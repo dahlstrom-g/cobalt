@@ -1,0 +1,158 @@
+// Copyright 2017 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef DEVICE_FIDO_FIDO_DISCOVERY_H_
+#define DEVICE_FIDO_FIDO_DISCOVERY_H_
+
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "base/component_export.h"
+#include "base/logging.h"
+#include "base/macros.h"
+#include "base/memory/weak_ptr.h"
+#include "base/strings/string_piece.h"
+#include "device/fido/cable/cable_discovery_data.h"
+#include "device/fido/fido_discovery_base.h"
+#include "device/fido/fido_transport_protocol.h"
+
+namespace service_manager {
+class Connector;
+}
+
+namespace device {
+
+class FidoDevice;
+
+namespace internal {
+class ScopedFidoDiscoveryFactory;
+}
+
+class COMPONENT_EXPORT(DEVICE_FIDO) FidoDiscovery : public FidoDiscoveryBase {
+ public:
+  enum class State {
+    kIdle,
+    kStarting,
+    kRunning,
+  };
+
+  // Factory functions to construct an instance that discovers authenticators on
+  // the given |transport| protocol. The first variant is for everything except
+  // for cloud-assisted BLE which is handled by the second variant.
+  //
+  // FidoTransportProtocol::kUsbHumanInterfaceDevice requires specifying a valid
+  // |connector| on Desktop, and is not valid on Android.
+  static std::unique_ptr<FidoDiscovery> Create(
+      FidoTransportProtocol transport,
+      ::service_manager::Connector* connector);
+  static std::unique_ptr<FidoDiscovery> CreateCable(
+      std::vector<CableDiscoveryData> cable_data);
+
+  ~FidoDiscovery() override;
+
+  bool is_start_requested() const { return state_ != State::kIdle; }
+  bool is_running() const { return state_ == State::kRunning; }
+
+  std::vector<FidoDevice*> GetDevices();
+  std::vector<const FidoDevice*> GetDevices() const;
+
+  // TODO(martinkr): Rename to GetDeviceForTesting.
+  FidoDevice* GetDevice(base::StringPiece device_id);
+  const FidoDevice* GetDevice(base::StringPiece device_id) const;
+
+  // FidoDiscoveryBase:
+  void Start() override;
+
+ protected:
+  FidoDiscovery(FidoTransportProtocol transport);
+
+  void NotifyDiscoveryStarted(bool success);
+  void NotifyAuthenticatorAdded(FidoAuthenticator* authenticator);
+  void NotifyAuthenticatorRemoved(FidoAuthenticator* authenticator);
+
+  bool AddDevice(std::unique_ptr<FidoDevice> device);
+  bool RemoveDevice(base::StringPiece device_id);
+
+  // Subclasses should implement this to actually start the discovery when it is
+  // requested.
+  //
+  // The implementation should asynchronously invoke NotifyDiscoveryStarted when
+  // the discovery is s tarted.
+  virtual void StartInternal() = 0;
+
+  std::map<std::string,
+           std::pair<std::unique_ptr<FidoAuthenticator>,
+                     std::unique_ptr<FidoDevice>>,
+           std::less<>>
+      devices_;
+
+ private:
+  friend class internal::ScopedFidoDiscoveryFactory;
+
+  // Factory function can be overridden by tests to construct fakes.
+  using FactoryFuncPtr = decltype(&Create);
+  using CableFactoryFuncPtr = decltype(&CreateCable);
+  static FactoryFuncPtr g_factory_func_;
+  static CableFactoryFuncPtr g_cable_factory_func_;
+
+  State state_ = State::kIdle;
+  base::WeakPtrFactory<FidoDiscovery> weak_factory_;
+
+  DISALLOW_COPY_AND_ASSIGN(FidoDiscovery);
+};
+
+namespace internal {
+
+// Base class for a scoped override of FidoDiscovery::Create, used in unit
+// tests, layout tests, and when running with the Web Authn Testing API enabled.
+//
+// While there is a subclass instance in scope, calls to the factory method will
+// be hijacked such that the derived class's CreateFidoDiscovery method will be
+// invoked instead.
+class COMPONENT_EXPORT(DEVICE_FIDO) ScopedFidoDiscoveryFactory {
+ public:
+  // There should be at most one instance of any subclass in scope at a time.
+  ScopedFidoDiscoveryFactory();
+  virtual ~ScopedFidoDiscoveryFactory();
+
+  const std::vector<CableDiscoveryData>& last_cable_data() const {
+    return last_cable_data_;
+  }
+
+ protected:
+  void set_last_cable_data(std::vector<CableDiscoveryData> cable_data) {
+    last_cable_data_ = std::move(cable_data);
+  }
+
+  virtual std::unique_ptr<FidoDiscovery> CreateFidoDiscovery(
+      FidoTransportProtocol transport,
+      ::service_manager::Connector* connector) = 0;
+
+ private:
+  static std::unique_ptr<FidoDiscovery>
+  ForwardCreateFidoDiscoveryToCurrentFactory(
+      FidoTransportProtocol transport,
+      ::service_manager::Connector* connector);
+
+  static std::unique_ptr<FidoDiscovery>
+  ForwardCreateCableDiscoveryToCurrentFactory(
+      std::vector<CableDiscoveryData> cable_data);
+
+  static ScopedFidoDiscoveryFactory* g_current_factory;
+
+  FidoDiscovery::FactoryFuncPtr original_factory_func_;
+  FidoDiscovery::CableFactoryFuncPtr original_cable_factory_func_;
+  std::vector<CableDiscoveryData> last_cable_data_;
+
+  DISALLOW_COPY_AND_ASSIGN(ScopedFidoDiscoveryFactory);
+};
+
+}  // namespace internal
+}  // namespace device
+
+#endif  // DEVICE_FIDO_FIDO_DISCOVERY_H_

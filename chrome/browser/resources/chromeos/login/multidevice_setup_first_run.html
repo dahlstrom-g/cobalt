@@ -1,0 +1,41 @@
+<!-- Copyright 2018 The Chromium Authors. All rights reserved.
+     Use of this source code is governed by a BSD-style license that can be
+     found in the LICENSE file. -->
+
+<link rel="import" href="chrome://resources/html/polymer.html">
+
+<link rel="import" href="chrome://oobe/custom_elements.html">
+<link rel="import" href="chrome://resources/cr_components/chromeos/multidevice_setup/multidevice_setup_shared_css.html">
+<link rel="import" href="chrome://resources/cr_components/chromeos/multidevice_setup/multidevice_setup.html">
+<!--
+  UI for the MultiDevice setup flow when displayed after OOBE or during the
+  user's first login on this Chromebook. Note that this flow is
+  slightly different from the post-login flow in 3 ways:
+    (1) In the first run, the user has just entered their password, so we do not
+        prompt the user to enter a password before continuing.
+    (2) In the first run, once the user selects a host device, we continue to
+        the next OOBE/login task; in the post-login mode, there is a "success"
+        screen.
+    (3) In the first run, buttons are styled with custom OOBE buttons.
+
+  Example:
+      <multidevice-setup-first-run></multidevice-setup-first-run>
+-->
+<dom-module id="multidevice-setup-first-run">
+  <template>
+    <style include="shared-style multidevice-setup-shared"></style>
+    <multidevice-setup delegate="[[delegate_]]"
+        on-setup-exited="onExitRequested_"
+        forward-button-text="{{forwardButtonText_}}"
+        forward-button-disabled="{{forwardButtonDisabled_}}"
+        backward-button-text="{{backwardButtonText_}}">
+      <oobe-text-button slot="backward-button">
+        <div>[[backwardButtonText_]]</div>
+      </oobe-text-button>
+      <oobe-next-button slot="forward-button"
+          disabled$="[[forwardButtonDisabled_]]">
+        <div>[[forwardButtonText_]]</div>
+      </oobe-next-button>
+    </multidevice-setup>
+  </template>
+</dom-module>
