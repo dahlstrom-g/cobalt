@@ -1,0 +1,19 @@
+{
+  metadata: {
+    namespace: "PerformanceEntry",
+    export: "CORE_EXPORT",
+  },
+
+  data: [
+    "element",
+    "event",
+    "firstInput",
+    "longtask",
+    "mark",
+    "measure",
+    "navigation",
+    "paint",
+    "resource",
+    "taskattribution",
+  ],
+}
