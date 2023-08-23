@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 TEST(DiskCacheStatsTest, Init) {

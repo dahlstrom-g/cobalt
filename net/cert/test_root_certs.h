@@ -23,6 +23,7 @@
 #include <CoreFoundation/CFArray.h>
 #include <Security/SecTrust.h>
 #include "base/mac/scoped_cftyperef.h"
+#include "starboard/types.h"
 #endif
 
 namespace base {
@@ -80,7 +81,7 @@ class NET_EXPORT TestRootCerts {
   // engine is appropriate. The caller is responsible for freeing the
   // returned HCERTCHAINENGINE.
   HCERTCHAINENGINE GetChainEngine() const;
-#elif defined(OS_FUCHSIA)
+#elif defined(OS_FUCHSIA) || defined(STARBOARD)
   TrustStore* test_trust_store() { return &test_trust_store_; }
 #endif
 
@@ -126,11 +127,12 @@ class NET_EXPORT TestRootCerts {
 #elif defined(OS_MACOSX)
   base::ScopedCFTypeRef<CFMutableArrayRef> temporary_roots_;
   TrustStoreInMemory test_trust_store_;
-#elif defined(OS_FUCHSIA)
+#elif defined(OS_FUCHSIA) || defined(STARBOARD)
   TrustStoreInMemory test_trust_store_;
 #endif
 
-#if defined(OS_WIN) || defined(OS_ANDROID) || defined(OS_FUCHSIA)
+#if defined(OS_WIN) || defined(OS_ANDROID) || defined(OS_FUCHSIA) \
+    || defined(STARBOARD)
   // True if there are no temporarily trusted root certificates.
   bool empty_ = true;
 #endif

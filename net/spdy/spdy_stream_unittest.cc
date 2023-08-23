@@ -4,8 +4,6 @@
 
 #include "net/spdy/spdy_stream.h"
 
-#include <stdint.h>
-
 #include <algorithm>
 #include <cstddef>
 #include <limits>
@@ -36,7 +34,8 @@
 #include "net/test/gtest_util.h"
 #include "net/test/test_data_directory.h"
 #include "net/test/test_with_scoped_task_environment.h"
-#include "net/third_party/spdy/core/spdy_protocol.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_protocol.h"
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -113,8 +112,17 @@ class SpdyStreamTest : public TestWithScopedTaskEnvironment {
     reads_.push_back(MockRead(ASYNC, ERR_IO_PENDING, offset_++));
   }
 
+#ifdef STARBOARD
+  base::span<const MockRead> GetReads() {
+    return base::span<const MockRead>(reads_.data(), reads_.size());
+  }
+  base::span<const MockWrite> GetWrites() {
+    return base::span<const MockWrite>(writes_.data(), writes_.size());
+  }
+#else
   base::span<const MockRead> GetReads() { return reads_; }
   base::span<const MockWrite> GetWrites() { return writes_; }
+#endif
 
   void ActivatePushStream(SpdySession* session, SpdyStream* stream) {
     std::unique_ptr<SpdyStream> activated =

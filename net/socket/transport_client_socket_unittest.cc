@@ -26,6 +26,8 @@
 #include "net/test/gtest_util.h"
 #include "net/test/test_with_scoped_task_environment.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
@@ -293,8 +295,8 @@ TEST_P(TransportClientSocketTest, IsConnected) {
   EXPECT_TRUE(sock_->IsConnected());
   EXPECT_FALSE(sock_->IsConnectedAndIdle());
 
-  bytes_read =
-      DrainClientSocket(buf.get(), 4096, strlen(kServerReply) - 1, &callback);
+  bytes_read = DrainClientSocket(
+      buf.get(), 4096, strlen(kServerReply) - 1, &callback);
   ASSERT_EQ(bytes_read, strlen(kServerReply) - 1);
 
   // After draining the data, the socket should be back to connected
@@ -313,8 +315,8 @@ TEST_P(TransportClientSocketTest, IsConnected) {
   EXPECT_TRUE(sock_->IsConnected());
   EXPECT_FALSE(sock_->IsConnectedAndIdle());
 
-  bytes_read =
-      DrainClientSocket(buf.get(), 4096, strlen(kServerReply) - 1, &callback);
+  bytes_read = DrainClientSocket(
+      buf.get(), 4096, strlen(kServerReply) - 1, &callback);
   ASSERT_EQ(bytes_read, strlen(kServerReply) - 1);
 
   // Once the data is drained, the socket should now be seen as not
@@ -336,8 +338,8 @@ TEST_P(TransportClientSocketTest, Read) {
   SendRequestAndResponse();
 
   scoped_refptr<IOBuffer> buf = base::MakeRefCounted<IOBuffer>(4096);
-  uint32_t bytes_read =
-      DrainClientSocket(buf.get(), 4096, strlen(kServerReply), &callback);
+  uint32_t bytes_read = DrainClientSocket(
+      buf.get(), 4096, strlen(kServerReply), &callback);
   ASSERT_EQ(bytes_read, strlen(kServerReply));
   ASSERT_EQ(std::string(kServerReply), std::string(buf->data(), bytes_read));
 

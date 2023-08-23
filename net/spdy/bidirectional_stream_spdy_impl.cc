@@ -16,7 +16,8 @@
 #include "net/spdy/spdy_buffer.h"
 #include "net/spdy/spdy_http_utils.h"
 #include "net/spdy/spdy_stream.h"
-#include "net/third_party/spdy/core/spdy_header_block.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_header_block.h"
+#include "starboard/memory.h"
 
 namespace net {
 
@@ -146,7 +147,7 @@ void BidirectionalStreamSpdyImpl::SendvData(
     // TODO(xunjieli): Get rid of extra copy. Coalesce headers and data frames.
     for (size_t i = 0; i < buffers.size(); ++i) {
       memcpy(pending_combined_buffer_->data() + len, buffers[i]->data(),
-             lengths[i]);
+                   lengths[i]);
       len += lengths[i];
     }
   }

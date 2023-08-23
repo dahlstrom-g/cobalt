@@ -4,8 +4,6 @@
 
 #include "net/disk_cache/blockfile/sparse_control.h"
 
-#include <stdint.h>
-
 #include "base/bind.h"
 #include "base/format_macros.h"
 #include "base/location.h"
@@ -26,6 +24,8 @@
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_with_source.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 using base::Time;
 

@@ -12,7 +12,7 @@
 #include "base/macros.h"
 #include "base/trace_event/memory_usage_estimator.h"
 #include "net/base/io_buffer.h"
-#include "net/third_party/spdy/core/spdy_protocol.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_protocol.h"
 
 namespace net {
 
@@ -30,7 +30,12 @@ std::unique_ptr<spdy::SpdySerializedFrame> MakeSpdySerializedFrame(
   CHECK_GT(size, 0u);
   CHECK_LE(size, kMaxSpdyFrameSize);
 
+#if defined(STARBOARD)
+  // Work-around for no C++14 support.
+  auto frame_data = std::unique_ptr<char[]>(new char[size]);
+#else
   auto frame_data = std::make_unique<char[]>(size);
+#endif
   std::memcpy(frame_data.get(), data, size);
   return std::make_unique<spdy::SpdySerializedFrame>(frame_data.release(), size,
                                                      true /* owns_buffer */);

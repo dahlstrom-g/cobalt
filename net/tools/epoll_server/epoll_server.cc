@@ -14,6 +14,8 @@
 #include "base/logging.h"
 #include "base/stl_util.h"
 #include "base/time/time.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 // Design notes: An efficient implementation of ready list has the following
 // desirable properties:

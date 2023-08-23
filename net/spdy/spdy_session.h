@@ -5,9 +5,6 @@
 #ifndef NET_SPDY_SPDY_SESSION_H_
 #define NET_SPDY_SPDY_SESSION_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <map>
 #include <memory>
 #include <set>
@@ -46,13 +43,18 @@
 #include "net/spdy/spdy_stream.h"
 #include "net/spdy/spdy_write_queue.h"
 #include "net/ssl/ssl_config_service.h"
-#include "net/third_party/spdy/core/spdy_alt_svc_wire_format.h"
-#include "net/third_party/spdy/core/spdy_framer.h"
-#include "net/third_party/spdy/core/spdy_header_block.h"
-#include "net/third_party/spdy/core/spdy_protocol.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_alt_svc_wire_format.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_framer.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_header_block.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_protocol.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
+#include "starboard/types.h"
 #include "url/gurl.h"
 #include "url/scheme_host_port.h"
+
+#if defined(QUIC_DISABLED_FOR_STARBOARD)
+#include "net/third_party/quic/core/quic_versions.h"
+#endif
 
 namespace net {
 

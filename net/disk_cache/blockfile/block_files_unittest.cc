@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "net/disk_cache/blockfile/block_files.h"
 #include "base/files/file_enumerator.h"
 #include "base/files/file_util.h"
-#include "net/disk_cache/blockfile/block_files.h"
 #include "net/disk_cache/disk_cache.h"
 #include "net/disk_cache/disk_cache_test_base.h"
 #include "net/disk_cache/disk_cache_test_util.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::Time;

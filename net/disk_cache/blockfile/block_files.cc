@@ -17,6 +17,7 @@
 #include "net/disk_cache/blockfile/stress_support.h"
 #include "net/disk_cache/blockfile/trace.h"
 #include "net/disk_cache/cache_util.h"
+#include "starboard/memory.h"
 
 using base::TimeTicks;
 

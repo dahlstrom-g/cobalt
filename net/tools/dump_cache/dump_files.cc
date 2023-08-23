@@ -30,6 +30,8 @@
 #include "net/disk_cache/blockfile/storage_block-inl.h"
 #include "net/disk_cache/blockfile/storage_block.h"
 #include "net/url_request/view_cache_helper.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace {
 

@@ -4,13 +4,11 @@
 
 #include "net/url_request/url_fetcher_core.h"
 
-#include <stdint.h>
 #include <utility>
 
 #include "base/bind.h"
 #include "base/logging.h"
 #include "base/sequenced_task_runner.h"
-#include "base/single_thread_task_runner.h"
 #include "base/stl_util.h"
 #include "base/threading/sequenced_task_runner_handle.h"
 #include "net/base/elements_upload_data_stream.h"
@@ -28,13 +26,44 @@
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_context_getter.h"
 #include "net/url_request/url_request_throttler_manager.h"
+#include "starboard/time.h"
+#include "starboard/types.h"
 #include "url/origin.h"
 
 namespace {
 
+#if defined(STARBOARD)
+const SbTime kInformDownloadProgressInterval = 50 * kSbTimeMillisecond;
+#else   // defined(STARBOARD)
 const int kBufferSize = 4096;
+#endif  // defined(STARBOARD)
+
 const int kUploadProgressTimerInterval = 100;
+
 bool g_ignore_certificate_requests = false;
+
+#if defined(STARBOARD)
+int GetIOBufferSizeByContentSize(int content_size) {
+  // If |content_size| is unknown, use 64k as buffer size.
+  if (content_size < 0) {
+    return 64 * 1024;
+  }
+  // If the content is really small, use 4k anyway.
+  if (content_size <= 4 * 1024) {
+    return 4 * 1024;
+  }
+  // If the content is medium sized, use the size as buffer size.
+  if (content_size < 64 * 1024) {
+    return content_size;
+  }
+  // If the content is fairly large, use a much larger buffer size.
+  if (content_size >= 512 * 1024) {
+    return 256 * 1024;
+  }
+  // Otherwise use 64k as buffer size.
+  return 64 * 1024;
+}
+#endif  // defined(STARBOARD)
 
 }  // namespace
 
@@ -80,6 +109,9 @@ URLFetcherCore::URLFetcherCore(
       load_flags_(LOAD_NORMAL),
       allow_credentials_(base::nullopt),
       response_code_(URLFetcher::RESPONSE_CODE_INVALID),
+#if defined(STARBOARD)
+      io_buffer_size_(GetIOBufferSizeByContentSize(-1)),
+#endif  // defined(STARBOARD)
       url_request_data_key_(NULL),
       was_fetched_via_proxy_(false),
       was_cached_(false),
@@ -104,6 +136,26 @@ URLFetcherCore::URLFetcherCore(
       total_response_bytes_(-1),
       traffic_annotation_(traffic_annotation) {
   CHECK(original_url_.is_valid());
+  DCHECK(delegate_);
+
+  const base::CommandLine& command_line =
+      *base::CommandLine::ForCurrentProcess();
+  const CobaltExtensionUrlFetcherObserverApi* observer_extension =
+      static_cast<const CobaltExtensionUrlFetcherObserverApi*>(
+          SbSystemGetExtension(kCobaltExtensionUrlFetcherObserverName));
+  if (command_line.HasSwitch(URL_FETCHER_COMMAND_LINE_SWITCH) &&
+      observer_extension &&
+      strcmp(observer_extension->name,
+                         kCobaltExtensionUrlFetcherObserverName) == 0 &&
+      observer_extension->version >= 1) {
+    observer_extension_ = observer_extension;
+    observer_extension_->FetcherCreated(
+        original_url_.spec()
+            .substr(0, URL_FETCHER_OBSERVER_MAX_URL_SIZE)
+            .c_str());
+  } else {
+    observer_extension_ = nullptr;
+  }
 }
 
 void URLFetcherCore::Start() {
@@ -122,8 +174,9 @@ void URLFetcherCore::Start() {
 }
 
 void URLFetcherCore::Stop() {
-  if (delegate_task_runner_)  // May be NULL in tests.
+  if (delegate_task_runner_) {  // May be NULL in tests.
     DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
+  }
 
   delegate_ = NULL;
   fetcher_ = NULL;
@@ -144,8 +197,11 @@ void URLFetcherCore::SetUploadData(const std::string& upload_content_type,
   DCHECK(!is_chunked_upload_);
   DCHECK(upload_content_type_.empty());
 
+// Cobalt manages the content type header itself.
+#if !defined(STARBOARD)
   // Empty |upload_content_type| is allowed iff the |upload_content| is empty.
   DCHECK(upload_content.empty() || !upload_content_type.empty());
+#endif
 
   upload_content_type_ = upload_content_type;
   upload_content_ = upload_content;
@@ -296,6 +352,14 @@ void URLFetcherCore::SaveResponseToFileAtPath(
       new URLFetcherFileWriter(file_task_runner, file_path)));
 }
 
+#if defined(STARBOARD)
+void URLFetcherCore::SaveResponseToLargeString() {
+  DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
+  SaveResponseWithWriter(std::unique_ptr<URLFetcherResponseWriter>(
+      new URLFetcherLargeStringWriter()));
+}
+#endif
+
 void URLFetcherCore::SaveResponseToTemporaryFile(
     scoped_refptr<base::SequencedTaskRunner> file_task_runner) {
   DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
@@ -307,6 +371,10 @@ void URLFetcherCore::SaveResponseWithWriter(
     std::unique_ptr<URLFetcherResponseWriter> response_writer) {
   DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
   response_writer_ = std::move(response_writer);
+}
+
+const HttpRequestHeaders& URLFetcherCore::GetRequestHeaders() const {
+  return extra_request_headers_;
 }
 
 HttpResponseHeaders* URLFetcherCore::GetResponseHeaders() const {
@@ -375,6 +443,19 @@ bool URLFetcherCore::GetResponseAsString(
   return true;
 }
 
+#if defined(STARBOARD)
+bool URLFetcherCore::GetResponseAsLargeString(
+    std::string* out_response_string) const {
+  URLFetcherLargeStringWriter* large_string_writer =
+      response_writer_ ? response_writer_->AsLargeStringWriter() : NULL;
+  if (!large_string_writer)
+    return false;
+
+  large_string_writer->GetAndResetData(out_response_string);
+  return true;
+}
+#endif
+
 bool URLFetcherCore::GetResponseAsFilePath(bool take_ownership,
                                            base::FilePath* out_response_path) {
   DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
@@ -405,11 +486,15 @@ void URLFetcherCore::OnReceivedRedirect(URLRequest* request,
                                         const RedirectInfo& redirect_info,
                                         bool* defer_redirect) {
   DCHECK_EQ(request, request_.get());
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
   if (stop_on_redirect_) {
     stopped_on_redirect_ = true;
     url_ = redirect_info.new_url;
     response_code_ = request_->GetResponseCode();
+#if defined(COBALT)
+    // Cobalt needs header information for CORS check between redirects.
+    response_headers_ = request_->response_headers();
+#endif
     proxy_server_ = request_->proxy_server();
     was_fetched_via_proxy_ = request_->was_fetched_via_proxy();
     was_cached_ = request_->was_cached();
@@ -421,7 +506,7 @@ void URLFetcherCore::OnReceivedRedirect(URLRequest* request,
 
 void URLFetcherCore::OnResponseStarted(URLRequest* request, int net_error) {
   DCHECK_EQ(request, request_.get());
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
   DCHECK_NE(ERR_IO_PENDING, net_error);
 
   if (net_error == OK) {
@@ -435,8 +520,23 @@ void URLFetcherCore::OnResponseStarted(URLRequest* request, int net_error) {
   }
 
   DCHECK(!buffer_);
+#if defined(STARBOARD)
+  if (request_type_ != URLFetcher::HEAD) {
+    response_writer_->OnResponseStarted(total_response_bytes_);
+    io_buffer_size_ = GetIOBufferSizeByContentSize(total_response_bytes_);
+    buffer_ = base::MakeRefCounted<IOBuffer>(io_buffer_size_);
+  }
+
+  // We update this earlier than OnReadCompleted(), so that the delegate
+  // can know about it if they call GetURL() in any callback.
+  if (!stopped_on_redirect_) {
+    url_ = request_->url();
+  }
+  InformDelegateResponseStarted();
+#else   // defined(STARBOARD)
   if (request_type_ != URLFetcher::HEAD)
     buffer_ = base::MakeRefCounted<IOBuffer>(kBufferSize);
+#endif  // defined(STARBOARD)
   ReadResponse();
 }
 
@@ -444,7 +544,7 @@ void URLFetcherCore::OnCertificateRequested(
     URLRequest* request,
     SSLCertRequestInfo* cert_request_info) {
   DCHECK_EQ(request, request_.get());
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
 
   if (g_ignore_certificate_requests) {
     request->ContinueWithCertificate(nullptr, nullptr);
@@ -456,7 +556,7 @@ void URLFetcherCore::OnCertificateRequested(
 void URLFetcherCore::OnReadCompleted(URLRequest* request,
                                      int bytes_read) {
   DCHECK_EQ(request, request_.get());
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
 
   if (!stopped_on_redirect_)
     url_ = request->url();
@@ -465,6 +565,35 @@ void URLFetcherCore::OnReadCompleted(URLRequest* request,
   if (throttler_manager)
     url_throttler_entry_ = throttler_manager->RegisterRequestUrl(url_);
 
+#if defined(STARBOARD)
+  // Prime it to the current time so it is only called after the loop, or every
+  // time when the loop takes |kInformDownloadProgressInterval|.
+  SbTime download_progress_informed_at = SbTimeGetMonotonicNow();
+  bool did_read_after_inform_download_progress = false;
+
+  while (bytes_read > 0) {
+    current_response_bytes_ += bytes_read;
+    did_read_after_inform_download_progress = true;
+    auto now = SbTimeGetMonotonicNow();
+    if (now - download_progress_informed_at > kInformDownloadProgressInterval) {
+      InformDelegateDownloadProgress();
+      download_progress_informed_at = now;
+      did_read_after_inform_download_progress = false;
+    }
+
+    const int result = WriteBuffer(
+        base::MakeRefCounted<DrainableIOBuffer>(buffer_, bytes_read));
+    if (result < 0) {
+      // Write failed or waiting for write completion.
+      return;
+    }
+    bytes_read = request_->Read(buffer_.get(), io_buffer_size_);
+  }
+
+  if (did_read_after_inform_download_progress) {
+    InformDelegateDownloadProgress();
+  }
+#else   // defined(STARBOARD)
   while (bytes_read > 0) {
     current_response_bytes_ += bytes_read;
     InformDelegateDownloadProgress();
@@ -477,6 +606,7 @@ void URLFetcherCore::OnReadCompleted(URLRequest* request,
     }
     bytes_read = request_->Read(buffer_.get(), kBufferSize);
   }
+#endif  // defined(STARBOARD)
 
   // See comments re: HEAD requests in ReadResponse().
   if (bytes_read != ERR_IO_PENDING || request_type_ == URLFetcher::HEAD) {
@@ -513,13 +643,19 @@ void URLFetcherCore::SetIgnoreCertificateRequests(bool ignored) {
 }
 
 URLFetcherCore::~URLFetcherCore() {
+  if (observer_extension_ != nullptr) {
+    observer_extension_->FetcherDestroyed(
+        original_url_.spec()
+            .substr(0, URL_FETCHER_OBSERVER_MAX_URL_SIZE)
+            .c_str());
+  }
   // |request_| should be NULL. If not, it's unsafe to delete it here since we
   // may not be on the IO thread.
   DCHECK(!request_.get());
 }
 
 void URLFetcherCore::StartOnIOThread() {
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
 
   // Create ChunkedUploadDataStream, if needed, so the consumer can start
   // appending data.  Have to do it here because StartURLRequest() may be called
@@ -539,8 +675,14 @@ void URLFetcherCore::StartOnIOThread() {
 }
 
 void URLFetcherCore::StartURLRequest() {
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
 
+  if (observer_extension_ != nullptr) {
+    observer_extension_->StartURLRequest(
+        original_url_.spec()
+            .substr(0, URL_FETCHER_OBSERVER_MAX_URL_SIZE)
+            .c_str());
+  }
   if (was_cancelled_) {
     // Since StartURLRequest() is posted as a *delayed* task, it may
     // run after the URLFetcher was already stopped.
@@ -574,7 +716,14 @@ void URLFetcherCore::StartURLRequest() {
   request_->SetReferrer(referrer_);
   request_->set_referrer_policy(referrer_policy_);
   request_->set_site_for_cookies(initiator_.has_value() &&
+#if defined(STARBOARD)
+                                         // This is not a Cobalt change, but due
+                                         // to a mismatch between src/net and
+                                         // src/url version.
+                                         !initiator_.value().unique()
+#else
                                          !initiator_.value().opaque()
+#endif
                                      ? initiator_.value().GetURL()
                                      : original_url_);
   request_->set_initiator(initiator_);
@@ -590,8 +739,11 @@ void URLFetcherCore::StartURLRequest() {
     case URLFetcher::POST:
     case URLFetcher::PUT:
     case URLFetcher::PATCH: {
+// Cobalt sometimes does not have a request body for post request.
+#if !defined(STARBOARD)
       // Upload content must be set.
       DCHECK(is_chunked_upload_ || upload_content_set_);
+#endif
 
       request_->set_method(
           request_type_ == URLFetcher::POST ? "POST" :
@@ -638,12 +790,24 @@ void URLFetcherCore::StartURLRequest() {
       request_->set_method("DELETE");
       break;
 
+#if defined(COBALT)
+    // Cobalt needs OPTIONS method to send CORS-Preflight requests.
+    case URLFetcher::OPTIONS:
+      request_->set_method("OPTIONS");
+      break;
+#endif
+
     default:
       NOTREACHED();
   }
 
   if (!extra_request_headers_.IsEmpty())
     request_->SetExtraRequestHeaders(extra_request_headers_);
+
+#if defined(STARBOARD)
+  request_->SetLoadTimingInfoCallback(base::Bind(&URLFetcherCore::GetLoadTimingInfo,
+      base::Unretained(this)));
+#endif
 
   request_->Start();
 }
@@ -657,7 +821,7 @@ void URLFetcherCore::DidInitializeWriter(int result) {
 }
 
 void URLFetcherCore::StartURLRequestWhenAppropriate() {
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
 
   if (was_cancelled_)
     return;
@@ -694,7 +858,7 @@ void URLFetcherCore::StartURLRequestWhenAppropriate() {
 }
 
 void URLFetcherCore::CancelURLRequest(int error) {
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
 
   if (request_.get()) {
     request_->CancelWithError(error);
@@ -723,7 +887,6 @@ void URLFetcherCore::CancelURLRequest(int error) {
 void URLFetcherCore::OnCompletedURLRequest(
     base::TimeDelta backoff_delay) {
   DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
-
   // Save the status and backoff_delay so that delegates can read it.
   if (delegate_) {
     backoff_delay_ = backoff_delay;
@@ -733,12 +896,13 @@ void URLFetcherCore::OnCompletedURLRequest(
 
 void URLFetcherCore::InformDelegateFetchIsComplete() {
   DCHECK(delegate_task_runner_->RunsTasksInCurrentSequence());
-  if (delegate_)
+  if (delegate_) {
     delegate_->OnURLFetchComplete(fetcher_);
+  }
 }
 
 void URLFetcherCore::NotifyMalformedContent() {
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
   if (url_throttler_entry_.get()) {
     int status_code = response_code_;
     if (status_code == URLFetcher::RESPONSE_CODE_INVALID) {
@@ -763,7 +927,7 @@ void URLFetcherCore::DidFinishWriting(int result) {
 }
 
 void URLFetcherCore::RetryOrCompleteUrlFetch() {
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
   base::TimeDelta backoff_delay;
 
   // Checks the response from server.
@@ -833,7 +997,7 @@ void URLFetcherCore::ReleaseRequest() {
 }
 
 base::TimeTicks URLFetcherCore::GetBackoffReleaseTime() {
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
 
   if (!original_url_throttler_entry_.get())
     return base::TimeTicks();
@@ -901,14 +1065,39 @@ void URLFetcherCore::ReadResponse() {
   // completed immediately, without trying to read any data back (all we care
   // about is the response code and headers, which we already have).
   int bytes_read = 0;
+#if defined(STARBOARD)
+  if (request_type_ != URLFetcher::HEAD)
+    bytes_read = request_->Read(buffer_.get(), io_buffer_size_);
+#else   // defined(STARBOARD)
   if (request_type_ != URLFetcher::HEAD)
     bytes_read = request_->Read(buffer_.get(), kBufferSize);
+#endif  // defined(STARBOARD)
 
   OnReadCompleted(request_.get(), bytes_read);
 }
 
+#if defined(STARBOARD)
+
+void URLFetcherCore::InformDelegateResponseStarted() {
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
+  DCHECK(request_);
+
+  delegate_task_runner_->PostTask(
+      FROM_HERE,
+      base::Bind(&URLFetcherCore::InformDelegateResponseStartedInDelegateThread,
+                 this));
+}
+
+void URLFetcherCore::InformDelegateResponseStartedInDelegateThread() {
+  if (delegate_) {
+    delegate_->OnURLFetchResponseStarted(fetcher_);
+  }
+}
+
+#endif  // defined(STARBOARD)
+
 void URLFetcherCore::InformDelegateUploadProgress() {
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
   if (request_.get()) {
     int64_t current = request_->GetUploadProgress().position();
     if (current_upload_bytes_ != current) {
@@ -939,7 +1128,7 @@ void URLFetcherCore::InformDelegateUploadProgressInDelegateSequence(
 }
 
 void URLFetcherCore::InformDelegateDownloadProgress() {
-  DCHECK(network_task_runner_->BelongsToCurrentThread());
+  DCHECK(network_task_runner_->RunsTasksInCurrentSequence());
   delegate_task_runner_->PostTask(
       FROM_HERE,
       base::Bind(
@@ -964,5 +1153,23 @@ void URLFetcherCore::AssertHasNoUploadData() const {
   DCHECK(upload_file_path_.empty());
   DCHECK(upload_stream_factory_.is_null());
 }
+
+#if defined(STARBOARD)
+void URLFetcherCore::GetLoadTimingInfo(
+    const net::LoadTimingInfo& timing_info) {
+  delegate_task_runner_->PostTask(
+      FROM_HERE,
+      base::Bind(&URLFetcherCore::GetLoadTimingInfoInDelegateThread,
+                 this, timing_info));
+}
+
+void URLFetcherCore::GetLoadTimingInfoInDelegateThread(
+    const net::LoadTimingInfo& timing_info) {
+  // Check if the URLFetcherCore has been stopped before.
+  if (delegate_) {
+    delegate_->ReportLoadTimingInfo(timing_info);
+  }
+}
+#endif  // defined(STARBOARD)
 
 }  // namespace net

@@ -14,6 +14,7 @@
 #include "net/base/test_completion_callback.h"
 #include "net/filter/filter_source_stream.h"
 #include "net/filter/mock_source_stream.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

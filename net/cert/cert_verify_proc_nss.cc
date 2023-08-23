@@ -15,6 +15,10 @@
 #include <string>
 #include <vector>
 
+#include "starboard/types.h"
+
+#include "starboard/memory.h"
+
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/protected_memory.h"

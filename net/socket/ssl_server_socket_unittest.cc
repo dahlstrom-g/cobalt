@@ -15,7 +15,6 @@
 
 #include "net/socket/ssl_server_socket.h"
 
-#include <stdint.h>
 #include <stdlib.h>
 #include <utility>
 
@@ -68,6 +67,9 @@
 #include "net/test/test_data_directory.h"
 #include "net/test/test_with_scoped_task_environment.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
@@ -953,7 +955,8 @@ TEST_F(SSLServerSocketTest, DataTransfer) {
   }
   EXPECT_EQ(write_buf->size(), read_buf->BytesConsumed());
   read_buf->SetOffset(0);
-  EXPECT_EQ(0, memcmp(write_buf->data(), read_buf->data(), write_buf->size()));
+  EXPECT_EQ(0, memcmp(write_buf->data(), read_buf->data(),
+                      write_buf->size()));
 
   // Read then write.
   write_buf = base::MakeRefCounted<StringIOBuffer>("hello123");
@@ -981,7 +984,8 @@ TEST_F(SSLServerSocketTest, DataTransfer) {
   }
   EXPECT_EQ(write_buf->size(), read_buf->BytesConsumed());
   read_buf->SetOffset(0);
-  EXPECT_EQ(0, memcmp(write_buf->data(), read_buf->data(), write_buf->size()));
+  EXPECT_EQ(0, memcmp(write_buf->data(), read_buf->data(),
+                      write_buf->size()));
 }
 
 // A regression test for bug 127822 (http://crbug.com/127822).

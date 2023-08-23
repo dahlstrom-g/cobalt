@@ -36,6 +36,8 @@
 #include "net/cert/pem_tokenizer.h"
 #include "net/cert/x509_util.h"
 #include "net/der/parser.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "third_party/boringssl/src/include/openssl/evp.h"
 #include "third_party/boringssl/src/include/openssl/pkcs7.h"
 #include "third_party/boringssl/src/include/openssl/pool.h"

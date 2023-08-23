@@ -47,7 +47,7 @@ class ProxyResolverV8TracingTest : public TestWithScopedTaskEnvironment {
 
 scoped_refptr<PacFileData> LoadScriptData(const char* filename) {
   base::FilePath path;
-  base::PathService::Get(base::DIR_SOURCE_ROOT, &path);
+  base::PathService::Get(base::DIR_TEST_DATA, &path);
   path = path.AppendASCII("net");
   path = path.AppendASCII("data");
   path = path.AppendASCII("proxy_resolver_v8_tracing_unittest");
@@ -105,22 +105,22 @@ class MockBindings {
 
     // ProxyResolverV8Tracing::Bindings overrides.
     void Alert(const base::string16& message) override {
-      DCHECK(thread_checker_.CalledOnValidThread());
+      DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
       bindings_->Alert(message);
     }
 
     void OnError(int line_number, const base::string16& error) override {
-      DCHECK(thread_checker_.CalledOnValidThread());
+      DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
       bindings_->OnError(line_number, error);
     }
 
     NetLogWithSource GetNetLogWithSource() override {
-      DCHECK(thread_checker_.CalledOnValidThread());
+      DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
       return NetLogWithSource();
     }
 
     HostResolver* GetHostResolver() override {
-      DCHECK(thread_checker_.CalledOnValidThread());
+      DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
       return bindings_->host_resolver();
     }
 

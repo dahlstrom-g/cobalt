@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "net/base/test_data_stream.h"
+#include "starboard/memory.h"
 
 namespace net {
 

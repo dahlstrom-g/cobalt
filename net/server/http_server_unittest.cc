@@ -4,8 +4,6 @@
 
 #include "net/server/http_server.h"
 
-#include <stdint.h>
-
 #include <algorithm>
 #include <memory>
 #include <utility>
@@ -49,6 +47,8 @@
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_context_getter.h"
 #include "net/url_request/url_request_test_util.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -722,6 +722,11 @@ class CloseOnConnectHttpServerTest : public HttpServerTest {
   std::vector<int> connection_ids_;
 };
 
+// Starboard platforms cannot distinguish between a connection attempt that
+// failed, and a connection attempt that succeeded but was then immediately
+// closed, because it calls SbSocketIsConnected() to determine if a connection
+// attempt was successful.
+#if !defined(STARBOARD)
 TEST_F(CloseOnConnectHttpServerTest, ServerImmediatelyClosesConnection) {
   TestHttpClient client;
   ASSERT_THAT(client.ConnectAndWait(server_address_), IsOk());
@@ -738,6 +743,7 @@ TEST_F(CloseOnConnectHttpServerTest, ServerImmediatelyClosesConnection) {
   // closed without reading from it.
   EXPECT_EQ(0ul, requests_.size());
 }
+#endif  // !defined(STARBOARD)
 
 }  // namespace
 

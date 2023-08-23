@@ -14,6 +14,9 @@
 #include "base/logging.h"
 #include "base/synchronization/lock.h"
 #include "net/disk_cache/blockfile/stress_support.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 // Change this value to 1 to enable tracing on a release build. By default,
 // tracing is enabled only on debug builds.
@@ -132,7 +135,8 @@ void Trace(const char* format, ...) {
     if (!s_trace_buffer || !s_trace_enabled)
       return;
 
-    memcpy(s_trace_buffer->buffer[s_trace_buffer->current], line, kEntrySize);
+    memcpy(s_trace_buffer->buffer[s_trace_buffer->current], line,
+                 kEntrySize);
 
     s_trace_buffer->num_traces++;
     s_trace_buffer->current++;

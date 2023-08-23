@@ -24,7 +24,9 @@
 #include "net/http/http_stream_request.h"
 #include "net/log/net_log_with_source.h"
 #include "net/proxy_resolution/proxy_resolution_service.h"
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
 #include "net/quic/quic_stream_factory.h"
+#endif
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool_manager.h"
 #include "net/socket/next_proto.h"
@@ -250,7 +252,11 @@ class HttpStreamFactory::Job {
     return using_existing_quic_session_;
   }
 
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   bool using_quic() const { return using_quic_; }
+#else
+  bool using_quic() const { return false; }
+#endif
 
   bool should_reconsider_proxy() const { return should_reconsider_proxy_; }
 
@@ -469,7 +475,9 @@ class HttpStreamFactory::Job {
   // True if this job might succeed with a different proxy config.
   bool should_reconsider_proxy_;
 
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   QuicStreamRequest quic_request_;
+#endif
 
   // Only valid for a QUIC job. Set when a QUIC connection is started. If true,
   // then OnQuicHostResolution() is expected to be called in the future.

@@ -23,7 +23,7 @@ enum CacheType {
 enum BackendType {
   CACHE_BACKEND_DEFAULT,
   CACHE_BACKEND_BLOCKFILE,  // The |BackendImpl|.
-  CACHE_BACKEND_SIMPLE  // The |SimpleBackendImpl|.
+  CACHE_BACKEND_SIMPLE,     // The |SimpleBackendImpl|.
 };
 
 }  // namespace net

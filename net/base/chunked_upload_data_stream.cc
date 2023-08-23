@@ -9,6 +9,9 @@
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 
+#include "starboard/client_porting/poem/string_poem.h"
+#include "starboard/memory.h"
+
 namespace net {
 
 ChunkedUploadDataStream::Writer::~Writer() = default;
@@ -99,7 +102,7 @@ int ChunkedUploadDataStream::ReadChunk(IOBuffer* buf, int buf_len) {
         std::min(static_cast<size_t>(buf_len - bytes_read),
                  data->size() - read_offset_);
     memcpy(buf->data() + bytes_read, data->data() + read_offset_,
-           bytes_to_read);
+                 bytes_to_read);
     bytes_read += bytes_to_read;
     read_offset_ += bytes_to_read;
     if (read_offset_ == data->size()) {

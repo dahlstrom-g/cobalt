@@ -21,6 +21,7 @@
 #include "base/strings/string_util.h"
 #include "base/test/test_timeouts.h"
 #include "net/test/python_utils.h"
+#include "starboard/types.h"
 
 namespace {
 
@@ -139,9 +140,9 @@ bool LocalTestServer::LaunchPython(const base::FilePath& testserver_path) {
   base::LaunchOptions options;
 
   // Set CWD to source root.
-  if (!base::PathService::Get(base::DIR_SOURCE_ROOT,
+  if (!base::PathService::Get(base::DIR_TEST_DATA,
                               &options.current_directory)) {
-    LOG(ERROR) << "Failed to get DIR_SOURCE_ROOT";
+    LOG(ERROR) << "Failed to get DIR_SOURCE_ROOT_FOR_TESTING";
     return false;
   }
 

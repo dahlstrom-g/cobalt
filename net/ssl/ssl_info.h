@@ -5,8 +5,6 @@
 #ifndef NET_SSL_SSL_INFO_H_
 #define NET_SSL_SSL_INFO_H_
 
-#include <stdint.h>
-
 #include <vector>
 
 #include "base/memory/ref_counted.h"
@@ -19,6 +17,7 @@
 #include "net/cert/signed_certificate_timestamp_and_status.h"
 #include "net/cert/x509_cert_types.h"
 #include "net/ssl/ssl_config.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -79,6 +78,15 @@ class NET_EXPORT SSLInfo {
   // The ID of the (EC)DH group used by the key exchange or zero if unknown
   // (older cache entries may not store the value) or not applicable.
   uint16_t key_exchange_group = 0;
+
+#if defined(COBALT_QUIC46)
+  // The signature algorithm used by the peer in the TLS handshake, as defined
+  // by the TLS SignatureScheme registry
+  // (https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-signaturescheme).
+  // These correspond to |SSL_SIGN_*| constants in BoringSSL. The value is zero
+  // if unknown (older cache entries may not store the value) or not applicable.
+  uint16_t peer_signature_algorithm = 0;
+#endif
 
   // Information about the SSL connection itself. See
   // ssl_connection_status_flags.h for values. The protocol version,

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-
 #include "base/base64.h"
 #include "base/stl_util.h"
 #include "base/strings/string_piece.h"
@@ -15,6 +13,9 @@
 #include "net/http/transport_security_state.h"
 #include "net/ssl/ssl_info.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#ifdef STARBOARD
+#include "net/net_buildflags.h"
+#endif
 
 namespace net {
 
@@ -22,6 +23,8 @@ namespace {
 
 namespace test_default {
 #include "net/http/transport_security_state_static_unittest_default.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 }
 
 HashValue GetTestHashValue(uint8_t label, HashValueTag tag) {
@@ -660,6 +663,7 @@ TEST_F(HttpSecurityHeadersTest, ValidPKPHeadersSHA256) {
   TestValidPKPHeaders(HASH_VALUE_SHA256);
 }
 
+#if BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
 TEST_F(HttpSecurityHeadersTest, UpdateDynamicPKPOnly) {
   SetTransportSecurityStateSourceForTesting(&test_default::kHSTSSource);
 
@@ -866,6 +870,7 @@ TEST_F(HttpSecurityHeadersTest, NoClobberPins) {
           domain_port, is_issued_by_known_root, saved_hashes, nullptr, nullptr,
           TransportSecurityState::DISABLE_PIN_REPORTS, &failure_log));
 }
+#endif
 
 // Tests that seeing an invalid HPKP header leaves the existing one alone.
 TEST_F(HttpSecurityHeadersTest, IgnoreInvalidHeaders) {

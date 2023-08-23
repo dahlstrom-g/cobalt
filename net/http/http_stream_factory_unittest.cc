@@ -4,8 +4,6 @@
 
 #include "net/http/http_stream_factory.h"
 
-#include <stdint.h>
-
 #include <memory>
 #include <string>
 #include <tuple>
@@ -42,10 +40,12 @@
 #include "net/log/net_log_with_source.h"
 #include "net/proxy_resolution/proxy_info.h"
 #include "net/proxy_resolution/proxy_resolution_service.h"
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
 #include "net/quic/mock_crypto_client_stream_factory.h"
 #include "net/quic/quic_http_utils.h"
 #include "net/quic/quic_stream_factory_peer.h"
 #include "net/quic/quic_test_packet_maker.h"
+#endif
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/mock_client_socket_pool_manager.h"
 #include "net/socket/next_proto.h"
@@ -60,10 +60,13 @@
 #include "net/test/gtest_util.h"
 #include "net/test/test_data_directory.h"
 #include "net/test/test_with_scoped_task_environment.h"
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
 #include "net/third_party/quic/core/quic_server_id.h"
+#include "net/third_party/quic/core/quic_utils.h"
 #include "net/third_party/quic/test_tools/crypto_test_utils.h"
 #include "net/third_party/quic/test_tools/mock_random.h"
 #include "net/third_party/quic/test_tools/quic_test_utils.h"
+#endif
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 
 // This file can be included from net/http even though
@@ -71,6 +74,7 @@
 // introduce any link dependency to net/websockets.
 #include "net/websockets/websocket_handshake_stream_base.h"
 
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -754,6 +758,7 @@ TEST_F(HttpStreamFactoryTest, NoProxyFallbackOnTunnelFail) {
   EXPECT_EQ(0u, retry_info.size());
 }
 
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
 // List of errors that are used in the tests related to QUIC proxy.
 const int quic_proxy_test_mock_errors[] = {
     ERR_PROXY_CONNECTION_FAILED,
@@ -943,7 +948,9 @@ void SetupForQuicAlternativeProxyTest(
   proxy_resolution_service->SetProxyDelegate(test_proxy_delegate);
 }
 
+#endif  // !defined(QUIC_DISABLED_FOR_STARBOARD)
 }  // namespace
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
 
 // Tests that a HTTPS proxy that supports QUIC alternative proxy server is
 // marked as bad if connecting to both the default proxy and the alternative
@@ -1399,6 +1406,7 @@ TEST_F(HttpStreamFactoryTest, ProxyServerPreconnectDifferentPrivacyModes) {
   EXPECT_EQ(-1, ssl_conn_pool->last_num_streams());
   EXPECT_EQ(num_streams, http_proxy_pool->last_num_streams());
 }
+#endif  // !defined(QUIC_DISABLED_FOR_STARBOARD)
 
 namespace {
 
@@ -2321,6 +2329,7 @@ TEST_F(HttpStreamFactoryTest, RequestBidirectionalStreamImpl) {
   EXPECT_TRUE(waiter.used_proxy_info().is_direct());
 }
 
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
 class HttpStreamFactoryBidirectionalQuicTest
     : public TestWithScopedTaskEnvironment,
       public ::testing::WithParamInterface<
@@ -2330,19 +2339,19 @@ class HttpStreamFactoryBidirectionalQuicTest
       : default_url_(kDefaultUrl),
         version_(std::get<0>(GetParam())),
         client_headers_include_h2_stream_dependency_(std::get<1>(GetParam())),
+        random_generator_(0),
         client_packet_maker_(version_,
-                             0,
+                             quic::QuicUtils::CreateRandomConnectionId(&random_generator_),
                              &clock_,
                              "www.example.org",
                              quic::Perspective::IS_CLIENT,
                              client_headers_include_h2_stream_dependency_),
         server_packet_maker_(version_,
-                             0,
+                             quic::QuicUtils::CreateRandomConnectionId(&random_generator_),
                              &clock_,
                              "www.example.org",
                              quic::Perspective::IS_SERVER,
                              false),
-        random_generator_(0),
         proxy_resolution_service_(ProxyResolutionService::CreateDirect()),
         ssl_config_service_(new SSLConfigServiceDefaults) {
     clock_.AdvanceTime(quic::QuicTime::Delta::FromMilliseconds(20));
@@ -2414,18 +2423,22 @@ class HttpStreamFactoryBidirectionalQuicTest
   const GURL default_url_;
 
   quic::QuicStreamId GetNthClientInitiatedStreamId(int n) {
+#if defined(COBALT_QUIC46)
+    return quic::test::GetNthClientInitiatedBidirectionalStreamId(version_, n);
+#else
     return quic::test::GetNthClientInitiatedStreamId(version_, n);
+#endif
   }
 
  private:
   const quic::QuicTransportVersion version_;
   const bool client_headers_include_h2_stream_dependency_;
   quic::MockClock clock_;
+  quic::test::MockRandom random_generator_;
   test::QuicTestPacketMaker client_packet_maker_;
   test::QuicTestPacketMaker server_packet_maker_;
   MockTaggingClientSocketFactory socket_factory_;
   std::unique_ptr<HttpNetworkSession> session_;
-  quic::test::MockRandom random_generator_;
   MockCertVerifier cert_verifier_;
   ProofVerifyDetailsChromium verify_details_;
   MockCryptoClientStreamFactory crypto_client_stream_factory_;
@@ -2663,6 +2676,7 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
                    HttpNetworkSession::WEBSOCKET_SOCKET_POOL)));
   EXPECT_TRUE(waiter.used_proxy_info().is_direct());
 }
+#endif  // !defined(QUIC_DISABLED_FOR_STARBOARD)
 
 TEST_F(HttpStreamFactoryTest, RequestBidirectionalStreamImplFailure) {
   SpdySessionDependencies session_deps(ProxyResolutionService::CreateDirect());
@@ -2854,6 +2868,7 @@ TEST_F(HttpStreamFactoryTest, Tag) {
                    HttpNetworkSession::NORMAL_SOCKET_POOL)));
 }
 
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
 // Verify HttpStreamFactory::Job passes socket tag along properly to QUIC
 // sessions and that QuicSessions have unique socket tags (e.g. one sessions
 // should not be shared amongst streams with different socket tags).
@@ -2981,6 +2996,7 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest, Tag) {
   EXPECT_EQ(kProtoQUIC, request3->negotiated_protocol());
   EXPECT_EQ(2, GetQuicSessionCount(session()));
 }
+#endif  // !defined(QUIC_DISABLED_FOR_STARBOARD)
 
 TEST_F(HttpStreamFactoryTest, ChangeSocketTag) {
   SpdySessionDependencies session_deps;

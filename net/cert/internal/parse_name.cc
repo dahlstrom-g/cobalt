@@ -11,6 +11,9 @@
 #include "base/sys_byteorder.h"
 #include "base/third_party/icu/icu_utf.h"
 
+#include "starboard/client_porting/poem/string_poem.h"
+#include "starboard/memory.h"
+
 namespace net {
 
 namespace {
@@ -25,8 +28,8 @@ bool ConvertBmpStringValue(const der::Input& in, std::string* out) {
 
   base::string16 in_16bit;
   if (in.Length()) {
-    memcpy(base::WriteInto(&in_16bit, in.Length() / 2 + 1), in.UnsafeData(),
-           in.Length());
+    memcpy(base::WriteInto(&in_16bit, in.Length() / 2 + 1),
+                 in.UnsafeData(), in.Length());
   }
   for (base::char16& c : in_16bit) {
     // BMPString is UCS-2 in big-endian order.

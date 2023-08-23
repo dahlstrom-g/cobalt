@@ -5,8 +5,6 @@
 #ifndef NET_WEBSOCKETS_WEBSOCKET_EVENT_INTERFACE_H_
 #define NET_WEBSOCKETS_WEBSOCKET_EVENT_INTERFACE_H_
 
-#include <stdint.h>
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,6 +15,7 @@
 #include "base/memory/scoped_refptr.h"
 #include "base/optional.h"
 #include "net/base/net_export.h"
+#include "starboard/types.h"
 
 class GURL;
 
@@ -67,7 +66,7 @@ class NET_EXPORT WebSocketEventInterface {
   virtual void OnClosingHandshake() = 0;
 
   // Called when the channel has been dropped, either due to a network close, a
-  // network error, or a protocol error. This may or may not be preceeded by a
+  // network error, or a protocol error. This may or may not be preceded by a
   // call to OnClosingHandshake().
   //
   // Warning: Both the |code| and |reason| are passed through to Javascript, so
@@ -141,6 +140,15 @@ class NET_EXPORT WebSocketEventInterface {
       const HostPortPair& host_port_pair,
       base::OnceCallback<void(const AuthCredentials*)> callback,
       base::Optional<AuthCredentials>* credentials) = 0;
+
+#if defined(STARBOARD)
+  // Added so that Cobalt's websocket implementation can reduce its count for
+  // bufferdAmount of send data.
+
+  // Called when a write completes, and |bytes_written| indicates how many bytes
+  // were written.
+  virtual void OnWriteDone(uint64_t bytes_written) = 0;
+#endif  // defined(STARBOARD)
 
  protected:
   WebSocketEventInterface() {}

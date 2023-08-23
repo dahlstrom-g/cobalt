@@ -26,6 +26,8 @@
 #include "net/ssl/ssl_platform_key_util.h"
 #include "net/ssl/ssl_platform_key_win.h"
 #include "net/ssl/ssl_private_key.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "third_party/boringssl/src/include/openssl/pool.h"
 
 namespace net {

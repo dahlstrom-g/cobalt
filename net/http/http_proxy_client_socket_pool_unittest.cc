@@ -32,7 +32,7 @@
 #include "net/spdy/spdy_test_util_common.h"
 #include "net/test/gtest_util.h"
 #include "net/test/test_with_scoped_task_environment.h"
-#include "net/third_party/spdy/core/spdy_protocol.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_protocol.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -84,7 +84,9 @@ class HttpProxyClientSocketPoolTest
                          NULL,
                          session_deps_.ssl_config_service.get(),
                          NetLogWithSource().net_log()),
+#if !defined(STARBOARD)
         field_trial_list_(nullptr),
+#endif
         pool_(
             std::make_unique<HttpProxyClientSocketPool>(kMaxSockets,
                                                         kMaxSocketsPerGroup,
@@ -119,10 +121,12 @@ class HttpProxyClientSocketPoolTest
       params["max_proxy_connection_timeout_seconds"] =
           base::IntToString(max_proxy_connection_timeout.InSeconds());
     }
+#if !defined(STARBOARD)
     base::FieldTrialParamAssociator::GetInstance()->ClearAllParamsForTesting();
     EXPECT_TRUE(
         base::AssociateFieldTrialParams(trial_name, group_name, params));
     EXPECT_TRUE(base::FieldTrialList::CreateFieldTrial(trial_name, group_name));
+#endif
 
     // Reset |pool_| so that the field trial parameters are read by the
     // |pool_|.
@@ -246,7 +250,10 @@ class HttpProxyClientSocketPoolTest
 
   base::HistogramTester histogram_tester_;
 
+#if !defined(STARBOARD)
+  // Starboard does not support FieldTrial.
   base::FieldTrialList field_trial_list_;
+#endif
 
  protected:
   SpdyTestUtil spdy_util_;
@@ -714,7 +721,7 @@ TEST_P(HttpProxyClientSocketPoolTest, TunnelSetupRedirect) {
     EXPECT_FALSE(handle_.socket());
   } else {
     // Expect ProxyClientSocket to return the proxy's response, sanitized.
-    EXPECT_THAT(rv, IsError(ERR_HTTPS_PROXY_TUNNEL_RESPONSE));
+    EXPECT_THAT(rv, IsError(ERR_HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT));
     EXPECT_TRUE(handle_.is_initialized());
     ASSERT_TRUE(handle_.socket());
 
@@ -770,6 +777,8 @@ TEST_P(HttpProxyClientSocketPoolTest, ProxyPoolMaxTimeout) {
 #endif
 }
 
+// Cobalt does not need FieldTrial yet.
+#if !defined(STARBOARD)
 // Tests the connection timeout values when the field trial parameters are
 // specified.
 TEST_P(HttpProxyClientSocketPoolTest, ProxyPoolTimeoutWithExperiment) {
@@ -853,6 +862,7 @@ TEST_P(HttpProxyClientSocketPoolTest, ProxyPoolTimeoutWithConnectionProperty) {
   EXPECT_EQ(kNonSecureMultiplier * kRttEstimate,
             job_factory.ConnectionTimeoutWithConnectionProperty(false));
 }
+#endif
 
 // Tests the connection timeout values when the field trial parameters are not
 // specified.

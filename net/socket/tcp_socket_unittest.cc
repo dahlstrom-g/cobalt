@@ -4,12 +4,17 @@
 
 #include "net/socket/tcp_socket.h"
 
-#include <stddef.h>
 #include <string.h>
 
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "starboard/types.h"
+
+#include "starboard/common/string.h"
+
+#include "starboard/memory.h"
 
 #include "base/memory/ref_counted.h"
 #include "base/test/bind_test_util.h"
@@ -33,12 +38,14 @@
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
 
+#if !defined(STARBOARD)
 // For getsockopt() call.
 #if defined(OS_WIN)
 #include <winsock2.h>
 #else  // !defined(OS_WIN)
 #include <sys/socket.h>
 #endif  //  !defined(OS_WIN)
+#endif  // !defined(STARBOARD)
 
 using net::test::IsError;
 using net::test::IsOk;
@@ -109,6 +116,7 @@ class TCPSocketTest : public PlatformTest, public WithScopedTaskEnvironment {
     ASSERT_THAT(socket_.GetLocalAddress(&local_address_), IsOk());
   }
 
+#if !defined(STARBOARD) || SB_HAS(IPV6)
   void SetUpListenIPv6(bool* success) {
     *success = false;
 
@@ -122,6 +130,7 @@ class TCPSocketTest : public PlatformTest, public WithScopedTaskEnvironment {
     ASSERT_THAT(socket_.GetLocalAddress(&local_address_), IsOk());
     *success = true;
   }
+#endif
 
   void TestAcceptAsync() {
     TestCompletionCallback accept_callback;
@@ -296,6 +305,7 @@ TEST_F(TCPSocketTest, AdoptConnectedSocket) {
   EXPECT_THAT(connect_callback.GetResult(connect_result), IsOk());
 }
 
+#if !defined(STARBOARD)
 // Test Accept() for AdoptUnconnectedSocket.
 TEST_F(TCPSocketTest, AcceptForAdoptedUnconnectedSocket) {
   SocketDescriptor existing_socket =
@@ -312,6 +322,7 @@ TEST_F(TCPSocketTest, AcceptForAdoptedUnconnectedSocket) {
 
   TestAcceptAsync();
 }
+#endif
 
 // Accept two connections simultaneously.
 TEST_F(TCPSocketTest, Accept2Connections) {
@@ -357,6 +368,7 @@ TEST_F(TCPSocketTest, Accept2Connections) {
   EXPECT_EQ(accepted_address2.address(), local_address_.address());
 }
 
+#if !defined(STARBOARD) || SB_HAS(IPV6)
 // Test listening and accepting with a socket bound to an IPv6 address.
 TEST_F(TCPSocketTest, AcceptIPv6) {
   bool initialized = false;
@@ -383,6 +395,7 @@ TEST_F(TCPSocketTest, AcceptIPv6) {
 
   EXPECT_THAT(connect_callback.GetResult(connect_result), IsOk());
 }
+#endif
 
 TEST_F(TCPSocketTest, ReadWrite) {
   ASSERT_NO_FATAL_FAILURE(SetUpListenIPv4());
@@ -416,7 +429,7 @@ TEST_F(TCPSocketTest, ReadWrite) {
     scoped_refptr<IOBufferWithSize> write_buffer =
         base::MakeRefCounted<IOBufferWithSize>(message.size() - bytes_written);
     memmove(write_buffer->data(), message.data() + bytes_written,
-            message.size() - bytes_written);
+                 message.size() - bytes_written);
 
     TestCompletionCallback write_callback;
     int write_result = accepted_socket->Write(
@@ -577,9 +590,9 @@ TEST_F(TCPSocketTest, CancelPendingReadIfReady) {
       base::MakeRefCounted<StringIOBuffer>(kMsg);
 
   TestCompletionCallback write_callback;
-  int write_result = accepted_socket->Write(write_buffer.get(), strlen(kMsg),
-                                            write_callback.callback(),
-                                            TRAFFIC_ANNOTATION_FOR_TESTS);
+  int write_result = accepted_socket->Write(
+      write_buffer.get(), strlen(kMsg), write_callback.callback(),
+      TRAFFIC_ANNOTATION_FOR_TESTS);
   const int msg_size = strlen(kMsg);
   ASSERT_EQ(msg_size, write_result);
 
@@ -596,6 +609,8 @@ TEST_F(TCPSocketTest, CancelPendingReadIfReady) {
   ASSERT_EQ(0, memcmp(&kMsg, read_buffer->data(), msg_size));
 }
 
+// Starboard does not provide any equivalent of getsockopt.
+#if !defined(STARBOARD)
 // Tests that setting a socket option in the BeforeConnectCallback works. With
 // real sockets, socket options often have to be set before the connect() call,
 // and the BeforeConnectCallback is the only way to do that, with a
@@ -644,6 +659,7 @@ TEST_F(TCPSocketTest, BeforeConnectCallback) {
   EXPECT_EQ(kReceiveBufferSize, actual_size);
 #endif
 }
+#endif
 
 TEST_F(TCPSocketTest, BeforeConnectCallbackFails) {
   // Setting up a server isn't strictly necessary, but it does allow checking

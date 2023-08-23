@@ -12,6 +12,9 @@
 #include "net/third_party/quic/platform/api/quic_string.h"
 #include "third_party/zlib/zlib.h"
 
+#include "starboard/client_porting/poem/string_poem.h"
+#include "starboard/memory.h"
+
 namespace quic {
 
 namespace {
@@ -197,7 +200,7 @@ std::vector<CertEntry> MatchCerts(const std::vector<QuicString>& certs,
            j += sizeof(uint64_t)) {
         uint64_t cached_hash;
         memcpy(&cached_hash, client_cached_cert_hashes.data() + j,
-               sizeof(uint64_t));
+                     sizeof(uint64_t));
         if (hash != cached_hash) {
           continue;
         }

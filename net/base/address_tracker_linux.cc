@@ -6,7 +6,6 @@
 
 #include <errno.h>
 #include <linux/if.h>
-#include <stdint.h>
 #include <sys/ioctl.h>
 
 #include "base/bind_helpers.h"
@@ -18,6 +17,9 @@
 #include "base/threading/scoped_blocking_call.h"
 #include "base/threading/thread_restrictions.h"
 #include "net/base/network_interfaces_linux.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace net {
 namespace internal {

@@ -25,6 +25,8 @@
 #include "net/log/net_log_event_type.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/ssl_client_socket.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
 #include "url/url_canon.h"
 
 namespace net {
@@ -276,7 +278,8 @@ int HttpStreamParser::SendRequest(
     request_headers_ = base::MakeRefCounted<DrainableIOBuffer>(
         merged_request_headers_and_body, merged_size);
 
-    memcpy(request_headers_->data(), request.data(), request_headers_length_);
+    memcpy(request_headers_->data(), request.data(),
+                 request_headers_length_);
     request_headers_->DidConsume(request_headers_length_);
 
     uint64_t todo = request_->upload_data_stream->size();
@@ -675,8 +678,8 @@ int HttpStreamParser::DoReadBody() {
       CHECK_GT(available, 0);
       int bytes_from_buffer = std::min(available, user_read_buf_len_);
       memcpy(user_read_buf_->data(),
-             read_buf_->StartOfBuffer() + read_buf_unused_offset_,
-             bytes_from_buffer);
+                   read_buf_->StartOfBuffer() + read_buf_unused_offset_,
+                   bytes_from_buffer);
       read_buf_unused_offset_ += bytes_from_buffer;
       if (bytes_from_buffer == available) {
         read_buf_->SetCapacity(0);
@@ -780,13 +783,13 @@ int HttpStreamParser::DoReadBodyComplete(int result) {
     if (save_amount) {
       received_bytes_ -= save_amount;
       memcpy(read_buf_->StartOfBuffer(), user_read_buf_->data() + result,
-             save_amount);
+                   save_amount);
     }
     read_buf_->set_offset(save_amount);
     if (additional_save_amount) {
       memmove(read_buf_->data(),
-              read_buf_->StartOfBuffer() + read_buf_unused_offset_,
-              additional_save_amount);
+                   read_buf_->StartOfBuffer() + read_buf_unused_offset_,
+                   additional_save_amount);
       read_buf_->set_offset(save_amount + additional_save_amount);
     }
     read_buf_unused_offset_ = 0;
@@ -895,8 +898,8 @@ int HttpStreamParser::HandleReadHeaderResult(int result) {
       if (extra_bytes) {
         CHECK_GT(extra_bytes, 0);
         memmove(read_buf_->StartOfBuffer(),
-                read_buf_->StartOfBuffer() + end_of_header_offset,
-                extra_bytes);
+                     read_buf_->StartOfBuffer() + end_of_header_offset,
+                     extra_bytes);
       }
       read_buf_->SetCapacity(extra_bytes);
       if (response_->headers->response_code() / 100 == 1) {

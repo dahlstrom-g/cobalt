@@ -5,14 +5,13 @@
 #ifndef NET_BASE_EXPIRING_CACHE_H_
 #define NET_BASE_EXPIRING_CACHE_H_
 
-#include <stddef.h>
-
 #include <map>
 #include <utility>
 
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/time/time.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -21,12 +20,11 @@ template <typename KeyType,
           typename ExpirationType>
 class NoopEvictionHandler {
  public:
-  void Handle(const KeyType& key,
-              const ValueType& value,
-              const ExpirationType& expiration,
-              const ExpirationType& now,
-              bool onGet) const {
-  }
+  void Handle(const KeyType& /*key*/,
+              const ValueType& /*value*/,
+              const ExpirationType& /*expiration*/,
+              const ExpirationType& /*now*/,
+              bool /*onGet*/) const {}
 };
 
 // Cache implementation where all entries have an explicit expiration policy. As

@@ -7,6 +7,9 @@
 #include <tuple>
 #include <utility>
 
+#if defined(STARBOARD)
+#include "base/bind_helpers.h"
+#endif
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
 #include "base/message_loop/message_loop.h"
@@ -129,6 +132,9 @@ class EmbeddedTestServerTest
   void SetUp() override {
     base::Thread::Options thread_options;
     thread_options.message_loop_type = base::MessageLoop::TYPE_IO;
+#if defined(STARBOARD)
+    thread_options.stack_size = base::kUnitTestStackSize;
+#endif
     ASSERT_TRUE(io_thread_.StartWithOptions(thread_options));
 
     request_context_getter_ =
@@ -254,7 +260,7 @@ TEST_P(EmbeddedTestServerTest, RegisterRequestHandler) {
 
 TEST_P(EmbeddedTestServerTest, ServeFilesFromDirectory) {
   base::FilePath src_dir;
-  ASSERT_TRUE(base::PathService::Get(base::DIR_SOURCE_ROOT, &src_dir));
+  ASSERT_TRUE(base::PathService::Get(base::DIR_TEST_DATA, &src_dir));
   server_->ServeFilesFromDirectory(
       src_dir.AppendASCII("net").AppendASCII("data"));
   ASSERT_TRUE(server_->Start());
@@ -274,7 +280,7 @@ TEST_P(EmbeddedTestServerTest, ServeFilesFromDirectory) {
 
 TEST_P(EmbeddedTestServerTest, MockHeadersWithoutCRLF) {
   base::FilePath src_dir;
-  ASSERT_TRUE(base::PathService::Get(base::DIR_SOURCE_ROOT, &src_dir));
+  ASSERT_TRUE(base::PathService::Get(base::DIR_TEST_DATA, &src_dir));
   server_->ServeFilesFromDirectory(
       src_dir.AppendASCII("net").AppendASCII("data").AppendASCII(
           "embedded_test_server"));
@@ -534,7 +540,7 @@ class EmbeddedTestServerThreadingTestDelegate
     // Create the test server instance.
     EmbeddedTestServer server(type_);
     base::FilePath src_dir;
-    ASSERT_TRUE(base::PathService::Get(base::DIR_SOURCE_ROOT, &src_dir));
+    ASSERT_TRUE(base::PathService::Get(base::DIR_TEST_DATA, &src_dir));
     ASSERT_TRUE(server.Start());
 
     // Make a request and wait for the reply.
@@ -582,7 +588,14 @@ TEST_P(EmbeddedTestServerThreadingTest, RunTest) {
   EmbeddedTestServerThreadingTestDelegate delegate(std::get<0>(GetParam()),
                                                    std::get<1>(GetParam()),
                                                    std::get<2>(GetParam()));
+#if defined(STARBOARD)
+  // Some platforms have low default stack size that can't support unit tests.
+  ASSERT_TRUE(
+      base::PlatformThread::Create(base::kUnitTestStackSize, &delegate,
+                                   &thread_handle));
+#else
   ASSERT_TRUE(base::PlatformThread::Create(0, &delegate, &thread_handle));
+#endif
   base::PlatformThread::Join(thread_handle);
 }
 

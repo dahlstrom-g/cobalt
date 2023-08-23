@@ -12,6 +12,9 @@
 #include "third_party/boringssl/src/include/openssl/nid.h"
 #include "third_party/boringssl/src/include/openssl/sha.h"
 
+#include "starboard/client_porting/poem/string_poem.h"
+#include "starboard/common/string.h"
+
 namespace quic {
 
 // static
@@ -76,7 +79,8 @@ bool ChannelIDVerifier::VerifyRaw(QuicStringPiece key,
   SHA256_Init(&sha256);
   if (is_channel_id_signature) {
     SHA256_Update(&sha256, kContextStr, strlen(kContextStr) + 1);
-    SHA256_Update(&sha256, kClientToServerStr, strlen(kClientToServerStr) + 1);
+    SHA256_Update(&sha256, kClientToServerStr,
+                  strlen(kClientToServerStr) + 1);
   }
   SHA256_Update(&sha256, signed_data.data(), signed_data.size());
 

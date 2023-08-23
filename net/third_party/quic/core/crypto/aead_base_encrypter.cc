@@ -9,6 +9,7 @@
 #include "net/third_party/quic/platform/api/quic_arraysize.h"
 #include "net/third_party/quic/platform/api/quic_bug_tracker.h"
 #include "net/third_party/quic/platform/api/quic_logging.h"
+#include "starboard/memory.h"
 #include "third_party/boringssl/src/include/openssl/crypto.h"
 #include "third_party/boringssl/src/include/openssl/err.h"
 #include "third_party/boringssl/src/include/openssl/evp.h"
@@ -123,8 +124,7 @@ bool AeadBaseEncrypter::Encrypt(QuicStringPiece nonce,
   return true;
 }
 
-bool AeadBaseEncrypter::EncryptPacket(QuicTransportVersion /*version*/,
-                                      QuicPacketNumber packet_number,
+bool AeadBaseEncrypter::EncryptPacket(uint64_t packet_number,
                                       QuicStringPiece associated_data,
                                       QuicStringPiece plaintext,
                                       char* output,
@@ -145,7 +145,8 @@ bool AeadBaseEncrypter::EncryptPacket(QuicTransportVersion /*version*/,
           (packet_number >> ((sizeof(packet_number) - i - 1) * 8)) & 0xff;
     }
   } else {
-    memcpy(nonce_buffer + prefix_len, &packet_number, sizeof(packet_number));
+    memcpy(nonce_buffer + prefix_len, &packet_number,
+                 sizeof(packet_number));
   }
 
   if (!Encrypt(QuicStringPiece(nonce_buffer, nonce_size_), associated_data,

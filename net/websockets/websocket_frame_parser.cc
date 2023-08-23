@@ -14,6 +14,7 @@
 #include "base/memory/scoped_refptr.h"
 #include "net/base/io_buffer.h"
 #include "net/websockets/websocket_frame.h"
+#include "starboard/memory.h"
 
 namespace {
 

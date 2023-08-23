@@ -37,6 +37,7 @@
 #include "net/disk_cache/simple/simple_test_util.h"
 #include "net/disk_cache/simple/simple_util.h"
 #include "net/test/gtest_util.h"
+#include "starboard/memory.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -672,8 +673,8 @@ void DiskCacheEntryTest::StreamAccess() {
         WriteData(entry, i, 0, reference_buffers[i].get(), kBufferSize, false));
     memset(buffer1->data(), 0, kBufferSize);
     EXPECT_EQ(kBufferSize, ReadData(entry, i, 0, buffer1.get(), kBufferSize));
-    EXPECT_EQ(
-        0, memcmp(reference_buffers[i]->data(), buffer1->data(), kBufferSize));
+    EXPECT_EQ(0, memcmp(reference_buffers[i]->data(), buffer1->data(),
+                                 kBufferSize));
   }
   EXPECT_EQ(net::ERR_INVALID_ARGUMENT,
             ReadData(entry, kNumStreams, 0, buffer1.get(), kBufferSize));
@@ -692,18 +693,15 @@ void DiskCacheEntryTest::StreamAccess() {
     memset(buffer2->data(), 0, kReadBufferSize);
     EXPECT_EQ(kReadBufferSize,
               ReadData(entry, i, 0, buffer2.get(), kReadBufferSize));
-    EXPECT_EQ(
-        0,
-        memcmp(reference_buffers[i]->data(), buffer2->data(), kReadBufferSize));
+    EXPECT_EQ(0, memcmp(reference_buffers[i]->data(), buffer2->data(),
+                                 kReadBufferSize));
 
     memset(buffer2->data(), 0, kReadBufferSize);
     EXPECT_EQ(
         kFinalReadSize,
         ReadData(entry, i, kReadBufferSize, buffer2.get(), kReadBufferSize));
-    EXPECT_EQ(0,
-              memcmp(reference_buffers[i]->data() + kReadBufferSize,
-                     buffer2->data(),
-                     kFinalReadSize));
+    EXPECT_EQ(0, memcmp(reference_buffers[i]->data() + kReadBufferSize,
+                                 buffer2->data(), kFinalReadSize));
   }
 
   entry->Close();
@@ -1217,13 +1215,15 @@ void DiskCacheEntryTest::SizeChanges(int stream_index) {
   EXPECT_EQ(
       kSize,
       ReadData(entry, stream_index, 23000 + kSize - 35, buffer2.get(), kSize));
-  EXPECT_TRUE(!memcmp(buffer2->data(), buffer1->data() + kSize - 35, 35));
+  EXPECT_TRUE(
+      !memcmp(buffer2->data(), buffer1->data() + kSize - 35, 35));
 
   // Read slightly before the last write.
   CacheTestFillBuffer(buffer2->data(), kSize, true);
   EXPECT_EQ(kSize, ReadData(entry, stream_index, 24900, buffer2.get(), kSize));
   EXPECT_TRUE(!memcmp(buffer2->data(), zeros, 100));
-  EXPECT_TRUE(!memcmp(buffer2->data() + 100, buffer1->data(), kSize - 100));
+  EXPECT_TRUE(
+      !memcmp(buffer2->data() + 100, buffer1->data(), kSize - 100));
 
   // Extend the entry a little more.
   EXPECT_EQ(kSize,
@@ -1232,7 +1232,8 @@ void DiskCacheEntryTest::SizeChanges(int stream_index) {
   CacheTestFillBuffer(buffer2->data(), kSize, true);
   EXPECT_EQ(kSize, ReadData(entry, stream_index, 25900, buffer2.get(), kSize));
   EXPECT_TRUE(!memcmp(buffer2->data(), zeros, 100));
-  EXPECT_TRUE(!memcmp(buffer2->data() + 100, buffer1->data(), kSize - 100));
+  EXPECT_TRUE(
+      !memcmp(buffer2->data() + 100, buffer1->data(), kSize - 100));
 
   // And now reduce the size.
   EXPECT_EQ(kSize,
@@ -1241,7 +1242,8 @@ void DiskCacheEntryTest::SizeChanges(int stream_index) {
   EXPECT_EQ(
       28,
       ReadData(entry, stream_index, 25000 + kSize - 28, buffer2.get(), kSize));
-  EXPECT_TRUE(!memcmp(buffer2->data(), buffer1->data() + kSize - 28, 28));
+  EXPECT_TRUE(
+      !memcmp(buffer2->data(), buffer1->data() + kSize - 28, 28));
 
   // Reduce the size with a buffer that is not extending the size.
   EXPECT_EQ(kSize,
@@ -1252,7 +1254,8 @@ void DiskCacheEntryTest::SizeChanges(int stream_index) {
   EXPECT_EQ(24500 + kSize, entry->GetDataSize(stream_index));
   EXPECT_EQ(kSize, ReadData(entry, stream_index, 23900, buffer2.get(), kSize));
   EXPECT_TRUE(!memcmp(buffer2->data(), zeros, 100));
-  EXPECT_TRUE(!memcmp(buffer2->data() + 100, buffer1->data(), kSize - 100));
+  EXPECT_TRUE(
+      !memcmp(buffer2->data() + 100, buffer1->data(), kSize - 100));
 
   // And now reduce the size below the old size.
   EXPECT_EQ(kSize,
@@ -1260,7 +1263,8 @@ void DiskCacheEntryTest::SizeChanges(int stream_index) {
   EXPECT_EQ(19000 + kSize, entry->GetDataSize(stream_index));
   EXPECT_EQ(kSize, ReadData(entry, stream_index, 18900, buffer2.get(), kSize));
   EXPECT_TRUE(!memcmp(buffer2->data(), zeros, 100));
-  EXPECT_TRUE(!memcmp(buffer2->data() + 100, buffer1->data(), kSize - 100));
+  EXPECT_TRUE(
+      !memcmp(buffer2->data() + 100, buffer1->data(), kSize - 100));
 
   // Verify that the actual file is truncated.
   entry->Close();
@@ -1991,7 +1995,8 @@ TEST_F(DiskCacheEntryTest, SparseWriteDropped) {
   EXPECT_EQ(1024 * 7, start);
   rv = entry->ReadSparseData(start, buf_2.get(), kSize, cb.callback());
   EXPECT_EQ(80, cb.GetResult(rv));
-  EXPECT_EQ(0, memcmp(buf_1.get()->data() + 100, buf_2.get()->data(), 80));
+  EXPECT_EQ(
+      0, memcmp(buf_1.get()->data() + 100, buf_2.get()->data(), 80));
 
   // And even that part is dropped when another write changes the offset.
   offset = start;
@@ -2032,7 +2037,8 @@ TEST_F(DiskCacheEntryTest, SparseSquentialWriteNotDropped) {
 
     rv = entry->ReadSparseData(offset, buf_2.get(), kSize, cb.callback());
     EXPECT_EQ(kSize, cb.GetResult(rv));
-    EXPECT_EQ(0, memcmp(buf_1.get()->data(), buf_2.get()->data(), kSize));
+    EXPECT_EQ(0,
+              memcmp(buf_1.get()->data(), buf_2.get()->data(), kSize));
   }
 
   entry->Close();
@@ -2047,7 +2053,8 @@ TEST_F(DiskCacheEntryTest, SparseSquentialWriteNotDropped) {
 
   rv = entry->ReadSparseData(offset, buf_2.get(), kSize, cb.callback());
   EXPECT_EQ(kSize, cb.GetResult(rv));
-  EXPECT_EQ(0, memcmp(buf_1.get()->data(), buf_2.get()->data(), kSize));
+  EXPECT_EQ(0,
+            memcmp(buf_1.get()->data(), buf_2.get()->data(), kSize));
 
   entry->Close();
 }
@@ -3140,9 +3147,8 @@ TEST_F(DiskCacheEntryTest,
 
   helper.WaitUntilCacheIoFinished(expected_callback_runs);
   ASSERT_EQ(read_buffer->size(), write_buffer->size());
-  EXPECT_EQ(
-      0,
-      memcmp(read_buffer->data(), write_buffer->data(), read_buffer->size()));
+  EXPECT_EQ(0, memcmp(read_buffer->data(), write_buffer->data(),
+                               read_buffer->size()));
 }
 
 TEST_F(DiskCacheEntryTest, SimpleCacheOptimistic) {
@@ -3893,8 +3899,8 @@ TEST_F(DiskCacheEntryTest, SimpleCacheInFlightTruncate)  {
   EXPECT_TRUE(helper.WaitUntilCacheIoFinished(expected));
   EXPECT_EQ(kReadBufferSize, read_callback.last_result());
   EXPECT_EQ(kReadBufferSize, truncate_callback.last_result());
-  EXPECT_EQ(0,
-            memcmp(write_buffer->data(), read_buffer->data(), kReadBufferSize));
+  EXPECT_EQ(0, memcmp(write_buffer->data(), read_buffer->data(),
+                               kReadBufferSize));
 }
 
 // Tests that if a write and a read dependant on it are both in flight
@@ -3944,7 +3950,8 @@ TEST_F(DiskCacheEntryTest, SimpleCacheInFlightRead) {
   EXPECT_TRUE(helper.WaitUntilCacheIoFinished(expected));
   EXPECT_EQ(kBufferSize, write_callback.last_result());
   EXPECT_EQ(kBufferSize, read_callback.last_result());
-  EXPECT_EQ(0, memcmp(write_buffer->data(), read_buffer->data(), kBufferSize));
+  EXPECT_EQ(0, memcmp(write_buffer->data(), read_buffer->data(),
+                               kBufferSize));
 }
 
 TEST_F(DiskCacheEntryTest, SimpleCacheOpenCreateRaceWithNoIndex) {
@@ -4045,7 +4052,8 @@ TEST_F(DiskCacheEntryTest, SimpleCacheReadCombineCRC) {
   scoped_refptr<net::IOBuffer> buffer1_read1 =
       base::MakeRefCounted<net::IOBuffer>(buf_len);
   EXPECT_EQ(buf_len, ReadData(entry2, 1, offset, buffer1_read1.get(), buf_len));
-  EXPECT_EQ(0, memcmp(buffer1->data(), buffer1_read1->data(), buf_len));
+  EXPECT_EQ(0,
+            memcmp(buffer1->data(), buffer1_read1->data(), buf_len));
 
   // Read the second half of the data.
   offset = buf_len;
@@ -4108,7 +4116,8 @@ TEST_F(DiskCacheEntryTest, SimpleCacheNonSequentialWrite) {
     scoped_refptr<net::IOBuffer> buffer1_read1 =
         base::MakeRefCounted<net::IOBuffer>(kSize);
     EXPECT_EQ(kSize, ReadData(entry, i, 0, buffer1_read1.get(), kSize));
-    EXPECT_EQ(0, memcmp(buffer1->data(), buffer1_read1->data(), kSize));
+    EXPECT_EQ(0,
+              memcmp(buffer1->data(), buffer1_read1->data(), kSize));
     // Check that we are not leaking.
     ASSERT_NE(entry, null);
     EXPECT_TRUE(static_cast<disk_cache::SimpleEntryImpl*>(entry)->HasOneRef());
@@ -4233,10 +4242,10 @@ TEST_F(DiskCacheEntryTest, SimpleCacheCRCRewrite) {
     scoped_refptr<net::IOBuffer> buffer1_read1 =
         base::MakeRefCounted<net::IOBuffer>(kSize);
     EXPECT_EQ(kSize, ReadData(entry, i, 0, buffer1_read1.get(), kSize));
-    EXPECT_EQ(0, memcmp(buffer1->data(), buffer1_read1->data(), kHalfSize));
     EXPECT_EQ(
-        0,
-        memcmp(buffer2->data(), buffer1_read1->data() + kHalfSize, kHalfSize));
+        0, memcmp(buffer1->data(), buffer1_read1->data(), kHalfSize));
+    EXPECT_EQ(0, memcmp(buffer2->data(),
+                                 buffer1_read1->data() + kHalfSize, kHalfSize));
 
     entry->Close();
   }
@@ -4991,7 +5000,8 @@ TEST_F(DiskCacheEntryTest, SimpleCacheChecksumpScrewUp) {
   EXPECT_EQ(kSize, ReadData(entry, 1, 0, buffer2.get(), kSize));
   EXPECT_EQ(0, memcmp(buffer->data(), buffer2->data(), kSize));
   EXPECT_EQ(kSize, ReadData(entry, 1, kSize, buffer2.get(), kSize));
-  EXPECT_EQ(0, memcmp(big_buffer->data() + kSize, buffer2->data(), kSize));
+  EXPECT_EQ(
+      0, memcmp(big_buffer->data() + kSize, buffer2->data(), kSize));
   entry->Close();
 }
 
@@ -5072,7 +5082,8 @@ class DiskCacheSimplePrefetchTest : public DiskCacheEntryTest {
     scoped_refptr<net::IOBuffer> read_buf =
         base::MakeRefCounted<net::IOBuffer>(kEntrySize);
     EXPECT_EQ(kEntrySize, ReadData(entry, 1, 0, read_buf.get(), kEntrySize));
-    EXPECT_EQ(0, memcmp(read_buf->data(), payload_->data(), kEntrySize));
+    EXPECT_EQ(0,
+              memcmp(read_buf->data(), payload_->data(), kEntrySize));
     entry->Close();
   }
 

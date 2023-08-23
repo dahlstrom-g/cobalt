@@ -27,6 +27,7 @@
 #include "net/proxy_resolution/pac_file_data.h"
 #include "net/proxy_resolution/pac_js_library.h"
 #include "net/proxy_resolution/proxy_info.h"
+#include "starboard/common/string.h"
 #include "url/gurl.h"
 #include "url/url_canon.h"
 #include "v8/include/v8.h"
@@ -381,7 +382,8 @@ class SharedIsolateFactory {
         // The performance of the proxy resolver is limited by DNS resolution,
         // and not V8, so tune down V8 to use as little memory as possible.
         static const char kOptimizeForSize[] = "--optimize_for_size";
-        v8::V8::SetFlagsFromString(kOptimizeForSize, strlen(kOptimizeForSize));
+        v8::V8::SetFlagsFromString(kOptimizeForSize,
+                                   strlen(kOptimizeForSize));
         static const char kNoOpt[] = "--noopt";
         v8::V8::SetFlagsFromString(kNoOpt, strlen(kNoOpt));
 

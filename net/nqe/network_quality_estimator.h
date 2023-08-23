@@ -5,8 +5,6 @@
 #ifndef NET_NQE_NETWORK_QUALITY_ESTIMATOR_H_
 #define NET_NQE_NETWORK_QUALITY_ESTIMATOR_H_
 
-#include <stdint.h>
-
 #include <map>
 #include <memory>
 #include <string>
@@ -39,6 +37,7 @@
 #include "net/nqe/observation_buffer.h"
 #include "net/nqe/rtt_throughput_estimates_observer.h"
 #include "net/nqe/socket_watcher_factory.h"
+#include "starboard/types.h"
 
 namespace base {
 class TickClock;
@@ -645,7 +644,7 @@ class NET_EXPORT NetworkQualityEstimator
   // corresponding observation has been added on the current network.
   bool cached_estimate_applied_;
 
-  base::ThreadChecker thread_checker_;
+  THREAD_CHECKER(thread_checker_);
 
   NetLogWithSource net_log_;
 

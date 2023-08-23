@@ -5,11 +5,10 @@
 #ifndef NET_DISK_CACHE_CACHE_UTIL_H_
 #define NET_DISK_CACHE_CACHE_UTIL_H_
 
-#include <stdint.h>
-
 #include "base/feature_list.h"
 #include "net/base/net_export.h"
 #include "net/disk_cache/disk_cache.h"
+#include "starboard/types.h"
 
 namespace base {
 class FilePath;
@@ -19,6 +18,7 @@ namespace disk_cache {
 
 NET_EXPORT_PRIVATE extern const base::Feature kChangeDiskCacheSizeExperiment;
 
+#if !defined(STARBOARD)
 // Moves the cache files from the given path to another location.
 // Fails if the destination exists already, or if it doesn't have
 // permission for the operation.  This is basically a rename operation
@@ -27,6 +27,7 @@ NET_EXPORT_PRIVATE extern const base::Feature kChangeDiskCacheSizeExperiment;
 // directory.
 NET_EXPORT_PRIVATE bool MoveCache(const base::FilePath& from_path,
                                   const base::FilePath& to_path);
+#endif
 
 // Deletes the cache files stored on |path|, and optionally also attempts to
 // delete the folder itself.

@@ -9,6 +9,7 @@
 
 #include "net/proxy_resolution/proxy_config.h"
 
+#include "starboard/common/string.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

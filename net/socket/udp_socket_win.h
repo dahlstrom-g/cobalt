@@ -6,7 +6,6 @@
 #define NET_SOCKET_UDP_SOCKET_WIN_H_
 
 #include <qos2.h>
-#include <stdint.h>
 #include <winsock2.h>
 
 #include <memory>
@@ -29,6 +28,7 @@
 #include "net/socket/datagram_socket.h"
 #include "net/socket/diff_serv_code_point.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -305,7 +305,7 @@ class NET_EXPORT UDPSocketWin : public base::win::ObjectWatcher::Delegate {
   int SetDiffServCodePoint(DiffServCodePoint dscp);
 
   // Resets the thread to be used for thread-safety checks.
-  void DetachFromThread();
+  DETACH_FROM_THREAD(void);
 
   // This class by default uses overlapped IO. Call this method before Open()
   // to switch to non-blocking IO.

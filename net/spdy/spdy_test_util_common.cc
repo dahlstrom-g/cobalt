@@ -19,6 +19,7 @@
 #include "net/cert/mock_cert_verifier.h"
 #include "net/cert/signed_certificate_timestamp_and_status.h"
 #include "net/http/http_cache.h"
+#include "net/http/http_network_layer.h"
 #include "net/http/http_network_transaction.h"
 #include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_handle.h"
@@ -30,10 +31,11 @@
 #include "net/spdy/spdy_http_utils.h"
 #include "net/spdy/spdy_stream.h"
 #include "net/test/gtest_util.h"
-#include "net/third_party/spdy/core/spdy_alt_svc_wire_format.h"
-#include "net/third_party/spdy/core/spdy_framer.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_alt_svc_wire_format.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_framer.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request_job_factory_impl.h"
+#include "starboard/memory.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
 using net::test::IsError;
@@ -67,7 +69,7 @@ void ParseUrl(base::StringPiece url,
 std::unique_ptr<MockWrite[]> ChopWriteFrame(
     const spdy::SpdySerializedFrame& frame,
     int num_chunks) {
-  auto chunks = std::make_unique<MockWrite[]>(num_chunks);
+  auto chunks = std::unique_ptr<MockWrite[]>(new MockWrite[num_chunks]);
   int chunk_size = frame.size() / num_chunks;
   for (int index = 0; index < num_chunks; index++) {
     const char* ptr = frame.data() + (index * chunk_size);
@@ -149,7 +151,7 @@ spdy::SpdySerializedFrame CombineFrames(
   for (const auto* frame : frames) {
     total_size += frame->size();
   }
-  auto data = std::make_unique<char[]>(total_size);
+  auto data = std::unique_ptr<char[]>(new char[total_size]);
   char* ptr = data.get();
   for (const auto* frame : frames) {
     memcpy(ptr, frame->data(), frame->size());
@@ -396,7 +398,7 @@ HttpNetworkSession::Context SpdySessionDependencies::CreateSessionContext(
     SpdySessionDependencies* session_deps) {
   HttpNetworkSession::Context context;
   context.client_socket_factory = session_deps->socket_factory.get();
-  context.host_resolver = session_deps->host_resolver.get();
+  context.host_resolver = session_deps->GetHostResolver();
   context.cert_verifier = session_deps->cert_verifier.get();
   context.channel_id_service = session_deps->channel_id_service.get();
   context.transport_security_state =
@@ -448,9 +450,14 @@ SpdyURLRequestContext::SpdyURLRequestContext() : storage_(this) {
   SpdySessionPoolPeer pool_peer(
       storage_.http_network_session()->spdy_session_pool());
   pool_peer.SetEnableSendingInitialData(false);
+#ifdef HTTP_CACHE_DISABLED_FOR_STARBOARD
+  storage_.set_http_transaction_factory(
+      std::make_unique<HttpNetworkLayer>(storage_.http_network_session()));
+#else
   storage_.set_http_transaction_factory(std::make_unique<HttpCache>(
       storage_.http_network_session(), HttpCache::DefaultBackend::InMemory(0),
       false));
+#endif
 }
 
 SpdyURLRequestContext::~SpdyURLRequestContext() {

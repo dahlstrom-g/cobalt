@@ -5,8 +5,6 @@
 #ifndef NET_BASE_ESCAPE_H_
 #define NET_BASE_ESCAPE_H_
 
-#include <stdint.h>
-
 #include <set>
 #include <string>
 
@@ -14,6 +12,7 @@
 #include "base/strings/string_piece.h"
 #include "base/strings/utf_offset_string_conversions.h"
 #include "net/base/net_export.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -46,6 +45,10 @@ NET_EXPORT std::string EscapeNSURLPrecursor(base::StringPiece precursor);
 // as %XX (hex).
 NET_EXPORT std::string EscapeUrlEncodedData(base::StringPiece path,
                                             bool use_plus);
+
+// QUIC46
+// Escapes all non-ASCII input, as well as escaping % to %25.
+NET_EXPORT std::string EscapeNonASCIIAndPercent(base::StringPiece input);
 
 // Escapes all non-ASCII input.
 NET_EXPORT std::string EscapeNonASCII(base::StringPiece input);

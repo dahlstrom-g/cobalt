@@ -5,10 +5,9 @@
 #ifndef NET_BASE_LOAD_TIMING_INFO_H_
 #define NET_BASE_LOAD_TIMING_INFO_H_
 
-#include <stdint.h>
-
 #include "base/time/time.h"
 #include "net/base/net_export.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -161,6 +160,11 @@ struct NET_EXPORT LoadTimingInfo {
   // is not closed by the server.
   base::TimeTicks push_start;
   base::TimeTicks push_end;
+
+#if defined(STARBOARD)
+  uint64_t encoded_body_size;
+  base::TimeTicks service_worker_start_time;
+#endif  // defined(STARBOARD)
 };
 
 }  // namespace net

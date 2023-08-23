@@ -4,8 +4,6 @@
 
 #include "net/cert/ct_log_verifier.h"
 
-#include <stdint.h>
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -22,6 +20,8 @@
 #include "net/cert/signed_certificate_timestamp.h"
 #include "net/cert/signed_tree_head.h"
 #include "net/test/ct_test_util.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

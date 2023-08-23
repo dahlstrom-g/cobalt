@@ -5,8 +5,6 @@
 #ifndef NET_HTTP_TRANSPORT_SECURITY_STATE_H_
 #define NET_HTTP_TRANSPORT_SECURITY_STATE_H_
 
-#include <stdint.h>
-
 #include <map>
 #include <string>
 
@@ -22,6 +20,7 @@
 #include "net/base/net_export.h"
 #include "net/cert/signed_certificate_timestamp_and_status.h"
 #include "net/http/transport_security_state_source.h"
+#include "starboard/types.h"
 #include "url/gurl.h"
 
 namespace net {
@@ -560,6 +559,12 @@ class NET_EXPORT TransportSecurityState {
   // For unit tests only. Clears the caches that deduplicate sent HPKP and
   // Expect-CT reports.
   void ClearReportCachesForTesting();
+
+#if defined(COBALT_QUIC46)
+  // For unit tests only.
+  void EnableStaticPinsForTesting() { enable_static_pins_ = true; }
+  bool has_dynamic_pkp_state() const { return !enabled_pkp_hosts_.empty(); }
+#endif
 
  private:
   friend class TransportSecurityStateTest;

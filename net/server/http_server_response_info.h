@@ -5,13 +5,12 @@
 #ifndef NET_SERVER_HTTP_SERVER_RESPONSE_INFO_H_
 #define NET_SERVER_HTTP_SERVER_RESPONSE_INFO_H_
 
-#include <stddef.h>
-
 #include <string>
 #include <utility>
 
 #include "base/strings/string_split.h"
 #include "net/http/http_status_code.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -37,6 +36,9 @@ class HttpServerResponseInfo {
   std::string Serialize() const;
 
   HttpStatusCode status_code() const;
+#if defined(STARBOARD)
+  void SetStatusCode(const HttpStatusCode code) { status_code_ = code; }
+#endif
   const std::string& body() const;
 
  private:

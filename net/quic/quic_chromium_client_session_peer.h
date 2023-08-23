@@ -5,12 +5,11 @@
 #ifndef NET_QUIC_QUIC_CHROMIUM_CLIENT_SESSION_PEER_H_
 #define NET_QUIC_QUIC_CHROMIUM_CLIENT_SESSION_PEER_H_
 
-#include <stddef.h>
-
 #include <string>
 
 #include "base/macros.h"
 #include "net/third_party/quic/core/quic_packets.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -29,7 +28,7 @@ class QuicChromiumClientSessionPeer {
   static uint64_t GetPushedAndUnclaimedBytesCount(
       QuicChromiumClientSession* session);
 
-  static QuicChromiumClientStream* CreateOutgoingDynamicStream(
+  static QuicChromiumClientStream* CreateOutgoingStream(
       QuicChromiumClientSession* session);
 
  private:

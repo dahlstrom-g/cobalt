@@ -53,6 +53,9 @@ static const int kHttpProxyConnectJobTimeoutInSeconds = 30;
 // "NetAdaptiveProxyConnectionTimeout". If the value of the parameter is
 // unavailable, then |default_value| is available.
 int32_t GetInt32Param(const std::string& param_name, int32_t default_value) {
+#if defined(STARBOARD)
+  return default_value;
+#else
   int32_t param;
   if (!base::StringToInt(base::GetFieldTrialParamValue(
                              "NetAdaptiveProxyConnectionTimeout", param_name),
@@ -60,6 +63,7 @@ int32_t GetInt32Param(const std::string& param_name, int32_t default_value) {
     return default_value;
   }
   return param;
+#endif
 }
 
 }  // namespace
@@ -149,11 +153,14 @@ HttpProxyConnectJob::HttpProxyConnectJob(
           params->http_auth_cache(),
           params->http_auth_handler_factory(),
           params->spdy_session_pool(),
+#ifndef QUIC_DISABLED_FOR_STARBOARD
           params->quic_stream_factory(),
+#endif
           params->is_trusted_proxy(),
           params->tunnel(),
           params->traffic_annotation(),
-          this->net_log())) {}
+          this->net_log())) {
+}
 
 HttpProxyConnectJob::~HttpProxyConnectJob() = default;
 
@@ -186,7 +193,7 @@ int HttpProxyConnectJob::HandleConnectResult(int result) {
     error_response_info_ = client_socket_->GetAdditionalErrorState();
 
   if (result == OK || result == ERR_PROXY_AUTH_REQUESTED ||
-      result == ERR_HTTPS_PROXY_TUNNEL_RESPONSE) {
+      result == ERR_HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT) {
     SetSocket(std::move(client_socket_));
   }
   return result;

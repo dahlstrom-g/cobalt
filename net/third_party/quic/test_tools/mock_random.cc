@@ -6,6 +6,9 @@
 
 #include <string.h>
 
+#include "starboard/memory.h"
+#include "starboard/types.h"
+
 namespace quic {
 namespace test {
 
@@ -14,7 +17,7 @@ MockRandom::MockRandom() : base_(0xDEADBEEF), increment_(0) {}
 MockRandom::MockRandom(uint32_t base) : base_(base), increment_(0) {}
 
 void MockRandom::RandBytes(void* data, size_t len) {
-  memset(data, 'r' + increment_, len);
+  memset(data, increment_ + static_cast<uint8_t>('r'), len);
 }
 
 uint64_t MockRandom::RandUint64() {

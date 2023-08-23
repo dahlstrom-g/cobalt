@@ -4,8 +4,6 @@
 
 #include "net/ssl/ssl_private_key_test_util.h"
 
-#include <stdint.h>
-
 #include <vector>
 
 #include "base/bind.h"
@@ -16,6 +14,7 @@
 #include "net/base/net_errors.h"
 #include "net/ssl/ssl_private_key.h"
 #include "net/test/gtest_util.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "third_party/boringssl/src/include/openssl/bytestring.h"
 #include "third_party/boringssl/src/include/openssl/digest.h"
@@ -114,10 +113,21 @@ void TestSSLPrivateKeyMatches(SSLPrivateKey* key, const std::string& pkcs8) {
     // Test the key generates valid signatures.
     std::vector<uint8_t> input(100, 'a');
     std::vector<uint8_t> signature;
+#ifdef STARBOARD
+    base::span<const uint8_t> input_span(input.data(), input.size());
+    base::span<const uint8_t> signature_span(signature.data(),
+                                             signature.size());
+    Error error =
+        DoKeySigningWithWrapper(key, algorithm, input_span, &signature);
+    EXPECT_THAT(error, IsOk());
+    EXPECT_TRUE(VerifyWithOpenSSL(algorithm, input_span, openssl_key.get(),
+                                  signature_span));
+#else
     Error error = DoKeySigningWithWrapper(key, algorithm, input, &signature);
     EXPECT_THAT(error, IsOk());
     EXPECT_TRUE(
         VerifyWithOpenSSL(algorithm, input, openssl_key.get(), signature));
+#endif
   }
 }
 

@@ -4,8 +4,6 @@
 
 #include "net/http/http_stream_parser.h"
 
-#include <stdint.h>
-
 #include <algorithm>
 #include <string>
 #include <utility>
@@ -34,12 +32,20 @@
 #include "net/socket/socket_test_util.h"
 #include "net/test/gtest_util.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/gurl.h"
 
 using net::test::IsError;
 using net::test::IsOk;
+
+#if SB_IS(COMPILER_MSVC)
+// Converting 0x12 to char.
+#pragma warning(disable : 4838)
+#endif
 
 namespace net {
 
@@ -1228,8 +1234,8 @@ TEST(HttpStreamParser, WebSocket101Response) {
                               read_buffer->capacity()));
 
   EXPECT_EQ(CountWriteBytes(writes), parser.sent_bytes());
-  EXPECT_EQ(CountReadBytes(reads) -
-                static_cast<int64_t>(strlen("a fake websocket frame")),
+  EXPECT_EQ(CountReadBytes(reads) - static_cast<int64_t>(strlen(
+                                        "a fake websocket frame")),
             parser.received_bytes());
 }
 

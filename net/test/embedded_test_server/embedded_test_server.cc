@@ -52,7 +52,7 @@ EmbeddedTestServer::EmbeddedTestServer(Type type)
       port_(0),
       cert_(CERT_OK),
       weak_factory_(this) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   if (!is_using_ssl_)
     return;
@@ -60,7 +60,7 @@ EmbeddedTestServer::EmbeddedTestServer(Type type)
 }
 
 EmbeddedTestServer::~EmbeddedTestServer() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   if (Started() && !ShutdownAndWaitUntilComplete()) {
     LOG(ERROR) << "EmbeddedTestServer failed to shut down.";
@@ -178,6 +178,9 @@ void EmbeddedTestServer::StartAcceptingConnections() {
   base::Thread::Options thread_options;
   thread_options.message_loop_type = base::MessageLoop::TYPE_IO;
   io_thread_.reset(new base::Thread("EmbeddedTestServer IO Thread"));
+#if defined(STARBOARD)
+  thread_options.stack_size = base::kUnitTestStackSize;
+#endif
   CHECK(io_thread_->StartWithOptions(thread_options));
   CHECK(io_thread_->WaitUntilThreadStarted());
 
@@ -187,7 +190,7 @@ void EmbeddedTestServer::StartAcceptingConnections() {
 }
 
 bool EmbeddedTestServer::ShutdownAndWaitUntilComplete() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   return PostTaskToIOThreadAndWait(base::Bind(
       &EmbeddedTestServer::ShutdownOnIOThread, base::Unretained(this)));
@@ -333,14 +336,14 @@ void EmbeddedTestServer::ServeFilesFromDirectory(
 void EmbeddedTestServer::ServeFilesFromSourceDirectory(
     const std::string& relative) {
   base::FilePath test_data_dir;
-  CHECK(base::PathService::Get(base::DIR_SOURCE_ROOT, &test_data_dir));
+  CHECK(base::PathService::Get(base::DIR_TEST_DATA, &test_data_dir));
   ServeFilesFromDirectory(test_data_dir.AppendASCII(relative));
 }
 
 void EmbeddedTestServer::ServeFilesFromSourceDirectory(
     const base::FilePath& relative) {
   base::FilePath test_data_dir;
-  CHECK(base::PathService::Get(base::DIR_SOURCE_ROOT, &test_data_dir));
+  CHECK(base::PathService::Get(base::DIR_TEST_DATA, &test_data_dir));
   ServeFilesFromDirectory(test_data_dir.Append(relative));
 }
 

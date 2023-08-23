@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <limits.h>
-#include <stddef.h>
-#include <stdint.h>
 
 #include <iostream>
 #include <limits>
@@ -27,6 +25,7 @@
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_context_builder.h"
 #include "net/url_request/url_request_interceptor.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -49,7 +48,7 @@ bool QuicHttpProxyBackend::InitializeBackend(const std::string& backend_url) {
     return false;
   }
   if (proxy_thread_ == nullptr) {
-    proxy_thread_ = std::make_unique<base::Thread>("quic proxy thread");
+    proxy_thread_ = std::make_unique<base::Thread>("quic proxy thd");
     base::Thread::Options options;
     options.message_loop_type = base::MessageLoop::TYPE_IO;
     bool result = proxy_thread_->StartWithOptions(options);

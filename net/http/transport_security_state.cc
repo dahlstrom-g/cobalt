@@ -13,8 +13,10 @@
 #include "base/containers/span.h"
 #include "base/json/json_writer.h"
 #include "base/logging.h"
+#if !defined(STARBOARD)
 #include "base/metrics/field_trial.h"
 #include "base/metrics/field_trial_params.h"
+#endif
 #include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/stl_util.h"
@@ -46,6 +48,7 @@ namespace {
 
 #if BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
 #include "net/http/transport_security_state_static.h"  // nogncheck
+#include "starboard/memory.h"
 // Points to the active transport security state source.
 const TransportSecurityStateSource* const kDefaultHSTSSource = &kHSTSSource;
 #else
@@ -71,8 +74,12 @@ const base::Feature kEnforceCTForNewCerts{"EnforceCTForNewCerts",
                                           base::FEATURE_DISABLED_BY_DEFAULT};
 // The date (as the number of seconds since the Unix Epoch) to enforce CT for
 // new certificates.
+#if defined(STARBOARD)
+const int kEnforceCTForNewCertsDate = 0;
+#else
 constexpr base::FeatureParam<int> kEnforceCTForNewCertsDate{
     &kEnforceCTForNewCerts, "date", 0};
+#endif
 
 bool IsDynamicExpectCTEnabled() {
   return base::FeatureList::IsEnabled(
@@ -548,7 +555,11 @@ TransportSecurityState::CheckCTRequirements(
   if (base::FeatureList::IsEnabled(kEnforceCTForNewCerts)) {
     base::Time enforcement_date =
         base::Time::UnixEpoch() +
+#if defined(STARBOARD)
+        base::TimeDelta::FromSeconds(kEnforceCTForNewCertsDate);
+#else
         base::TimeDelta::FromSeconds(kEnforceCTForNewCertsDate.Get());
+#endif
     if (enforcement_date > base::Time::UnixEpoch() &&
         validated_certificate_chain->valid_start() > enforcement_date) {
       return complies ? CT_REQUIREMENTS_MET : CT_REQUIREMENTS_NOT_MET;
@@ -1153,9 +1164,15 @@ void TransportSecurityState::ClearReportCachesForTesting() {
 
 // static
 bool TransportSecurityState::IsBuildTimely() {
+#ifdef STARBOARD
+  // Cobalt does not need static TransportSecurityState data and does not
+  // support getting build time.
+  return false;
+#else
   const base::Time build_time = base::GetBuildTime();
   // We consider built-in information to be timely for 10 weeks.
   return (base::Time::Now() - build_time).InDays() < 70 /* 10 weeks */;
+#endif
 }
 
 TransportSecurityState::PKPStatus

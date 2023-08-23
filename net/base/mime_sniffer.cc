@@ -83,7 +83,8 @@
 // Note that our definition of HTML payload is much stricter than IE's
 // definition and roughly the same as Firefox's definition.
 
-#include <stdint.h>
+#include <string.h>
+
 #include <string>
 
 #include "net/base/mime_sniffer.h"
@@ -92,6 +93,8 @@
 #include "base/logging.h"
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
+#include "starboard/common/string.h"
+#include "starboard/types.h"
 #include "url/gurl.h"
 
 namespace net {

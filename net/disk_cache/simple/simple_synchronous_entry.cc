@@ -28,6 +28,7 @@
 #include "net/disk_cache/simple/simple_histogram_enums.h"
 #include "net/disk_cache/simple/simple_histogram_macros.h"
 #include "net/disk_cache/simple/simple_util.h"
+#include "starboard/memory.h"
 #include "third_party/zlib/zlib.h"
 
 using base::FilePath;
@@ -132,8 +133,13 @@ const base::Feature kSimpleCachePrefetchExperiment = {
 const char kSimplePrefetchBytesParam[] = "Bytes";
 
 int GetSimpleCachePrefetchSize() {
+#if defined(STARBOARD)
+  NOTIMPLEMENTED() << "Starboard does not support FieldTrial.";
+  return 0;
+#else
   return base::GetFieldTrialParamByFeatureAsInt(kSimpleCachePrefetchExperiment,
                                                 kSimplePrefetchBytesParam, 0);
+#endif
 }
 
 SimpleEntryStat::SimpleEntryStat(base::Time last_used,
@@ -328,7 +334,12 @@ int SimpleSynchronousEntry::Doom() {
             GetFilenameFromEntryFileKeyAndFileIndex(orig_key, i));
         FilePath new_name = path_.AppendASCII(
             GetFilenameFromEntryFileKeyAndFileIndex(entry_file_key_, i));
+#if defined(STARBOARD)
+        ok = false;
+        // Note: Files can not be renamed on Starboard.
+#else
         ok = base::ReplaceFile(old_name, new_name, &out_error) && ok;
+#endif
       }
     }
 
@@ -338,7 +349,12 @@ int SimpleSynchronousEntry::Doom() {
           path_.AppendASCII(GetSparseFilenameFromEntryFileKey(orig_key));
       FilePath new_name =
           path_.AppendASCII(GetSparseFilenameFromEntryFileKey(entry_file_key_));
+#if defined(STARBOARD)
+      ok = false;
+      // Note: Files can not be renamed on Starboard.
+#else
       ok = base::ReplaceFile(old_name, new_name, &out_error) && ok;
+#endif
     }
 
     SIMPLE_CACHE_UMA(TIMES, "DiskDoomLatency", cache_type_,
@@ -1389,6 +1405,7 @@ int SimpleSynchronousEntry::ReadAndValidateStream0AndMaybe1(
   std::unique_ptr<char[]> prefetch_buf;
   base::StringPiece file_0_prefetch;
 
+#if !defined(STARBOARD)
   if (file_size > GetSimpleCachePrefetchSize()) {
     RecordWhetherOpenDidPrefetch(cache_type_, false);
   } else {
@@ -1398,6 +1415,7 @@ int SimpleSynchronousEntry::ReadAndValidateStream0AndMaybe1(
       return net::ERR_FAILED;
     file_0_prefetch.set(prefetch_buf.get(), file_size);
   }
+#endif
 
   // Read stream 0 footer first --- it has size/feature info required to figure
   // out file 0's layout.

@@ -25,6 +25,7 @@
 #include "net/socket/ssl_client_socket_impl.h"
 #include "net/url_request/http_user_agent_settings.h"
 #include "net/url_request/url_request.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -55,15 +56,19 @@ URLRequestContext::URLRequestContext()
       enable_brotli_(false),
       check_cleartext_permitted_(false),
       name_("unknown") {
+#if !defined(STARBOARD)
   base::trace_event::MemoryDumpManager::GetInstance()->RegisterDumpProvider(
       this, "URLRequestContext", base::ThreadTaskRunnerHandle::Get());
+#endif
 }
 
 URLRequestContext::~URLRequestContext() {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   AssertNoURLRequests();
+#if !defined(STARBOARD)
   base::trace_event::MemoryDumpManager::GetInstance()->UnregisterDumpProvider(
       this);
+#endif
 }
 
 void URLRequestContext::CopyFrom(const URLRequestContext* other) {

@@ -22,6 +22,8 @@
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
 
+#include "starboard/memory.h"
+
 using net::test::IsError;
 using net::test::IsOk;
 

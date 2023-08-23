@@ -14,7 +14,14 @@
 #include "net/dns/dns_test_util.h"
 #include "net/dns/dns_util.h"
 #include "net/dns/record_rdata.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+#if SB_IS(COMPILER_MSVC)
+// Converting 0x12 to char.
+#pragma warning(disable : 4309)
+#pragma warning(disable : 4838)
+#endif
 
 namespace net {
 
@@ -251,7 +258,7 @@ TEST(DnsResponseTest, InitParse) {
 TEST(DnsResponseTest, InitParseWithoutQuery) {
   DnsResponse resp;
   memcpy(resp.io_buffer()->data(), kT0ResponseDatagram,
-         sizeof(kT0ResponseDatagram));
+               sizeof(kT0ResponseDatagram));
 
   // Accept matching question.
   EXPECT_TRUE(resp.InitParseWithoutQuery(sizeof(kT0ResponseDatagram)));

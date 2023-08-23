@@ -4,7 +4,6 @@
 
 #include "net/test/spawned_test_server/base_test_server.h"
 
-#include <stdint.h>
 #include <limits>
 #include <string>
 #include <utility>
@@ -26,6 +25,7 @@
 #include "net/dns/host_resolver.h"
 #include "net/log/net_log_with_source.h"
 #include "net/test/test_data_directory.h"
+#include "starboard/types.h"
 #include "url/gurl.h"
 
 namespace net {
@@ -107,7 +107,7 @@ bool GetLocalCertificatesDir(const base::FilePath& certificates_dir,
   }
 
   base::FilePath src_dir;
-  if (!base::PathService::Get(base::DIR_SOURCE_ROOT, &src_dir))
+  if (!base::PathService::Get(base::DIR_TEST_DATA, &src_dir))
     return false;
 
   *local_certificates_dir = src_dir.Append(certificates_dir);

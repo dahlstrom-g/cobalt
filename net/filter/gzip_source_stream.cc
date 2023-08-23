@@ -12,6 +12,7 @@
 #include "base/logging.h"
 #include "base/memory/ref_counted.h"
 #include "net/base/io_buffer.h"
+#include "starboard/memory.h"
 #include "third_party/zlib/zlib.h"
 
 namespace net {

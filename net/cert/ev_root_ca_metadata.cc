@@ -22,6 +22,7 @@
 #if defined(USE_NSS_CERTS)
 #include "crypto/nss_util.h"
 #elif defined(PLATFORM_USES_CHROMIUM_EV_METADATA) || defined(OS_WIN)
+#include "starboard/types.h"
 #include "third_party/boringssl/src/include/openssl/bytestring.h"
 #include "third_party/boringssl/src/include/openssl/mem.h"
 #endif
@@ -1046,37 +1047,61 @@ bool EVRootCAMetadata::RemoveEVCA(const SHA256HashValue& fingerprint) {
 //
 
 bool EVRootCAMetadata::IsEVPolicyOID(PolicyOID policy_oid) const {
+#if defined(STARBOARD)
+  NOTIMPLEMENTED_LOG_ONCE();
+#else
   LOG(WARNING) << "Not implemented";
+#endif
   return false;
 }
 
 bool EVRootCAMetadata::IsEVPolicyOIDGivenBytes(
     const der::Input& policy_oid) const {
+#if defined(STARBOARD)
+  NOTIMPLEMENTED_LOG_ONCE();
+#else
   LOG(WARNING) << "Not implemented";
+#endif
   return false;
 }
 
 bool EVRootCAMetadata::HasEVPolicyOID(const SHA256HashValue& fingerprint,
                                       PolicyOID policy_oid) const {
+#if defined(STARBOARD)
+  NOTIMPLEMENTED_LOG_ONCE();
+#else
   LOG(WARNING) << "Not implemented";
+#endif
   return false;
 }
 
 bool EVRootCAMetadata::HasEVPolicyOIDGivenBytes(
     const SHA256HashValue& fingerprint,
     const der::Input& policy_oid) const {
+#if defined(STARBOARD)
+  NOTIMPLEMENTED_LOG_ONCE();
+#else
   LOG(WARNING) << "Not implemented";
+#endif
   return false;
 }
 
 bool EVRootCAMetadata::AddEVCA(const SHA256HashValue& fingerprint,
                                const char* policy) {
+#if defined(STARBOARD)
+  NOTIMPLEMENTED_LOG_ONCE();
+#else
   LOG(WARNING) << "Not implemented";
+#endif
   return true;
 }
 
 bool EVRootCAMetadata::RemoveEVCA(const SHA256HashValue& fingerprint) {
+#if defined(STARBOARD)
+  NOTIMPLEMENTED_LOG_ONCE();
+#else
   LOG(WARNING) << "Not implemented";
+#endif
   return true;
 }
 

@@ -13,6 +13,8 @@
 #include "net/cert/asn1_util.h"
 #include "net/cert/signed_certificate_timestamp.h"
 #include "net/cert/x509_util.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "third_party/boringssl/src/include/openssl/bytestring.h"
 #include "third_party/boringssl/src/include/openssl/mem.h"
 

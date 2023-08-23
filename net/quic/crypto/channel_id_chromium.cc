@@ -7,12 +7,16 @@
 #include <utility>
 #include <vector>
 
+#include "base/bind.h"
 #include "base/strings/string_util.h"
 #include "crypto/ec_private_key.h"
 #include "crypto/ec_signature_creator.h"
 #include "net/base/net_errors.h"
 #include "net/cert/asn1_util.h"
 #include "net/ssl/channel_id_service.h"
+#include "starboard/client_porting/poem/string_poem.h"
+#include "starboard/memory.h"
+#include "starboard/string.h"
 
 namespace net {
 
@@ -29,8 +33,10 @@ bool ChannelIDKeyChromium::Sign(quic::QuicStringPiece signed_data,
   if (!sig_creator) {
     return false;
   }
-  const size_t len1 = strlen(quic::ChannelIDVerifier::kContextStr) + 1;
-  const size_t len2 = strlen(quic::ChannelIDVerifier::kClientToServerStr) + 1;
+  const size_t len1 =
+      strlen(quic::ChannelIDVerifier::kContextStr) + 1;
+  const size_t len2 =
+      strlen(quic::ChannelIDVerifier::kClientToServerStr) + 1;
   std::vector<uint8_t> data(len1 + len2 + signed_data.size());
   memcpy(&data[0], quic::ChannelIDVerifier::kContextStr, len1);
   memcpy(&data[len1], quic::ChannelIDVerifier::kClientToServerStr, len2);
@@ -44,7 +50,7 @@ bool ChannelIDKeyChromium::Sign(quic::QuicStringPiece signed_data,
     return false;
   }
   memcpy(base::WriteInto(out_signature, raw_signature.size() + 1),
-         &raw_signature[0], raw_signature.size());
+               &raw_signature[0], raw_signature.size());
   return true;
 }
 

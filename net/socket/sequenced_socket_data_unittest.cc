@@ -19,6 +19,7 @@
 #include "net/test/gtest_util.h"
 #include "net/test/test_with_scoped_task_environment.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
+#include "starboard/memory.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest-spi.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -648,6 +649,9 @@ TEST_F(SequencedSocketDataTest, SingleSyncWriteTooEarly) {
   set_expect_eof(false);
 }
 
+// This tests rely on a specific version of gtest being available which is
+// not guaranteed.
+#if !defined(STARBOARD)
 TEST_F(SequencedSocketDataTest, SingleSyncWriteTooSmall) {
   MockWrite writes[] = {
       MockWrite(SYNCHRONOUS, kMsg1, kLen1, 0),
@@ -689,6 +693,7 @@ TEST_F(SequencedSocketDataTest, SingleSyncWriteTooSmall) {
 
   set_expect_eof(false);
 }
+#endif
 
 TEST_F(SequencedSocketDataTest, SingleSyncPartialWrite) {
   MockWrite writes[] = {

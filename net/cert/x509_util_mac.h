@@ -16,6 +16,8 @@
 #include "net/base/hash_value.h"
 #include "net/base/net_export.h"
 #include "net/cert/x509_certificate.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace net {
 

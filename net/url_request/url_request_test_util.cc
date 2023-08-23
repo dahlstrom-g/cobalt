@@ -10,7 +10,7 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/run_loop.h"
-#include "base/single_thread_task_runner.h"
+#include "base/sequenced_task_runner.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/host_port_pair.h"
@@ -138,9 +138,15 @@ void TestURLRequestContext::Init() {
     session_context.channel_id_service = channel_id_service();
     context_storage_.set_http_network_session(
         std::make_unique<HttpNetworkSession>(session_params, session_context));
+#ifdef HTTP_CACHE_DISABLED_FOR_STARBOARD
+    context_storage_.set_http_transaction_factory(
+        std::make_unique<HttpNetworkLayer>(
+            context_storage_.http_network_session()));
+#else
     context_storage_.set_http_transaction_factory(std::make_unique<HttpCache>(
         context_storage_.http_network_session(),
         HttpCache::DefaultBackend::InMemory(0), true /* is_main_cache */));
+#endif
   }
   if (!http_user_agent_settings() && create_default_http_user_agent_settings_) {
     context_storage_.set_http_user_agent_settings(
@@ -154,13 +160,13 @@ void TestURLRequestContext::Init() {
 }
 
 TestURLRequestContextGetter::TestURLRequestContextGetter(
-    const scoped_refptr<base::SingleThreadTaskRunner>& network_task_runner)
+    const scoped_refptr<base::SequencedTaskRunner>& network_task_runner)
     : network_task_runner_(network_task_runner) {
   DCHECK(network_task_runner_.get());
 }
 
 TestURLRequestContextGetter::TestURLRequestContextGetter(
-    const scoped_refptr<base::SingleThreadTaskRunner>& network_task_runner,
+    const scoped_refptr<base::SequencedTaskRunner>& network_task_runner,
     std::unique_ptr<TestURLRequestContext> context)
     : network_task_runner_(network_task_runner), context_(std::move(context)) {
   DCHECK(network_task_runner_.get());
@@ -186,7 +192,7 @@ void TestURLRequestContextGetter::NotifyContextShuttingDown() {
   context_ = nullptr;
 }
 
-scoped_refptr<base::SingleThreadTaskRunner>
+scoped_refptr<base::SequencedTaskRunner>
 TestURLRequestContextGetter::GetNetworkTaskRunner() const {
   return network_task_runner_;
 }
@@ -347,10 +353,20 @@ void TestDelegate::OnReadCompleted(URLRequest* request, int bytes_read) {
 
 void TestDelegate::OnResponseCompleted(URLRequest* request) {
   response_completed_ = true;
-  if (use_legacy_on_complete_)
+  if (use_legacy_on_complete_) {
     base::RunLoop::QuitCurrentWhenIdleDeprecated();
-  else
+  } else {
+#if defined(STARBOARD)
+    // Cobalt doesn't have HTTP cache, skipping some steps in HTTP cache
+    // transactions and making request return faster in unit tests.
+    // Some net_unittests have dependency on request's return timing and can
+    // execute the request complete steps multiple times.
+    if (on_complete_.is_null()) {
+      return;
+    }
+#endif
     std::move(on_complete_).Run();
+  }
 }
 
 TestNetworkDelegate::TestNetworkDelegate()

@@ -52,8 +52,6 @@
 #ifndef NET_BASE_INTERVAL_SET_H_
 #define NET_BASE_INTERVAL_SET_H_
 
-#include <stddef.h>
-
 #include <algorithm>
 #include <ostream>
 #include <set>
@@ -63,6 +61,7 @@
 
 #include "base/logging.h"
 #include "net/base/interval.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -809,7 +808,7 @@ bool IntervalSet<T>::Valid() const {
 }
 
 template <typename T>
-inline std::ostream& operator<<(std::ostream& out, const IntervalSet<T>& seq) {
+inline std::ostream& operator<<(std::ostream& out, const IntervalSet<T>&) {
 // TODO(rtenneti): Implement << method of IntervalSet.
 #if 0
   util::gtl::LogRangeToStream(out, seq.begin(), seq.end(),

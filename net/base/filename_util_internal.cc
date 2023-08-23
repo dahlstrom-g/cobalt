@@ -89,7 +89,7 @@ void SanitizeGeneratedFileName(base::FilePath::StringType* filename,
     filename->resize((pos == std::string::npos) ? 0 : (pos + 1));
 #if defined(OS_WIN)
     base::TrimWhitespace(*filename, base::TRIM_TRAILING, filename);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
     base::TrimWhitespaceASCII(*filename, base::TRIM_TRAILING, filename);
 #else
 #error Unsupported platform
@@ -209,7 +209,7 @@ bool FilePathToString16(const base::FilePath& path, base::string16* converted) {
 #if defined(OS_WIN)
   *converted = path.value();
   return true;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
   std::string component8 = path.AsUTF8Unsafe();
   return !component8.empty() &&
          base::UTF8ToUTF16(component8.c_str(), component8.size(), converted);
@@ -267,7 +267,7 @@ base::string16 GetSuggestedFilenameImpl(
   replace_trailing = true;
   result_str = base::UTF8ToUTF16(filename);
   default_name_str = base::UTF8ToUTF16(default_name);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
   result_str = filename;
   default_name_str = default_name;
 #else
@@ -316,7 +316,7 @@ base::FilePath GenerateFileNameImpl(
 
 #if defined(OS_WIN)
   base::FilePath generated_name(file_name);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
   base::FilePath generated_name(
       base::SysWideToNativeMB(base::UTF16ToWide(file_name)));
 #endif

@@ -37,6 +37,7 @@
 #include "net/third_party/quic/core/quic_tag.h"
 #include "net/third_party/quic/core/quic_utils.h"
 #include "net/third_party/quic/platform/impl/quic_chromium_clock.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -110,7 +111,15 @@ HttpNetworkSession::Params::Params()
       enable_http2_alternative_service(false),
       enable_websocket_over_http2(false),
       enable_quic(false),
+#if defined(COBALT_QUIC46)
+      enable_quic_proxies_for_https_urls(false),
+#endif
+#if defined(STARBOARD)
+      use_quic_for_unknown_origins(false),
+#endif
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
       quic_max_packet_length(quic::kDefaultMaxPacketSize),
+#endif
       quic_max_server_configs_stored_in_properties(0u),
       quic_enable_socket_recv_optimization(false),
       mark_quic_broken_when_network_blackholes(false),
@@ -118,23 +127,33 @@ HttpNetworkSession::Params::Params()
       support_ietf_format_quic_altsvc(false),
       quic_close_sessions_on_ip_change(false),
       quic_goaway_sessions_on_ip_change(false),
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
       quic_idle_connection_timeout_seconds(kIdleConnectionTimeoutSeconds),
       quic_reduced_ping_timeout_seconds(quic::kPingTimeoutSecs),
+      quic_retransmittable_on_wire_timeout_milliseconds(
+          kDefaultRetransmittableOnWireTimeoutMillisecs),
       quic_max_time_before_crypto_handshake_seconds(
           quic::kMaxTimeForCryptoHandshakeSecs),
       quic_max_idle_time_before_crypto_handshake_seconds(
           quic::kInitialIdleTimeoutSecs),
+#endif
       quic_migrate_sessions_on_network_change_v2(false),
       quic_migrate_sessions_early_v2(false),
       quic_retry_on_alternate_network_before_handshake(false),
+      // QUIC46
+      quic_migrate_idle_sessions(false),
+      quic_idle_session_migration_period(base::TimeDelta::FromSeconds(
+          kDefaultIdleSessionMigrationPeriodSeconds)),
       quic_race_stale_dns_on_connection(false),
       quic_go_away_on_path_degrading(false),
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
       quic_max_time_on_non_default_network(
           base::TimeDelta::FromSeconds(kMaxTimeOnNonDefaultNetworkSecs)),
       quic_max_migrations_to_non_default_network_on_write_error(
           kMaxMigrationsToNonDefaultNetworkOnWriteError),
       quic_max_migrations_to_non_default_network_on_path_degrading(
           kMaxMigrationsToNonDefaultNetworkOnPathDegrading),
+#endif
       quic_allow_server_migration(false),
       quic_allow_remote_alt_svc(true),
       quic_disable_bidirectional_streams(false),
@@ -145,7 +164,7 @@ HttpNetworkSession::Params::Params()
       enable_channel_id(false),
       http_09_on_non_default_ports_enabled(false),
       disable_idle_sockets_close_on_memory_pressure(false) {
-  quic_supported_versions.push_back(quic::QUIC_VERSION_43);
+  quic_supported_versions.push_back(quic::QUIC_VERSION_46);
 }
 
 HttpNetworkSession::Params::Params(const Params& other) = default;
@@ -169,7 +188,13 @@ HttpNetworkSession::Context::Context()
       quic_clock(nullptr),
       quic_random(nullptr),
       quic_crypto_client_stream_factory(
-          QuicCryptoClientStreamFactory::GetDefaultFactory()) {}
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
+          QuicCryptoClientStreamFactory::GetDefaultFactory()) {
+}
+#else
+          nullptr) {
+}
+#endif
 
 HttpNetworkSession::Context::Context(const Context& other) = default;
 
@@ -187,6 +212,8 @@ HttpNetworkSession::HttpNetworkSession(const Params& params,
       websocket_endpoint_lock_manager_(
           std::make_unique<WebSocketEndpointLockManager>()),
       push_delegate_(nullptr),
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
+      // QUIC46, changed constructor params.
       quic_stream_factory_(
           context.net_log,
           context.host_resolver,
@@ -197,7 +224,6 @@ HttpNetworkSession::HttpNetworkSession(const Params& params,
           context.http_server_properties,
           context.cert_verifier,
           context.ct_policy_enforcer,
-          context.channel_id_service,
           context.transport_security_state,
           context.cert_transparency_verifier,
           context.socket_performance_watcher_factory,
@@ -214,24 +240,27 @@ HttpNetworkSession::HttpNetworkSession(const Params& params,
           params.mark_quic_broken_when_network_blackholes,
           params.quic_idle_connection_timeout_seconds,
           params.quic_reduced_ping_timeout_seconds,
+          params.quic_retransmittable_on_wire_timeout_milliseconds,
           params.quic_max_time_before_crypto_handshake_seconds,
           params.quic_max_idle_time_before_crypto_handshake_seconds,
           params.quic_migrate_sessions_on_network_change_v2,
           params.quic_migrate_sessions_early_v2,
           params.quic_retry_on_alternate_network_before_handshake,
-          params.quic_race_stale_dns_on_connection,
-          params.quic_go_away_on_path_degrading,
+          params.quic_migrate_idle_sessions,
+          params.quic_idle_session_migration_period,
           params.quic_max_time_on_non_default_network,
           params.quic_max_migrations_to_non_default_network_on_write_error,
           params.quic_max_migrations_to_non_default_network_on_path_degrading,
           params.quic_allow_server_migration,
+          params.quic_race_stale_dns_on_connection,
+          params.quic_go_away_on_path_degrading,
           params.quic_race_cert_verification,
           params.quic_estimate_initial_rtt,
           params.quic_headers_include_h2_stream_dependency,
           params.quic_connection_options,
           params.quic_client_connection_options,
-          params.enable_channel_id,
           params.quic_enable_socket_recv_optimization),
+#endif
       spdy_session_pool_(context.host_resolver,
                          context.ssl_config_service,
                          context.http_server_properties,
@@ -339,6 +368,7 @@ std::unique_ptr<base::Value> HttpNetworkSession::SpdySessionPoolInfoToValue()
 
 std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   dict->Set("sessions", quic_stream_factory_.QuicStreamFactoryInfoToValue());
   dict->SetBoolean("quic_enabled", IsQuicEnabled());
 
@@ -400,6 +430,7 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   dict->SetBoolean("force_hol_blocking", params_.quic_force_hol_blocking);
   dict->SetBoolean("server_push_cancellation",
                    params_.enable_server_push_cancellation);
+#endif
 
   return std::move(dict);
 }
@@ -408,7 +439,9 @@ void HttpNetworkSession::CloseAllConnections() {
   normal_socket_pool_manager_->FlushSocketPoolsWithError(ERR_ABORTED);
   websocket_socket_pool_manager_->FlushSocketPoolsWithError(ERR_ABORTED);
   spdy_session_pool_.CloseCurrentSessions(ERR_ABORTED);
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   quic_stream_factory_.CloseAllSessions(ERR_ABORTED, quic::QUIC_INTERNAL_ERROR);
+#endif
 }
 
 void HttpNetworkSession::CloseIdleConnections() {
@@ -441,7 +474,9 @@ void HttpNetworkSession::SetServerPushDelegate(
 
   push_delegate_ = std::move(push_delegate);
   spdy_session_pool_.set_server_push_delegate(push_delegate_.get());
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   quic_stream_factory_.set_server_push_delegate(push_delegate_.get());
+#endif
 }
 
 void HttpNetworkSession::GetAlpnProtos(NextProtoVector* alpn_protos) const {
@@ -479,8 +514,10 @@ void HttpNetworkSession::DumpMemoryStats(
       http_stream_factory_->DumpMemoryStats(
           pmd, http_network_session_dump->absolute_name());
     }
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
     quic_stream_factory_.DumpMemoryStats(
         pmd, http_network_session_dump->absolute_name());
+#endif
   }
 
   // Create an empty row under parent's dump so size can be attributed correctly
@@ -493,12 +530,30 @@ void HttpNetworkSession::DumpMemoryStats(
 }
 
 bool HttpNetworkSession::IsQuicEnabled() const {
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   return params_.enable_quic;
+#else
+  return false;
+#endif
 }
 
 void HttpNetworkSession::DisableQuic() {
   params_.enable_quic = false;
 }
+
+#if defined(STARBOARD)
+void HttpNetworkSession::ToggleQuic() {
+  params_.enable_quic = !params_.enable_quic;
+}
+
+void HttpNetworkSession::SetEnableQuic(bool enable_quic) {
+  params_.enable_quic = enable_quic;
+}
+
+bool HttpNetworkSession::UseQuicForUnknownOrigin() const {
+  return params_.use_quic_for_unknown_origins;
+}
+#endif  // defined(STARBOARD)
 
 ClientSocketPoolManager* HttpNetworkSession::GetSocketPoolManager(
     SocketPoolType pool_type) {

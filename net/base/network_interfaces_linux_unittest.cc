@@ -17,6 +17,8 @@
 #include "net/base/address_tracker_linux.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/network_interfaces_posix.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

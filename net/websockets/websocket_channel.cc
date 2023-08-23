@@ -5,7 +5,6 @@
 #include "net/websockets/websocket_channel.h"
 
 #include <limits.h>  // for INT_MAX
-#include <stddef.h>
 
 #include <algorithm>
 #include <utility>
@@ -36,6 +35,7 @@
 #include "net/websockets/websocket_handshake_response_info.h"
 #include "net/websockets/websocket_handshake_stream_create_helper.h"
 #include "net/websockets/websocket_stream.h"
+#include "starboard/types.h"
 #include "url/origin.h"
 
 namespace net {
@@ -148,6 +148,10 @@ class WebSocketChannel::SendBuffer {
 
   // Return a pointer to the frames_ for write purposes.
   std::vector<std::unique_ptr<WebSocketFrame>>* frames() { return &frames_; }
+
+#if defined(STARBOARD)
+  uint64_t total_bytes() const { return total_bytes_; }
+#endif
 
  private:
   // The frames_ that will be sent in the next call to WriteFrames().
@@ -651,6 +655,9 @@ ChannelState WebSocketChannel::OnWriteDone(bool synchronous, int result) {
   DCHECK(data_being_sent_);
   switch (result) {
     case OK:
+#if defined(STARBOARD)
+      event_interface_->OnWriteDone(data_being_sent_->total_bytes());
+#endif
       if (data_to_send_next_) {
         data_being_sent_ = std::move(data_to_send_next_);
         if (!synchronous)

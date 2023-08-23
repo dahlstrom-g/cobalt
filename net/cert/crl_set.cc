@@ -11,6 +11,7 @@
 #include "base/values.h"
 #include "crypto/sha2.h"
 #include "net/base/trace_constants.h"
+#include "starboard/memory.h"
 #include "third_party/boringssl/src/include/openssl/bytestring.h"
 #include "third_party/boringssl/src/include/openssl/mem.h"
 

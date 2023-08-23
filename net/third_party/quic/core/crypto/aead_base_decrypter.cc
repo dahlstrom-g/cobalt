@@ -11,6 +11,7 @@
 #include "net/third_party/quic/platform/api/quic_bug_tracker.h"
 #include "net/third_party/quic/platform/api/quic_logging.h"
 #include "net/third_party/quic/platform/api/quic_string.h"
+#include "starboard/memory.h"
 #include "third_party/boringssl/src/include/openssl/crypto.h"
 #include "third_party/boringssl/src/include/openssl/err.h"
 #include "third_party/boringssl/src/include/openssl/evp.h"
@@ -141,8 +142,7 @@ bool AeadBaseDecrypter::SetDiversificationNonce(
   return true;
 }
 
-bool AeadBaseDecrypter::DecryptPacket(QuicTransportVersion /*version*/,
-                                      QuicPacketNumber packet_number,
+bool AeadBaseDecrypter::DecryptPacket(uint64_t packet_number,
                                       QuicStringPiece associated_data,
                                       QuicStringPiece ciphertext,
                                       char* output,

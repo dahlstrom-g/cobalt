@@ -14,6 +14,7 @@
 #include "net/base/test_completion_callback.h"
 #include "net/filter/brotli_source_stream.h"
 #include "net/filter/mock_source_stream.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
 
@@ -33,7 +34,7 @@ class BrotliSourceStreamTest : public PlatformTest {
 
     // Get the path of data directory.
     base::FilePath data_dir;
-    base::PathService::Get(base::DIR_SOURCE_ROOT, &data_dir);
+    base::PathService::Get(base::DIR_TEST_DATA, &data_dir);
     data_dir = data_dir.AppendASCII("net");
     data_dir = data_dir.AppendASCII("data");
     data_dir = data_dir.AppendASCII("filter_unittests");
@@ -94,7 +95,8 @@ TEST_F(BrotliSourceStreamTest, DecodeBrotliOneBlockSync) {
   int bytes_read = ReadStream(callback);
 
   EXPECT_EQ(static_cast<int>(source_data_len()), bytes_read);
-  EXPECT_EQ(0, memcmp(out_data(), source_data().c_str(), source_data_len()));
+  EXPECT_EQ(
+      0, memcmp(out_data(), source_data().c_str(), source_data_len()));
   EXPECT_EQ("BROTLI", brotli_stream()->Description());
 }
 
@@ -175,7 +177,8 @@ TEST_F(BrotliSourceStreamTest, DecodeBrotliTwoBlockSync) {
   TestCompletionCallback callback;
   int bytes_read = ReadStream(callback);
   EXPECT_EQ(static_cast<int>(source_data_len()), bytes_read);
-  EXPECT_EQ(0, memcmp(out_data(), source_data().c_str(), source_data_len()));
+  EXPECT_EQ(
+      0, memcmp(out_data(), source_data().c_str(), source_data_len()));
   EXPECT_EQ("BROTLI", brotli_stream()->Description());
 }
 
@@ -191,7 +194,8 @@ TEST_F(BrotliSourceStreamTest, DecodeBrotliOneBlockAsync) {
   source()->CompleteNextRead();
   int rv = callback.WaitForResult();
   EXPECT_EQ(static_cast<int>(source_data_len()), rv);
-  EXPECT_EQ(0, memcmp(out_data(), source_data().c_str(), source_data_len()));
+  EXPECT_EQ(
+      0, memcmp(out_data(), source_data().c_str(), source_data_len()));
   EXPECT_EQ("BROTLI", brotli_stream()->Description());
 }
 
@@ -219,7 +223,8 @@ TEST_F(BrotliSourceStreamTest, DecodeWithSmallBufferSync) {
     total_bytes_read += bytes_read;
   } while (bytes_read > 0);
   EXPECT_EQ(source_data_len(), total_bytes_read);
-  EXPECT_EQ(0, memcmp(buffer->data(), source_data().c_str(), total_bytes_read));
+  EXPECT_EQ(0, memcmp(buffer->data(), source_data().c_str(),
+                               total_bytes_read));
   EXPECT_EQ("BROTLI", brotli_stream()->Description());
 }
 
@@ -250,7 +255,8 @@ TEST_F(BrotliSourceStreamTest, DecodeWithSmallBufferAsync) {
     total_bytes_read += bytes_read;
   } while (bytes_read > 0);
   EXPECT_EQ(source_data_len(), total_bytes_read);
-  EXPECT_EQ(0, memcmp(buffer->data(), source_data().c_str(), total_bytes_read));
+  EXPECT_EQ(0, memcmp(buffer->data(), source_data().c_str(),
+                               total_bytes_read));
   EXPECT_EQ("BROTLI", brotli_stream()->Description());
 }
 
@@ -276,8 +282,8 @@ TEST_F(BrotliSourceStreamTest, DecodeWithOneByteBuffer) {
     total_bytes_read += bytes_read;
   } while (bytes_read > 0);
   EXPECT_EQ(source_data_len(), total_bytes_read);
-  EXPECT_EQ(0,
-            memcmp(buffer->data(), source_data().c_str(), source_data_len()));
+  EXPECT_EQ(0, memcmp(buffer->data(), source_data().c_str(),
+                               source_data_len()));
   EXPECT_EQ("BROTLI", brotli_stream()->Description());
 }
 

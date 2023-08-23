@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "net/base/datagram_buffer.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

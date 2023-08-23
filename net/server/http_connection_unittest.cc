@@ -8,6 +8,7 @@
 
 #include "base/memory/ref_counted.h"
 #include "base/strings/string_piece.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

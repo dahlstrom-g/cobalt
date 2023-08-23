@@ -5,8 +5,6 @@
 #ifndef NET_DNS_MOCK_HOST_RESOLVER_H_
 #define NET_DNS_MOCK_HOST_RESOLVER_H_
 
-#include <stddef.h>
-
 #include <list>
 #include <map>
 #include <memory>
@@ -21,6 +19,7 @@
 #include "net/dns/host_resolver.h"
 #include "net/dns/host_resolver_proc.h"
 #include "net/dns/host_resolver_source.h"
+#include "starboard/types.h"
 
 namespace base {
 class TickClock;
@@ -140,6 +139,14 @@ class MockHostResolverBase
   // Returns true if there are pending requests that can be resolved by invoking
   // ResolveAllPending().
   bool has_pending_requests() const { return !requests_.empty(); }
+
+#if defined(COBALT_QUIC46)
+  // Returns the request with the given id.
+  RequestImpl* request(size_t id);
+
+  // Returns the priority of the request with the given id.
+  RequestPriority request_priority(size_t id);
+#endif
 
   // The number of times that Resolve() has been called.
   size_t num_resolve() const {

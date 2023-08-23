@@ -8,6 +8,7 @@
 
 #include "base/logging.h"
 #include "net/base/io_buffer.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

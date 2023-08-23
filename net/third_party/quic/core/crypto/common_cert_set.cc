@@ -9,7 +9,8 @@
 #include "base/macros.h"
 #include "net/third_party/quic/core/quic_utils.h"
 #include "net/third_party/quic/platform/api/quic_arraysize.h"
-#include "net/third_party/quic/platform/api/quic_singleton.h"
+
+#include "starboard/memory.h"
 
 namespace quic {
 
@@ -23,6 +24,7 @@ namespace common_cert_set_3 {
 
 namespace {
 
+#if !defined(COMMON_CERT_SET_DISABLED_FOR_STARBOARD)
 struct CertSet {
   // num_certs contains the number of certificates in this set.
   size_t num_certs;
@@ -69,6 +71,7 @@ int Compare(QuicStringPiece a, const unsigned char* b, size_t b_len) {
   }
   return 0;
 }
+#endif
 
 // CommonCertSetsQUIC implements the CommonCertSets interface using the default
 // certificate sets.
@@ -76,11 +79,18 @@ class CommonCertSetsQUIC : public CommonCertSets {
  public:
   // CommonCertSets interface.
   QuicStringPiece GetCommonHashes() const override {
+#if defined(COMMON_CERT_SET_DISABLED_FOR_STARBOARD)
+    return QuicStringPiece();
+#else
     return QuicStringPiece(reinterpret_cast<const char*>(kSetHashes),
                            sizeof(uint64_t) * QUIC_ARRAYSIZE(kSetHashes));
+#endif
   }
 
   QuicStringPiece GetCert(uint64_t hash, uint32_t index) const override {
+#if defined(COMMON_CERT_SET_DISABLED_FOR_STARBOARD)
+    NOTIMPLEMENTED() << "common cert set is disabled!";
+#else
     for (size_t i = 0; i < QUIC_ARRAYSIZE(kSets); i++) {
       if (kSets[i].hash == hash) {
         if (index < kSets[i].num_certs) {
@@ -91,6 +101,7 @@ class CommonCertSetsQUIC : public CommonCertSets {
         break;
       }
     }
+#endif
 
     return QuicStringPiece();
   }
@@ -99,6 +110,9 @@ class CommonCertSetsQUIC : public CommonCertSets {
                  QuicStringPiece common_set_hashes,
                  uint64_t* out_hash,
                  uint32_t* out_index) const override {
+#if defined(COMMON_CERT_SET_DISABLED_FOR_STARBOARD)
+    NOTIMPLEMENTED() << "common cert set is disabled!";
+#else
     if (common_set_hashes.size() % sizeof(uint64_t) != 0) {
       return false;
     }
@@ -106,7 +120,7 @@ class CommonCertSetsQUIC : public CommonCertSets {
     for (size_t i = 0; i < common_set_hashes.size() / sizeof(uint64_t); i++) {
       uint64_t hash;
       memcpy(&hash, common_set_hashes.data() + i * sizeof(uint64_t),
-             sizeof(uint64_t));
+                   sizeof(uint64_t));
 
       for (size_t j = 0; j < QUIC_ARRAYSIZE(kSets); j++) {
         if (kSets[j].hash != hash) {
@@ -138,21 +152,15 @@ class CommonCertSetsQUIC : public CommonCertSets {
         }
       }
     }
+#endif
 
     return false;
   }
 
-  static CommonCertSetsQUIC* GetInstance() {
-    return QuicSingleton<CommonCertSetsQUIC>::get();
-  }
-
- private:
   CommonCertSetsQUIC() {}
   CommonCertSetsQUIC(const CommonCertSetsQUIC&) = delete;
   CommonCertSetsQUIC& operator=(const CommonCertSetsQUIC&) = delete;
   ~CommonCertSetsQUIC() override {}
-
-  friend QuicSingletonFriend<CommonCertSetsQUIC>;
 };
 
 }  // anonymous namespace
@@ -161,7 +169,8 @@ CommonCertSets::~CommonCertSets() {}
 
 // static
 const CommonCertSets* CommonCertSets::GetInstanceQUIC() {
-  return CommonCertSetsQUIC::GetInstance();
+  static CommonCertSetsQUIC* certs = new CommonCertSetsQUIC();
+  return certs;
 }
 
 }  // namespace quic

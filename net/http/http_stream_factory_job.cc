@@ -40,8 +40,10 @@
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
 #include "net/quic/bidirectional_stream_quic_impl.h"
 #include "net/quic/quic_http_stream.h"
+#endif
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool.h"
 #include "net/socket/client_socket_pool_manager.h"
@@ -56,7 +58,7 @@
 #include "net/spdy/spdy_session_pool.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/ssl_cert_request_info.h"
-#include "net/third_party/spdy/core/spdy_protocol.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_protocol.h"
 #include "url/url_constants.h"
 
 namespace net {
@@ -193,15 +195,21 @@ HttpStreamFactory::Job::Job(Delegate* delegate,
       job_type_(job_type),
       using_ssl_(origin_url_.SchemeIs(url::kHttpsScheme) ||
                  origin_url_.SchemeIs(url::kWssScheme)),
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
       using_quic_(
           alternative_protocol == kProtoQUIC ||
           (ShouldForceQuic(session, destination, origin_url, proxy_info) &&
            !(proxy_info.is_quic() && using_ssl_))),
+#else
+      using_quic_(false),
+#endif
       quic_version_(quic_version),
       expect_spdy_(alternative_protocol == kProtoHTTP2 && !using_quic_),
       using_spdy_(false),
       should_reconsider_proxy_(false),
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
       quic_request_(session_->quic_stream_factory()),
+#endif
       expect_on_quic_host_resolution_(false),
       using_existing_quic_session_(false),
       establishing_tunnel_(false),
@@ -395,6 +403,7 @@ bool HttpStreamFactory::Job::ShouldForceQuic(HttpNetworkSession* session,
                                              const HostPortPair& destination,
                                              const GURL& origin_url,
                                              const ProxyInfo& proxy_info) {
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   if (!session->IsQuicEnabled())
     return false;
   if (proxy_info.is_quic())
@@ -404,6 +413,9 @@ bool HttpStreamFactory::Job::ShouldForceQuic(HttpNetworkSession* session,
           base::ContainsKey(session->params().origins_to_force_quic_on,
                             destination)) &&
          proxy_info.is_direct() && origin_url.SchemeIs(url::kHttpsScheme);
+#else
+  return false;
+#endif
 }
 
 // static
@@ -633,7 +645,7 @@ void HttpStreamFactory::Job::RunLoop(int result) {
                   connection_->ssl_error_response_info().cert_request_info)));
       return;
 
-    case ERR_HTTPS_PROXY_TUNNEL_RESPONSE: {
+    case ERR_HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT: {
       DCHECK(connection_.get());
       DCHECK(connection_->socket());
       DCHECK(establishing_tunnel_);
@@ -769,6 +781,14 @@ int HttpStreamFactory::Job::DoStart() {
     return ERR_UNSAFE_PORT;
   }
 
+  if (!session_->params().enable_quic_proxies_for_https_urls &&
+      proxy_info_.is_quic() && !request_info_.url.SchemeIs(url::kHttpScheme)) {
+#if defined(STARBOARD)
+    NOTREACHED() << "HTTPS quic proxies is not supported";
+#endif
+    return ERR_NOT_IMPLEMENTED;
+  }
+
   next_state_ = STATE_WAIT;
   return OK;
 }
@@ -871,7 +891,18 @@ int HttpStreamFactory::Job::DoInitConnectionImpl() {
     InitSSLConfig(&server_ssl_config_, /*is_proxy=*/false);
   }
 
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   if (using_quic_) {
+#if defined(COBALT_QUIC46)
+    // HTTPS QUIC proxy should be disabled, these changes can be removed
+    // in next rebase.
+    if (proxy_info_.is_quic() &&
+        !request_info_.url.SchemeIs(url::kHttpScheme)) {
+      NOTREACHED();
+      // TODO(rch): support QUIC proxies for HTTPS urls.
+      return ERR_NOT_IMPLEMENTED;
+    }
+#endif
     HostPortPair destination;
     SSLConfig* ssl_config;
     GURL url(request_info_.url);
@@ -918,6 +949,7 @@ int HttpStreamFactory::Job::DoInitConnectionImpl() {
     }
     return rv;
   }
+#endif
 
   // Check first if there is a pushed stream matching the request, or an HTTP/2
   // connection this request can pool to.  If so, then go straight to using
@@ -945,7 +977,13 @@ int HttpStreamFactory::Job::DoInitConnectionImpl() {
     }
   }
 
+#if defined(COBALT_QUIC46)
+  // HTTPS QUIC proxy should be disabled, these changes can be removed
+  // in next rebase.
+  if (proxy_info_.is_http() || proxy_info_.is_https())
+#else
   if (proxy_info_.is_http() || proxy_info_.is_https() || proxy_info_.is_quic())
+#endif
     establishing_tunnel_ = using_ssl_;
 
   HttpServerProperties* http_server_properties =
@@ -1080,7 +1118,7 @@ int HttpStreamFactory::Job::DoInitConnectionComplete(int result) {
   }
 
   if (result == ERR_PROXY_AUTH_REQUESTED ||
-      result == ERR_HTTPS_PROXY_TUNNEL_RESPONSE) {
+      result == ERR_HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT) {
     DCHECK(!ssl_started);
     // Other state (i.e. |using_ssl_|) suggests that |connection_| will have an
     // SSL socket, but there was an error before that could happen.  This
@@ -1101,6 +1139,7 @@ int HttpStreamFactory::Job::DoInitConnectionComplete(int result) {
   if (!ssl_started && result < 0 && (expect_spdy_ || using_quic_))
     return result;
 
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   if (using_quic_) {
     if (result < 0)
       return result;
@@ -1126,6 +1165,7 @@ int HttpStreamFactory::Job::DoInitConnectionComplete(int result) {
     next_state_ = STATE_NONE;
     return OK;
   }
+#endif
 
   if (result < 0 && !ssl_started)
     return ReconsiderProxyAfterError(result);
@@ -1206,8 +1246,14 @@ int HttpStreamFactory::Job::DoCreateStream() {
   if (!using_spdy_) {
     DCHECK(!expect_spdy_);
     // We may get ftp scheme when fetching ftp resources through proxy.
+#if defined(COBALT_QUIC46)
+    // HTTPS QUIC proxy should be disabled, these changes can be removed
+    // in next rebase.
+    bool using_proxy = (proxy_info_.is_http() || proxy_info_.is_https()) &&
+#else
     bool using_proxy = (proxy_info_.is_http() || proxy_info_.is_https() ||
                         proxy_info_.is_quic()) &&
+#endif
                        (request_info_.url.SchemeIs(url::kHttpScheme) ||
                         request_info_.url.SchemeIs(url::kFtpScheme));
     if (is_websocket_) {

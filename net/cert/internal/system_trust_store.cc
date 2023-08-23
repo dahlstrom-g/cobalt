@@ -23,6 +23,7 @@
 #include "net/cert/test_root_certs.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util.h"
+#include "starboard/types.h"
 
 #if defined(USE_NSS_CERTS)
 #include "crypto/nss_util.h"
@@ -35,6 +36,8 @@
 #include "net/cert/x509_util_mac.h"
 #elif defined(OS_FUCHSIA)
 #include "third_party/boringssl/src/include/openssl/pool.h"
+#elif defined(STARBOARD)
+#include "net/cert/internal/trust_store_in_memory_starboard.h"
 #endif
 
 namespace net {
@@ -213,6 +216,52 @@ class SystemTrustStoreFuchsia : public BaseSystemTrustStore {
 
 std::unique_ptr<SystemTrustStore> CreateSslSystemTrustStore() {
   return std::make_unique<SystemTrustStoreFuchsia>();
+}
+
+#elif defined(STARBOARD)
+
+namespace {
+
+class StarboardSystemCerts {
+ public:
+  StarboardSystemCerts() {}
+
+  TrustStoreInMemoryStarboard* system_trust_store() {
+    return &system_trust_store_;
+  }
+
+ private:
+  TrustStoreInMemoryStarboard system_trust_store_;
+};
+
+base::LazyInstance<StarboardSystemCerts>::Leaky g_root_certs_starboard =
+    LAZY_INSTANCE_INITIALIZER;
+
+}  // namespace
+
+// Starboard does not use system certificate stores but Cobalt ships with a
+// set of trusted CA certificates that can be used for validations.
+class SystemTrustStoreStarboard : public BaseSystemTrustStore {
+ public:
+  SystemTrustStoreStarboard() {
+    trust_store_.AddTrustStore(
+        g_root_certs_starboard.Get().system_trust_store());
+    if (TestRootCerts::HasInstance()) {
+      trust_store_.AddTrustStore(
+          TestRootCerts::GetInstance()->test_trust_store());
+    }
+  }
+
+  bool UsesSystemTrustStore() const override { return true; }
+
+  bool IsKnownRoot(const ParsedCertificate* trust_anchor) const override {
+    return g_root_certs_starboard.Get().system_trust_store()->Contains(
+        trust_anchor);
+  }
+};
+
+std::unique_ptr<SystemTrustStore> CreateSslSystemTrustStore() {
+  return std::make_unique<SystemTrustStoreStarboard>();
 }
 
 #else

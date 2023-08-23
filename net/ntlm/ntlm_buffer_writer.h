@@ -5,9 +5,6 @@
 #ifndef NET_BASE_NTLM_BUFFER_WRITER_H_
 #define NET_BASE_NTLM_BUFFER_WRITER_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <memory>
 #include <string>
 
@@ -16,6 +13,7 @@
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 #include "net/ntlm/ntlm_constants.h"
+#include "starboard/types.h"
 
 namespace net {
 namespace ntlm {
@@ -50,7 +48,13 @@ class NET_EXPORT_PRIVATE NtlmBufferWriter {
   size_t GetLength() const { return buffer_.size(); }
   size_t GetCursor() const { return cursor_; }
   bool IsEndOfBuffer() const { return cursor_ >= GetLength(); }
+#if defined(STARBOARD)
+  base::span<const uint8_t> GetBuffer() const {
+    return base::span<const uint8_t>(buffer_.data(), buffer_.size());
+  }
+#else
   base::span<const uint8_t> GetBuffer() const { return buffer_; }
+#endif
   std::vector<uint8_t> Pass() const { return std::move(buffer_); }
 
   // Returns true if there are |len| more bytes between the current cursor

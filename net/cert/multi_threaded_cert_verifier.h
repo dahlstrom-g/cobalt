@@ -5,9 +5,6 @@
 #ifndef NET_CERT_MULTI_THREADED_CERT_VERIFIER_H_
 #define NET_CERT_MULTI_THREADED_CERT_VERIFIER_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <map>
 #include <memory>
 #include <string>
@@ -20,6 +17,7 @@
 #include "net/base/completion_once_callback.h"
 #include "net/base/net_export.h"
 #include "net/cert/cert_verifier.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -66,6 +64,14 @@ class NET_EXPORT_PRIVATE MultiThreadedCertVerifier : public CertVerifier {
              std::unique_ptr<Request>* out_req,
              const NetLogWithSource& net_log) override;
   void SetConfig(const CertVerifier::Config& config) override;
+
+#if defined(STARBOARD) && defined(ENABLE_IGNORE_CERTIFICATE_ERRORS)
+  // Used to disable certificate verification errors for testing/developerment
+  // purpose.
+  void set_ignore_certificate_errors(bool ignore_certificate_errors) {
+    ignore_certificate_errors_ = ignore_certificate_errors;
+  }
+#endif
 
  private:
   struct JobToRequestParamsComparator;
@@ -125,6 +131,10 @@ class NET_EXPORT_PRIVATE MultiThreadedCertVerifier : public CertVerifier {
   // (See https://crbug.com/649026.)
   VerifyCompleteCallback verify_complete_callback_;
   bool should_record_histograms_ = true;
+
+#if defined(STARBOARD) && defined(ENABLE_IGNORE_CERTIFICATE_ERRORS)
+  bool ignore_certificate_errors_ = false;
+#endif
 
   THREAD_CHECKER(thread_checker_);
 

@@ -31,6 +31,8 @@
 #include "net/socket/socket_net_log_params.h"
 #include "net/socket/socket_options.h"
 #include "net/socket/socket_tag.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace net {
 

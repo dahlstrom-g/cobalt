@@ -48,6 +48,7 @@
 #if BUILDFLAG(ENABLE_REPORTING)
 #include "net/network_error_logging/network_error_logging_service.h"
 #include "net/reporting/reporting_service.h"
+#include "starboard/common/string.h"
 #endif  // BUILDFLAG(ENABLE_REPORTING)
 
 using base::Time;
@@ -479,8 +480,15 @@ void URLRequest::set_first_party_url_policy(
 
 void URLRequest::set_initiator(const base::Optional<url::Origin>& initiator) {
   DCHECK(!is_pending_);
+#if defined(STARBOARD)
+  // This is not a Cobalt change, but due toa mismatch between src/net and
+  // src/url version.
+  DCHECK(!initiator.has_value() || initiator.value().unique() ||
+         initiator.value().GetURL().is_valid());
+#else
   DCHECK(!initiator.has_value() || initiator.value().opaque() ||
          initiator.value().GetURL().is_valid());
+#endif
   initiator_ = initiator;
 }
 
@@ -1156,6 +1164,13 @@ void URLRequest::NotifyRequestCompleted() {
   // not be needed.
   if (has_notified_completion_)
     return;
+
+  #if defined (STARBOARD)
+    load_timing_info_.encoded_body_size = static_cast<uint64_t>(GetTotalReceivedBytes());
+    if (load_timing_info_callback_) {
+      load_timing_info_callback_.Run(load_timing_info_);
+    }
+  #endif  // defined(STARBOARD)
 
   is_pending_ = false;
   is_redirecting_ = false;

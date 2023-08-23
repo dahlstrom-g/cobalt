@@ -8,6 +8,9 @@
 #include <utility>
 
 #include "base/auto_reset.h"
+#ifdef QUIC_DISABLED_FOR_STARBOARD
+#include "base/bind_helpers.h"
+#endif
 #include "base/logging.h"
 
 #include "net/base/net_errors.h"
@@ -15,6 +18,7 @@
 #include "net/http/http_cache_transaction.h"
 #include "net/http/http_response_info.h"
 #include "net/http/partial_data.h"
+#include "starboard/memory.h"
 
 namespace net {
 
@@ -528,7 +532,7 @@ void HttpCache::Writers::CompleteWaitingForReadTransactions(int result) {
       // Save the data in the waiting transaction's read buffer.
       it->second.write_len = std::min(it->second.read_buf_len, result);
       memcpy(it->second.read_buf->data(), read_buf_->data(),
-             it->second.write_len);
+                   it->second.write_len);
       callback_result = it->second.write_len;
     }
 

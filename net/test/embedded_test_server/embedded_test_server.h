@@ -5,8 +5,6 @@
 #ifndef NET_TEST_EMBEDDED_TEST_SERVER_EMBEDDED_TEST_SERVER_H_
 #define NET_TEST_EMBEDDED_TEST_SERVER_EMBEDDED_TEST_SERVER_H_
 
-#include <stdint.h>
-
 #include <map>
 #include <memory>
 #include <string>
@@ -28,6 +26,7 @@
 #include "net/socket/stream_socket.h"
 #include "net/socket/tcp_server_socket.h"
 #include "net/ssl/ssl_server_config.h"
+#include "starboard/types.h"
 #include "url/gurl.h"
 
 namespace net {
@@ -211,12 +210,12 @@ class EmbeddedTestServer {
   // ServeFilesFromSourceDirectory.
   void ServeFilesFromDirectory(const base::FilePath& directory);
 
-  // Serves files relative to DIR_SOURCE_ROOT.
+  // Serves files relative to DIR_SOURCE_ROOT_FOR_TESTING.
   void ServeFilesFromSourceDirectory(const std::string& relative);
   void ServeFilesFromSourceDirectory(const base::FilePath& relative);
 
   // Registers the default handlers and serve additional files from the
-  // |directory| directory, relative to DIR_SOURCE_ROOT.
+  // |directory| directory, relative to DIR_SOURCE_ROOT_FOR_TESTING.
   void AddDefaultHandlers(const base::FilePath& directory);
 
   // The most general purpose method. Any request processing can be added using

@@ -7,9 +7,6 @@
 #ifndef NET_COOKIES_COOKIE_MONSTER_H_
 #define NET_COOKIES_COOKIE_MONSTER_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <map>
 #include <memory>
 #include <set>
@@ -32,6 +29,7 @@
 #include "net/cookies/cookie_monster_change_dispatcher.h"
 #include "net/cookies/cookie_store.h"
 #include "net/log/net_log_with_source.h"
+#include "starboard/types.h"
 #include "url/gurl.h"
 
 namespace base {
@@ -649,7 +647,7 @@ class NET_EXPORT CookieMonster : public CookieStore {
 
   bool persist_session_cookies_;
 
-  base::ThreadChecker thread_checker_;
+  THREAD_CHECKER(thread_checker_);
 
   base::WeakPtrFactory<CookieMonster> weak_ptr_factory_;
 

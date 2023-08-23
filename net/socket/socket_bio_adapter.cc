@@ -19,6 +19,8 @@
 #include "net/socket/stream_socket.h"
 #include "net/ssl/openssl_ssl_util.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "third_party/boringssl/src/include/openssl/bio.h"
 
 namespace {

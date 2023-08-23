@@ -6,6 +6,10 @@
 
 #include <memory>
 
+#include "starboard/types.h"
+
+#include "starboard/memory.h"
+
 #include "base/cancelable_callback.h"
 #include "base/files/file_util.h"
 #include "base/run_loop.h"
@@ -89,7 +93,7 @@ void InitializeResState(res_state res) {
       continue;
     // Must use malloc to mimick res_ninit.
     struct sockaddr_in6 *sa6;
-    sa6 = (struct sockaddr_in6 *)malloc(sizeof(*sa6));
+    sa6 = (struct sockaddr_in6*)SbMemoryAllocate(sizeof(*sa6));
     sa6->sin6_family = AF_INET6;
     sa6->sin6_port = base::HostToNet16(NS_DEFAULTPORT - i);
     inet_pton(AF_INET6, kNameserversIPv6[i], &sa6->sin6_addr);
@@ -105,7 +109,7 @@ void CloseResState(res_state res) {
 #if defined(OS_LINUX)
   for (int i = 0; i < res->nscount; ++i) {
     if (res->_u._ext.nsaddrs[i] != NULL)
-      free(res->_u._ext.nsaddrs[i]);
+      SbMemoryDeallocate(res->_u._ext.nsaddrs[i]);
   }
 #endif
 }

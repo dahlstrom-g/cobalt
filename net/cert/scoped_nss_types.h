@@ -5,10 +5,14 @@
 #ifndef NET_CERT_SCOPED_NSS_TYPES_H_
 #define NET_CERT_SCOPED_NSS_TYPES_H_
 
+#if !defined(STARBOARD)
+
 #include <cert.h>
 
 #include <memory>
 #include <vector>
+
+#include "starboard/types.h"
 
 namespace net {
 
@@ -24,5 +28,7 @@ typedef std::unique_ptr<CERTCertificate, FreeCERTCertificate>
 using ScopedCERTCertificateList = std::vector<ScopedCERTCertificate>;
 
 }  // namespace net
+
+#endif  // !defined(STARBOARD)
 
 #endif  // NET_CERT_SCOPED_NSS_TYPES_H_

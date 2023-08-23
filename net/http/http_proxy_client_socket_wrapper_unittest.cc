@@ -4,6 +4,9 @@
 
 #include "net/http/http_proxy_client_socket_wrapper.h"
 
+// This file has been discontinued by m74 Chromium net.
+#if !defined(QUIC_DISABLED_FOR_STARBOARD) && !defined(COBALT_QUIC46)
+
 #include <cstdio>
 #include <memory>
 
@@ -368,3 +371,5 @@ INSTANTIATE_TEST_CASE_P(
 
 };  // namespace test
 };  // namespace net
+
+#endif  // !defined(QUIC_DISABLED_FOR_STARBOARD) || defined(COBALT_QUIC46)

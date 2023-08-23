@@ -55,8 +55,9 @@
 #include "net/ssl/ssl_cipher_suite_names.h"
 #include "net/ssl/ssl_connection_status_flags.h"
 #include "net/third_party/quic/core/http/spdy_utils.h"
-#include "net/third_party/spdy/core/spdy_frame_builder.h"
-#include "net/third_party/spdy/core/spdy_protocol.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_frame_builder.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_protocol.h"
+#include "starboard/memory.h"
 #include "url/url_constants.h"
 
 namespace net {
@@ -2373,20 +2374,27 @@ void SpdySession::SendInitialData() {
       spdy::kHttp2ConnectionHeaderPrefixSize + settings_frame->size();
   if (send_window_update)
     initial_frame_size += window_update_frame->size();
+#if defined(STARBOARD)
+  // Work-around for no C++14 support.
+  auto initial_frame_data =
+      std::unique_ptr<char[]>(new char[initial_frame_size]);
+#else
   auto initial_frame_data = std::make_unique<char[]>(initial_frame_size);
+#endif
   size_t offset = 0;
 
-  memcpy(initial_frame_data.get() + offset, spdy::kHttp2ConnectionHeaderPrefix,
-         spdy::kHttp2ConnectionHeaderPrefixSize);
+  memcpy(initial_frame_data.get() + offset,
+               spdy::kHttp2ConnectionHeaderPrefix,
+               spdy::kHttp2ConnectionHeaderPrefixSize);
   offset += spdy::kHttp2ConnectionHeaderPrefixSize;
 
   memcpy(initial_frame_data.get() + offset, settings_frame->data(),
-         settings_frame->size());
+               settings_frame->size());
   offset += settings_frame->size();
 
   if (send_window_update) {
     memcpy(initial_frame_data.get() + offset, window_update_frame->data(),
-           window_update_frame->size());
+                 window_update_frame->size());
   }
 
   auto initial_frame = std::make_unique<spdy::SpdySerializedFrame>(

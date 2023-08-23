@@ -23,6 +23,7 @@
 #include "net/tools/quic/quic_simple_per_connection_packet_writer.h"
 #include "net/tools/quic/quic_simple_server_packet_writer.h"
 #include "net/tools/quic/quic_simple_server_session_helper.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -132,7 +133,11 @@ int QuicSimpleServer::Listen(const IPEndPoint& address) {
   socket_.swap(socket);
 
   dispatcher_.reset(new quic::QuicSimpleDispatcher(
+#if defined(COBALT_QUIC46)
+      &config_, &crypto_config_, &version_manager_,
+#else
       config_, &crypto_config_, &version_manager_,
+#endif
       std::unique_ptr<quic::QuicConnectionHelperInterface>(helper_),
       std::unique_ptr<quic::QuicCryptoServerStream::Helper>(
           new QuicSimpleServerSessionHelper(quic::QuicRandom::GetInstance())),

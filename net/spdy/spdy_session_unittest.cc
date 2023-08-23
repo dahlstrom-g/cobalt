@@ -44,8 +44,9 @@
 #include "net/test/gtest_util.h"
 #include "net/test/test_data_directory.h"
 #include "net/test/test_with_scoped_task_environment.h"
-#include "net/third_party/spdy/core/spdy_test_utils.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_test_utils.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
+#include "starboard/memory.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/platform_test.h"
 
@@ -53,6 +54,11 @@ using net::test::IsError;
 using net::test::IsOk;
 using net::test::TestServerPushDelegate;
 using testing::_;
+
+#if SB_IS(COMPILER_MSVC)
+#pragma warning(disable : 4309)
+#pragma warning(disable : 4838)
+#endif
 
 namespace net {
 

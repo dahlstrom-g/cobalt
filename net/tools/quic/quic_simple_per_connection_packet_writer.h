@@ -5,12 +5,11 @@
 #ifndef NET_TOOLS_QUIC_QUIC_SIMPLE_PER_CONNECTION_PACKET_WRITER_H_
 #define NET_TOOLS_QUIC_QUIC_SIMPLE_PER_CONNECTION_PACKET_WRITER_H_
 
-#include <stddef.h>
-
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
 #include "net/third_party/quic/core/quic_connection.h"
 #include "net/third_party/quic/core/quic_packet_writer.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -40,7 +39,9 @@ class QuicSimplePerConnectionPacketWriter : public quic::QuicPacketWriter {
                                 const quic::QuicIpAddress& self_address,
                                 const quic::QuicSocketAddress& peer_address,
                                 quic::PerPacketOptions* options) override;
+#if !defined(COBALT_QUIC46)
   bool IsWriteBlockedDataBuffered() const override;
+#endif
   bool IsWriteBlocked() const override;
   void SetWritable() override;
   quic::QuicByteCount GetMaxPacketSize(

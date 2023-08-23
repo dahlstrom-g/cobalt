@@ -5,11 +5,12 @@
 #ifndef NET_DISK_CACHE_BLOCKFILE_BITMAP_H_
 #define NET_DISK_CACHE_BLOCKFILE_BITMAP_H_
 
-#include <stdint.h>
 #include <string.h>
 
 #include "base/macros.h"
 #include "net/base/net_export.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace disk_cache {
 

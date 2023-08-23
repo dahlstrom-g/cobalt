@@ -14,8 +14,6 @@
 #ifndef NET_URL_REQUEST_URL_REQUEST_CONTEXT_BUILDER_H_
 #define NET_URL_REQUEST_URL_REQUEST_CONTEXT_BUILDER_H_
 
-#include <stdint.h>
-
 #include <map>
 #include <memory>
 #include <string>
@@ -29,7 +27,9 @@
 #include "base/memory/ref_counted.h"
 #include "base/task/task_traits.h"
 #include "build/build_config.h"
+#if !defined(STARBOARD)
 #include "build/buildflag.h"
+#endif
 #include "net/base/net_export.h"
 #include "net/base/network_delegate.h"
 #include "net/base/proxy_delegate.h"
@@ -41,6 +41,7 @@
 #include "net/ssl/ssl_config_service.h"
 #include "net/third_party/quic/core/quic_packets.h"
 #include "net/url_request/url_request_job_factory.h"
+#include "starboard/types.h"
 
 namespace base {
 namespace android {

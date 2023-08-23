@@ -17,6 +17,7 @@
 #include "net/third_party/quic/platform/api/quic_test.h"
 #include "net/third_party/quic/tools/quic_backend_response.h"
 #include "net/tools/quic/quic_http_proxy_backend.h"
+#include "starboard/common/string.h"
 
 namespace net {
 namespace test {
@@ -33,7 +34,7 @@ const char* const kHttp2StatusHeader = ":status";
 // To test uploading the contents of a file
 base::FilePath GetUploadFileTestPath() {
   base::FilePath path;
-  base::PathService::Get(base::DIR_SOURCE_ROOT, &path);
+  base::PathService::Get(base::DIR_TEST_DATA, &path);
   return path.Append(
       FILE_PATH_LITERAL("net/data/url_request_unittest/BullRunSpeech.txt"));
 }

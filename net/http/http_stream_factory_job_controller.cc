@@ -29,6 +29,10 @@ namespace net {
 
 namespace {
 
+#if defined(STARBOARD)
+const int kDefaultQUICServerPort = 443;
+#endif
+
 // Returns parameters associated with the proxy resolution.
 std::unique_ptr<base::Value> NetLogHttpStreamJobProxyServerResolved(
     const ProxyServer& proxy_server,
@@ -1127,8 +1131,25 @@ HttpStreamFactory::JobController::GetAlternativeServiceInfoInternal(
       *session_->http_server_properties();
   const AlternativeServiceInfoVector alternative_service_info_vector =
       http_server_properties.GetAlternativeServiceInfos(origin);
+#if defined(STARBOARD)
+  // This block of code suggests QUIC connection for initial requests to a
+  // stranger host. This method is proven to provide performance benefit while
+  // still enabling Cobalt network module to fall back on TCP connection when
+  // QUIC fails or is too slow.
+  if (alternative_service_info_vector.empty() && session_->IsQuicEnabled() &&
+      session_->UseQuicForUnknownOrigin()) {
+    if (origin.port() == kDefaultQUICServerPort) {
+      return AlternativeServiceInfo::CreateQuicAlternativeServiceInfo(
+          AlternativeService(net::kProtoQUIC, origin.host(),
+                             kDefaultQUICServerPort),
+          base::Time::Max(), {quic::QUIC_VERSION_46});
+    }
+    return AlternativeServiceInfo();
+  }
+#else
   if (alternative_service_info_vector.empty())
     return AlternativeServiceInfo();
+#endif
 
   bool quic_advertised = false;
   bool quic_all_broken = true;
@@ -1189,6 +1210,7 @@ HttpStreamFactory::JobController::GetAlternativeServiceInfoInternal(
         quic::QUIC_VERSION_UNSUPPORTED)
       continue;
 
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
     // Check whether there is an existing QUIC session to use for this origin.
     HostPortPair mapped_origin(origin.host(), origin.port());
     ignore_result(ApplyHostMappingRules(original_url, &mapped_origin));
@@ -1208,6 +1230,7 @@ HttpStreamFactory::JobController::GetAlternativeServiceInfoInternal(
 
     if (!IsQuicWhitelistedForHost(destination.host()))
       continue;
+#endif
 
     // Cache this entry if we don't have a non-broken Alt-Svc yet.
     if (first_alternative_service_info.protocol() == kProtoUnknown)

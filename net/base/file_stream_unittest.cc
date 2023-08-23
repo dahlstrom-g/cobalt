@@ -37,6 +37,7 @@ using net::test::IsOk;
 
 #if defined(OS_ANDROID)
 #include "base/test/test_file_util.h"
+#include "starboard/memory.h"
 #endif
 
 namespace net {
@@ -788,7 +789,11 @@ TEST_F(FileStreamTest, WriteError) {
   int rv = stream->Write(buf.get(), 1, callback.callback());
   if (rv == ERR_IO_PENDING)
     rv = callback.WaitForResult();
+#ifndef STARBOARD
+  // Starboard does not guarantee that file with read access returns error on
+  // write.
   EXPECT_LT(rv, 0);
+#endif
 
   stream.reset();
   base::RunLoop().RunUntilIdle();
@@ -811,7 +816,11 @@ TEST_F(FileStreamTest, ReadError) {
   int rv = stream->Read(buf.get(), 1, callback.callback());
   if (rv == ERR_IO_PENDING)
     rv = callback.WaitForResult();
+#ifndef STARBOARD
+  // Starboard does not guarantee that file with write access returns error on
+  // read.
   EXPECT_LT(rv, 0);
+#endif
 
   stream.reset();
   base::RunLoop().RunUntilIdle();
@@ -841,7 +850,7 @@ TEST_F(FileStreamTest, AsyncFlagMismatch) {
 #if defined(OS_ANDROID)
 TEST_F(FileStreamTest, ContentUriRead) {
   base::FilePath test_dir;
-  base::PathService::Get(base::DIR_SOURCE_ROOT, &test_dir);
+  base::PathService::Get(base::DIR_TEST_DATA, &test_dir);
   test_dir = test_dir.AppendASCII("net");
   test_dir = test_dir.AppendASCII("data");
   test_dir = test_dir.AppendASCII("file_stream_unittest");

@@ -5,8 +5,6 @@
 #ifndef NET_NQE_THROUGHPUT_ANALYZER_H_
 #define NET_NQE_THROUGHPUT_ANALYZER_H_
 
-#include <stdint.h>
-
 #include "base/callback.h"
 #include "base/containers/hash_tables.h"
 #include "base/macros.h"
@@ -15,6 +13,7 @@
 #include "base/time/time.h"
 #include "net/base/net_export.h"
 #include "net/log/net_log_with_source.h"
+#include "starboard/types.h"
 
 namespace {
 typedef base::Callback<void(int32_t)> ThroughputObservationCallback;
@@ -208,7 +207,7 @@ class NET_EXPORT_PRIVATE ThroughputAnalyzer {
   // network quality. Set to true only for tests.
   bool use_localhost_requests_for_tests_;
 
-  base::ThreadChecker thread_checker_;
+  THREAD_CHECKER(thread_checker_);
 
   NetLogWithSource net_log_;
 

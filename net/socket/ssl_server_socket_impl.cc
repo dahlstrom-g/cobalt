@@ -25,6 +25,7 @@
 #include "net/ssl/ssl_connection_status_flags.h"
 #include "net/ssl/ssl_info.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
+#include "starboard/memory.h"
 #include "third_party/boringssl/src/include/openssl/err.h"
 #include "third_party/boringssl/src/include/openssl/pool.h"
 #include "third_party/boringssl/src/include/openssl/ssl.h"
@@ -829,7 +830,12 @@ SSLServerContextImpl::SSLServerContextImpl(
     const SSLServerConfig& ssl_server_config)
     : ssl_server_config_(ssl_server_config),
       cert_(certificate),
+#if defined(STARBOARD)
+      key_(key.Copy()),
+      private_key_(nullptr) {
+#else
       key_(key.Copy()) {
+#endif
   CHECK(key_);
   Init();
 }

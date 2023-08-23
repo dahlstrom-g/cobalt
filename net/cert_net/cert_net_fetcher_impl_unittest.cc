@@ -72,9 +72,14 @@ class RequestContext : public URLRequestContext {
     session_context.http_server_properties = http_server_properties();
     storage_.set_http_network_session(std::make_unique<HttpNetworkSession>(
         HttpNetworkSession::Params(), session_context));
+#ifdef HTTP_CACHE_DISABLED_FOR_STARBOARD
+    storage_.set_http_transaction_factory(
+        std::make_unique<HttpNetworkLayer>(storage_.http_network_session()));
+#else
     storage_.set_http_transaction_factory(std::make_unique<HttpCache>(
         storage_.http_network_session(), HttpCache::DefaultBackend::InMemory(0),
         false /* is_main_cache */));
+#endif
     storage_.set_job_factory(std::make_unique<URLRequestJobFactoryImpl>());
   }
 
@@ -321,6 +326,8 @@ TEST_F(CertNetFetcherImplTest, ContentDisposition) {
   VerifySuccess("-downloadable.js-\n", request.get());
 }
 
+// Caching is disabled on Starboard.
+#if !defined(STARBOARD)
 // Verifies that a cachable request will be served from the HTTP cache the
 // second time it is requested.
 TEST_F(CertNetFetcherImplTest, Cache) {
@@ -350,6 +357,7 @@ TEST_F(CertNetFetcherImplTest, Cache) {
 
   EXPECT_EQ(2, NumCreatedRequests());
 }
+#endif  // !defined(STARBOARD)
 
 // Verify that the maximum response body constraints are enforced by fetching a
 // resource that is larger than the limit.
@@ -512,7 +520,13 @@ TEST_F(CertNetFetcherImplTest, CancelAfterRunningMessageLoop) {
 
 // Fetch the same URLs in parallel and verify that only 1 request is made per
 // URL.
+#if defined(STARBOARD)
+// STARBOARD does not use CertNetFetcher at all, but this test fails on some
+// platform.
+TEST_F(CertNetFetcherImplTest, DISABLED_ParallelFetchDuplicates) {
+#else
 TEST_F(CertNetFetcherImplTest, ParallelFetchDuplicates) {
+#endif
   ASSERT_TRUE(test_server_.Start());
 
   CreateFetcher();
@@ -578,7 +592,13 @@ TEST_F(CertNetFetcherImplTest, CancelThenStart) {
 }
 
 // Start duplicate requests and then cancel all of them.
+#if defined(STARBOARD)
+// STARBOARD does not use CertNetFetcher at all, but this test fails on some
+// platform.
+TEST_F(CertNetFetcherImplTest, DISABLED_CancelAll) {
+#else
 TEST_F(CertNetFetcherImplTest, CancelAll) {
+#endif
   ASSERT_TRUE(test_server_.Start());
 
   CreateFetcher();

@@ -5,8 +5,6 @@
 #ifndef NET_URL_REQUEST_URL_FETCHER_CORE_H_
 #define NET_URL_REQUEST_URL_FETCHER_CORE_H_
 
-#include <stdint.h>
-
 #include <memory>
 #include <set>
 #include <string>
@@ -17,8 +15,12 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/timer/timer.h"
+#include "starboard/extension/url_fetcher_observer.h"
 #include "net/base/chunked_upload_data_stream.h"
 #include "net/base/host_port_pair.h"
+#if defined(STARBOARD)
+#include "net/base/load_timing_info.h"
+#endif  // defined(STARBOARD)
 #include "net/base/proxy_server.h"
 #include "net/http/http_request_headers.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
@@ -26,6 +28,7 @@
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context_getter_observer.h"
 #include "net/url_request/url_request_status.h"
+#include "starboard/types.h"
 #include "url/gurl.h"
 
 namespace base {
@@ -111,10 +114,19 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   void SaveResponseToFileAtPath(
       const base::FilePath& file_path,
       scoped_refptr<base::SequencedTaskRunner> file_task_runner);
+#if defined(STARBOARD)
+  void SaveResponseToLargeString();
+#endif
   void SaveResponseToTemporaryFile(
       scoped_refptr<base::SequencedTaskRunner> file_task_runner);
   void SaveResponseWithWriter(
       std::unique_ptr<URLFetcherResponseWriter> response_writer);
+#if defined(STARBOARD)
+  URLFetcherResponseWriter* GetResponseWriter() const {
+    return response_writer_.get();
+  }
+#endif
+  const HttpRequestHeaders& GetRequestHeaders() const;
   HttpResponseHeaders* GetResponseHeaders() const;
   HostPortPair GetSocketAddress() const;
   const ProxyServer& ProxyServerUsed() const;
@@ -134,6 +146,9 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   // headers.
   void ReceivedContentWasMalformed();
   bool GetResponseAsString(std::string* out_response_string) const;
+#if defined(STARBOARD)
+  bool GetResponseAsLargeString(std::string* out_response_string) const;
+#endif
   bool GetResponseAsFilePath(bool take_ownership,
                              base::FilePath* out_response_path);
 
@@ -154,7 +169,10 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   static int GetNumFetcherCores();
   static void SetEnableInterceptionForTests(bool enabled);
   static void SetIgnoreCertificateRequests(bool ignored);
-
+#if defined (STARBOARD)
+  void GetLoadTimingInfo(const net::LoadTimingInfo& timing_info);
+  void GetLoadTimingInfoInDelegateThread(const net::LoadTimingInfo& timing_info);
+#endif  // defined(STARBOARD)
  private:
   friend class base::RefCountedThreadSafe<URLFetcherCore>;
 
@@ -220,6 +238,10 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   // Read response bytes from the request.
   void ReadResponse();
 
+#if defined(STARBOARD)
+  void InformDelegateResponseStarted();
+  void InformDelegateResponseStartedInDelegateThread();
+#endif  // defined(STARBOARD)
   // Notify Delegate about the progress of upload/download.
   void InformDelegateUploadProgress();
   void InformDelegateUploadProgressInDelegateSequence(int64_t current,
@@ -242,7 +264,7 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   // Task runner for the creating sequence. Used to interact with the delegate.
   const scoped_refptr<base::SequencedTaskRunner> delegate_task_runner_;
   // Task runner for network operations.
-  scoped_refptr<base::SingleThreadTaskRunner> network_task_runner_;
+  scoped_refptr<base::SequencedTaskRunner> network_task_runner_;
   // Task runner for upload file access.
   scoped_refptr<base::TaskRunner> upload_file_task_runner_;
   std::unique_ptr<URLRequest> request_;  // The actual request this wraps
@@ -250,6 +272,10 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   // Whether credentials are sent along with the request.
   base::Optional<bool> allow_credentials_;
   int response_code_;                // HTTP status code for the request
+
+#if defined(STARBOARD)
+  int io_buffer_size_;
+#endif  // defined(STARBOARD)
   scoped_refptr<IOBuffer> buffer_;
                                      // Read buffer
   scoped_refptr<URLRequestContextGetter> request_context_getter_;
@@ -357,6 +383,8 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   const net::NetworkTrafficAnnotationTag traffic_annotation_;
 
   static base::LazyInstance<Registry>::DestructorAtExit g_registry;
+
+  const CobaltExtensionUrlFetcherObserverApi* observer_extension_;
 
   DISALLOW_COPY_AND_ASSIGN(URLFetcherCore);
 };

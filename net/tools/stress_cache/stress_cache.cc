@@ -48,6 +48,7 @@
 
 #if defined(OS_WIN)
 #include "base/logging_win.h"
+#include "starboard/memory.h"
 #endif
 
 using base::Time;

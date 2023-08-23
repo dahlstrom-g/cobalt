@@ -43,6 +43,7 @@
 #include "net/socket/socket_test_util.h"
 #include "net/spdy/spdy_test_util_common.h"
 #include "net/test/test_with_scoped_task_environment.h"
+#include "net/third_party/quic/core/quic_utils.h"
 #include "net/third_party/quic/test_tools/mock_random.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -60,6 +61,7 @@ using ::testing::SizeIs;
 namespace net {
 
 namespace test {
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
 
 namespace {
 
@@ -166,10 +168,12 @@ class HttpStreamFactoryJobPeer {
     job->stream_ = std::move(http_stream);
   }
 
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   static void SetQuicConnectionFailedOnDefaultNetwork(
       HttpStreamFactory::Job* job) {
     job->quic_request_.OnConnectionFailedOnDefaultNetwork();
   }
+#endif
 };
 
 class JobControllerPeer {
@@ -196,8 +200,10 @@ class JobControllerPeer {
   static void SetAltJobFailedOnDefaultNetwork(
       HttpStreamFactory::JobController* job_controller) {
     DCHECK(job_controller->alternative_job() != nullptr);
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
     HttpStreamFactoryJobPeer::SetQuicConnectionFailedOnDefaultNetwork(
         job_controller->alternative_job_.get());
+#endif
   }
 };
 
@@ -349,7 +355,11 @@ class HttpStreamFactoryJobControllerTest
   quic::test::MockRandom random_generator_{0};
   QuicTestPacketMaker client_maker_{
       HttpNetworkSession::Params().quic_supported_versions[0],
+#if defined(COBALT_QUIC46)
+      quic::QuicUtils::CreateRandomConnectionId(&random_generator_),
+#else
       0,
+#endif
       &clock_,
       kServerHostname,
       quic::Perspective::IS_CLIENT,
@@ -1831,7 +1841,8 @@ TEST_F(HttpStreamFactoryJobControllerTest, ResumeMainJobLaterCanceled) {
   session_deps_.proxy_resolution_service = std::move(proxy_resolution_service);
 
   // Using hanging resolver will cause the alternative job to hang indefinitely.
-  session_deps_.host_resolver = std::make_unique<HangingResolver>();
+  session_deps_.alternate_host_resolver =
+      std::make_unique<HangingHostResolver>();
 
   HttpRequestInfo request_info;
   request_info.method = "GET";
@@ -2970,6 +2981,8 @@ TEST_F(HttpStreamFactoryJobControllerTest, QuicHostWhitelist) {
   EXPECT_EQ(kProtoUnknown, alt_svc_info.alternative_service().protocol);
   EXPECT_EQ(0u, alt_svc_info.advertised_versions().size());
 }
+
+#endif  // !defined(QUIC_DISABLED_FOR_STARBOARD)
 
 }  // namespace test
 

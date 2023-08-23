@@ -30,6 +30,7 @@
 #include "net/test/gtest_util.h"
 #include "net/test/test_with_scoped_task_environment.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
+#include "starboard/common/string.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -855,6 +856,10 @@ TEST_F(TransportClientSocketPoolTest, BackupSocketFailAfterDelay) {
   handle.Reset();
 }
 
+// Disable this test since the TransportConnectJob::DoResolveHostComplete
+// customization causes the IPv4 address to be tried first, thus breaking
+// the assumptions of this test.
+#ifndef STARBOARD
 // Test the case of the IPv6 address stalling, and falling back to the IPv4
 // socket which finishes first.
 TEST_F(TransportClientSocketPoolTest, IPv6FallbackSocketIPv4FinishesFirst) {
@@ -902,7 +907,12 @@ TEST_F(TransportClientSocketPoolTest, IPv6FallbackSocketIPv4FinishesFirst) {
 
   EXPECT_EQ(2, client_socket_factory_.allocation_count());
 }
+#endif
 
+// Disable this test since the TransportConnectJob::DoResolveHostComplete
+// customization causes the IPv4 address to be tried first, thus breaking
+// the assumptions of this test.
+#ifndef STARBOARD
 // Test the case of the IPv6 address being slow, thus falling back to trying to
 // connect to the IPv4 address, but having the connect to the IPv6 address
 // finish first.
@@ -954,6 +964,7 @@ TEST_F(TransportClientSocketPoolTest, IPv6FallbackSocketIPv6FinishesFirst) {
 
   EXPECT_EQ(2, client_socket_factory_.allocation_count());
 }
+#endif
 
 TEST_F(TransportClientSocketPoolTest, IPv6NoIPv4AddressesToFallbackTo) {
   // Create a pool without backup jobs.
@@ -1071,6 +1082,10 @@ TEST_F(TransportClientSocketPoolTest, TCPFastOpenOnIPv6WithNoFallback) {
   EXPECT_TRUE(socket_data.IsUsingTCPFastOpen());
 }
 
+// Disable this test since the TransportConnectJob::DoResolveHostComplete
+// customization causes the IPv4 address to be tried first, thus breaking
+// the assumptions of this test.
+#ifndef STARBOARD
 // Test that if TCP FastOpen is enabled, it does not do anything when there
 // is a IPv6 address with fallback to an IPv4 address. This test tests the case
 // when the IPv6 connect fails and the IPv4 one succeeds.
@@ -1140,6 +1155,7 @@ TEST_F(TransportClientSocketPoolTest,
   // Verify that TCP FastOpen was not turned on for the socket.
   EXPECT_FALSE(socket_data.IsUsingTCPFastOpen());
 }
+#endif
 
 // Test that SocketTag passed into TransportClientSocketPool is applied to
 // returned sockets.
@@ -1190,7 +1206,8 @@ TEST_F(TransportClientSocketPoolTest, Tag) {
   rv =
       handle.socket()->Write(write_buffer.get(), strlen(kRequest),
                              callback.callback(), TRAFFIC_ANNOTATION_FOR_TESTS);
-  EXPECT_EQ(static_cast<int>(strlen(kRequest)), callback.GetResult(rv));
+  EXPECT_EQ(static_cast<int>(strlen(kRequest)),
+            callback.GetResult(rv));
   EXPECT_GT(GetTaggedBytes(tag_val2), old_traffic);
   // Disconnect socket to prevent reuse.
   handle.socket()->Disconnect();
@@ -1216,7 +1233,8 @@ TEST_F(TransportClientSocketPoolTest, Tag) {
   rv =
       handle.socket()->Write(write_buffer.get(), strlen(kRequest),
                              callback.callback(), TRAFFIC_ANNOTATION_FOR_TESTS);
-  EXPECT_EQ(static_cast<int>(strlen(kRequest)), callback.GetResult(rv));
+  EXPECT_EQ(static_cast<int>(strlen(kRequest)),
+            callback.GetResult(rv));
   EXPECT_GT(GetTaggedBytes(tag_val2), old_traffic);
   // Disconnect socket to prevent reuse.
   handle.socket()->Disconnect();
@@ -1250,17 +1268,19 @@ TEST_F(TransportClientSocketPoolTest, Tag) {
   EXPECT_TRUE(handle.socket()->IsConnected());
   // Verify |handle_high_pri| has |tag2| applied.
   old_traffic = GetTaggedBytes(tag_val2);
-  rv = handle_high_pri.socket()->Write(write_buffer.get(), strlen(kRequest),
-                                       callback.callback(),
-                                       TRAFFIC_ANNOTATION_FOR_TESTS);
-  EXPECT_EQ(static_cast<int>(strlen(kRequest)), callback.GetResult(rv));
+  rv = handle_high_pri.socket()->Write(
+      write_buffer.get(), strlen(kRequest), callback.callback(),
+      TRAFFIC_ANNOTATION_FOR_TESTS);
+  EXPECT_EQ(static_cast<int>(strlen(kRequest)),
+            callback.GetResult(rv));
   EXPECT_GT(GetTaggedBytes(tag_val2), old_traffic);
   // Verify |handle| has |tag1| applied.
   old_traffic = GetTaggedBytes(tag_val1);
   rv =
       handle.socket()->Write(write_buffer.get(), strlen(kRequest),
                              callback.callback(), TRAFFIC_ANNOTATION_FOR_TESTS);
-  EXPECT_EQ(static_cast<int>(strlen(kRequest)), callback.GetResult(rv));
+  EXPECT_EQ(static_cast<int>(strlen(kRequest)),
+            callback.GetResult(rv));
   EXPECT_GT(GetTaggedBytes(tag_val1), old_traffic);
 }
 #endif

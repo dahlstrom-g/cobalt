@@ -6,7 +6,6 @@
 
 #include <math.h>  // ceil
 #include <stdarg.h>
-#include <stdint.h>
 
 #include <limits>
 #include <set>
@@ -93,7 +92,7 @@
 #include "net/test/gtest_util.h"
 #include "net/test/test_data_directory.h"
 #include "net/test/test_with_scoped_task_environment.h"
-#include "net/third_party/spdy/core/spdy_framer.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_framer.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/websockets/websocket_handshake_stream_base.h"
 #include "net/websockets/websocket_test_util.h"
@@ -105,6 +104,9 @@
 #if defined(NTLM_PORTABLE)
 #include "base/base64.h"
 #include "net/ntlm/ntlm_test_data.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #endif
 
 using net::test::IsError;
@@ -1564,7 +1566,8 @@ void HttpNetworkTransactionTest::PreconnectErrorResendRequestTest(
 
     data2_reads.push_back(
         MockRead(ASYNC, kHttpResponse, strlen(kHttpResponse), 1));
-    data2_reads.push_back(MockRead(ASYNC, kHttpData, strlen(kHttpData), 2));
+    data2_reads.push_back(
+        MockRead(ASYNC, kHttpData, strlen(kHttpData), 2));
     data2_reads.push_back(MockRead(ASYNC, OK, 3));
   }
   SequencedSocketData data2(data2_reads, data2_writes);
@@ -10733,6 +10736,8 @@ TEST_F(HttpNetworkTransactionTest, UploadFileSmallerThanLength) {
   base::DeleteFile(temp_file_path, false);
 }
 
+#if !defined(STARBOARD)
+// Starboard does not implement MakeFileUnreadable.
 TEST_F(HttpNetworkTransactionTest, UploadUnreadableFile) {
   base::FilePath temp_file;
   ASSERT_TRUE(base::CreateTemporaryFile(&temp_file));
@@ -10772,6 +10777,7 @@ TEST_F(HttpNetworkTransactionTest, UploadUnreadableFile) {
 
   base::DeleteFile(temp_file, false);
 }
+#endif
 
 TEST_F(HttpNetworkTransactionTest, CancelDuringInitRequestBody) {
   class FakeUploadElementReader : public UploadElementReader {

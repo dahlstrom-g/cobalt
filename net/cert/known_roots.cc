@@ -10,6 +10,8 @@
 
 #include "net/base/hash_value.h"
 #include "net/cert/root_cert_list_generated.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace net {
 

@@ -12,6 +12,9 @@
 #include "net/dns/dns_util.h"
 #include "net/dns/record_rdata.h"
 
+#include "starboard/client_porting/poem/string_poem.h"
+#include "starboard/memory.h"
+
 namespace net {
 
 namespace {
@@ -148,7 +151,7 @@ DnsQuery::DnsQuery(const DnsQuery& orig, uint16_t id) {
   qname_size_ = orig.qname_size_;
   io_buffer_ = base::MakeRefCounted<IOBufferWithSize>(orig.io_buffer()->size());
   memcpy(io_buffer_.get()->data(), orig.io_buffer()->data(),
-         io_buffer_.get()->size());
+               io_buffer_.get()->size());
   header_ = reinterpret_cast<dns_protocol::Header*>(io_buffer_->data());
   header_->id = base::HostToNet16(id);
 }

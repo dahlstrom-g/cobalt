@@ -5,9 +5,6 @@
 #ifndef NET_HTTP_HTTP_NETWORK_SESSION_H_
 #define NET_HTTP_HTTP_NETWORK_SESSION_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <map>
 #include <memory>
 #include <set>
@@ -28,11 +25,14 @@
 #include "net/dns/host_resolver.h"
 #include "net/http/http_auth_cache.h"
 #include "net/http/http_stream_factory.h"
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
 #include "net/quic/quic_stream_factory.h"
+#endif
 #include "net/socket/next_proto.h"
 #include "net/spdy/spdy_session_pool.h"
 #include "net/ssl/ssl_client_auth_cache.h"
-#include "net/third_party/spdy/core/spdy_protocol.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_protocol.h"
+#include "starboard/types.h"
 
 namespace base {
 class Value;
@@ -59,9 +59,19 @@ class NetLog;
 class NetworkQualityProvider;
 class ProxyResolutionService;
 }  // namespace net
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
 namespace quic {
 class QuicClock;
 }  // namespace quic
+#else
+// These classes have not yet been enabled.
+namespace quic {
+class QuicRandom;
+}
+namespace net {
+class QuicStreamFactory;
+}
+#endif
 namespace net {
 class QuicCryptoClientStreamFactory;
 class SocketPerformanceWatcherFactory;
@@ -134,6 +144,17 @@ class NET_EXPORT HttpNetworkSession {
     // Enables QUIC support.
     bool enable_quic;
 
+#if defined(COBALT_QUIC46)
+    // If true, HTTPS URLs can be sent to QUIC proxies.
+    bool enable_quic_proxies_for_https_urls;
+#endif
+
+#if defined(STARBOARD)
+    // If true, request to an origin without recorded alt-svc info will
+    // try to establish both QUIC and TCP connections and use the faster one.
+    bool use_quic_for_unknown_origins;
+#endif
+
     // QUIC runtime configuration options.
 
     // Versions of QUIC which may be used.
@@ -145,6 +166,7 @@ class NET_EXPORT HttpNetworkSession {
     // Maximum number of server configs that are to be stored in
     // HttpServerProperties, instead of the disk cache.
     size_t quic_max_server_configs_stored_in_properties;
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
     // QUIC will be used for all connections in this set.
     std::set<HostPortPair> origins_to_force_quic_on;
     // Set of QUIC tags to send in the handshake's connection options.
@@ -152,6 +174,7 @@ class NET_EXPORT HttpNetworkSession {
     // Set of QUIC tags to send in the handshake's connection options that only
     // affect the client.
     quic::QuicTagVector quic_client_connection_options;
+#endif
     // Enables experimental optimization for receiving data in UDPSocket.
     bool quic_enable_socket_recv_optimization;
 
@@ -176,6 +199,10 @@ class NET_EXPORT HttpNetworkSession {
     // Specifies the reduced ping timeout subsequent connections should use when
     // a connection was timed out with open streams.
     int quic_reduced_ping_timeout_seconds;
+    // QUIC46
+    // Maximum time that a session can have no retransmittable packets on the
+    // wire.
+    int quic_retransmittable_on_wire_timeout_milliseconds;
     // Maximum time the session can be alive before crypto handshake is
     // finished.
     int quic_max_time_before_crypto_handshake_seconds;
@@ -191,6 +218,12 @@ class NET_EXPORT HttpNetworkSession {
     // If true, a new connection may be kicked off on an alternate network when
     // a connection fails on the default network before handshake is confirmed.
     bool quic_retry_on_alternate_network_before_handshake;
+    // QUIC46
+    // If true, an idle session will be migrated within the idle migration
+    // period.
+    bool quic_migrate_idle_sessions;
+    // A session can be migrated if its idle time is within this period.
+    base::TimeDelta quic_idle_session_migration_period;
     // If true, the quic stream factory may race connection from stale dns
     // result with the original dns resolution
     bool quic_race_stale_dns_on_connection;
@@ -306,8 +339,14 @@ class NET_EXPORT HttpNetworkSession {
   WebSocketEndpointLockManager* websocket_endpoint_lock_manager() {
     return websocket_endpoint_lock_manager_.get();
   }
-  SpdySessionPool* spdy_session_pool() { return &spdy_session_pool_; }
+  SpdySessionPool* spdy_session_pool() {
+    return &spdy_session_pool_;
+  }
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   QuicStreamFactory* quic_stream_factory() { return &quic_stream_factory_; }
+#else
+  QuicStreamFactory* quic_stream_factory() { return NULL; }
+#endif
   HttpAuthHandlerFactory* http_auth_handler_factory() {
     return http_auth_handler_factory_;
   }
@@ -363,6 +402,16 @@ class NET_EXPORT HttpNetworkSession {
   // Disable QUIC for new streams.
   void DisableQuic();
 
+#if defined(STARBOARD)
+  // Toggle QUIC support for new streams.
+  void ToggleQuic();
+
+  void SetEnableQuic(bool enable_quic);
+
+  // Whether to try QUIC connection for origins without alt-svc on record.
+  bool UseQuicForUnknownOrigin() const;
+#endif  // defined(STARBOARD)
+
  private:
   friend class HttpNetworkSessionPeer;
 
@@ -387,7 +436,9 @@ class NET_EXPORT HttpNetworkSession {
   std::unique_ptr<ClientSocketPoolManager> normal_socket_pool_manager_;
   std::unique_ptr<ClientSocketPoolManager> websocket_socket_pool_manager_;
   std::unique_ptr<ServerPushDelegate> push_delegate_;
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   QuicStreamFactory quic_stream_factory_;
+#endif
   SpdySessionPool spdy_session_pool_;
   std::unique_ptr<HttpStreamFactory> http_stream_factory_;
   std::map<HttpResponseBodyDrainer*, std::unique_ptr<HttpResponseBodyDrainer>>

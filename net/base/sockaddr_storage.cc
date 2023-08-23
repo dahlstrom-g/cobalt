@@ -6,6 +6,9 @@
 
 #include <string.h>
 
+#include "starboard/memory.h"
+#include "starboard/types.h"
+
 namespace net {
 
 SockaddrStorage::SockaddrStorage()

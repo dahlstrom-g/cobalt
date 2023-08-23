@@ -14,6 +14,7 @@
 #include "base/values.h"
 #include "net/cert/ct_serialization.h"
 #include "net/cert/signed_tree_head.h"
+#include "starboard/memory.h"
 
 namespace net {
 
@@ -148,8 +149,7 @@ bool FillSignedTreeHead(const base::Value& json_signed_tree_head,
   signed_tree_head->timestamp = base::Time::FromJsTime(parsed_sth.timestamp);
   signed_tree_head->signature = parsed_sth.signature;
   memcpy(signed_tree_head->sha256_root_hash,
-         parsed_sth.sha256_root_hash.c_str(),
-         kSthRootHashLength);
+               parsed_sth.sha256_root_hash.c_str(), kSthRootHashLength);
   return true;
 }
 

@@ -74,6 +74,8 @@
 #include "net/test/test_data_directory.h"
 #include "net/test/test_with_scoped_task_environment.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
@@ -177,7 +179,7 @@ int ReadBufferingStreamSocket::ReadIfReady(IOBuffer* buf,
 
   if (read_buffer_->RemainingCapacity() == 0) {
     memcpy(buf->data(), read_buffer_->StartOfBuffer(),
-           read_buffer_->capacity());
+                 read_buffer_->capacity());
     read_buffer_->set_offset(0);
     return read_buffer_->capacity();
   }
@@ -239,9 +241,8 @@ int ReadBufferingStreamSocket::DoReadComplete(int result) {
   if (user_read_buf_ == nullptr)
     return OK;
 
-  memcpy(user_read_buf_->data(),
-         read_buffer_->StartOfBuffer(),
-         read_buffer_->capacity());
+  memcpy(user_read_buf_->data(), read_buffer_->StartOfBuffer(),
+               read_buffer_->capacity());
   read_buffer_->set_offset(0);
   return read_buffer_->capacity();
 }
@@ -1521,7 +1522,8 @@ TEST_P(SSLClientSocketReadTest, Read) {
   const char request_text[] = "GET / HTTP/1.0\r\n\r\n";
   scoped_refptr<IOBuffer> request_buffer =
       base::MakeRefCounted<IOBuffer>(base::size(request_text) - 1);
-  memcpy(request_buffer->data(), request_text, arraysize(request_text) - 1);
+  memcpy(request_buffer->data(), request_text,
+               arraysize(request_text) - 1);
 
   rv = callback.GetResult(
       sock->Write(request_buffer.get(), arraysize(request_text) - 1,
@@ -2111,7 +2113,8 @@ TEST_P(SSLClientSocketReadTest, Read_SmallChunks) {
   const char request_text[] = "GET / HTTP/1.0\r\n\r\n";
   scoped_refptr<IOBuffer> request_buffer =
       base::MakeRefCounted<IOBuffer>(base::size(request_text) - 1);
-  memcpy(request_buffer->data(), request_text, arraysize(request_text) - 1);
+  memcpy(request_buffer->data(), request_text,
+               arraysize(request_text) - 1);
 
   TestCompletionCallback callback;
   rv = callback.GetResult(
@@ -2150,7 +2153,8 @@ TEST_P(SSLClientSocketReadTest, Read_ManySmallRecords) {
   const char request_text[] = "GET /ssl-many-small-records HTTP/1.0\r\n\r\n";
   scoped_refptr<IOBuffer> request_buffer =
       base::MakeRefCounted<IOBuffer>(base::size(request_text) - 1);
-  memcpy(request_buffer->data(), request_text, arraysize(request_text) - 1);
+  memcpy(request_buffer->data(), request_text,
+               arraysize(request_text) - 1);
 
   rv = callback.GetResult(
       sock->Write(request_buffer.get(), arraysize(request_text) - 1,
@@ -2184,7 +2188,8 @@ TEST_P(SSLClientSocketReadTest, Read_Interrupted) {
   const char request_text[] = "GET / HTTP/1.0\r\n\r\n";
   scoped_refptr<IOBuffer> request_buffer =
       base::MakeRefCounted<IOBuffer>(base::size(request_text) - 1);
-  memcpy(request_buffer->data(), request_text, arraysize(request_text) - 1);
+  memcpy(request_buffer->data(), request_text,
+               arraysize(request_text) - 1);
 
   TestCompletionCallback callback;
   rv = callback.GetResult(
@@ -2220,7 +2225,8 @@ TEST_P(SSLClientSocketReadTest, Read_FullLogging) {
   const char request_text[] = "GET / HTTP/1.0\r\n\r\n";
   scoped_refptr<IOBuffer> request_buffer =
       base::MakeRefCounted<IOBuffer>(base::size(request_text) - 1);
-  memcpy(request_buffer->data(), request_text, arraysize(request_text) - 1);
+  memcpy(request_buffer->data(), request_text,
+               arraysize(request_text) - 1);
 
   rv = callback.GetResult(
       sock->Write(request_buffer.get(), arraysize(request_text) - 1,
@@ -2700,6 +2706,7 @@ TEST_F(SSLClientSocketTest, EVCertStatusRemovedForNonCompliantCert) {
   EXPECT_TRUE(result.cert_status & CERT_STATUS_CT_COMPLIANCE_FAILED);
 }
 
+#if !defined(STARBOARD)
 // Test that when an EV certificate does not conform to the CT policy and its EV
 // status is removed, the corresponding histogram is recorded correctly.
 TEST_F(SSLClientSocketTest, NonCTCompliantEVHistogram) {
@@ -2779,6 +2786,7 @@ TEST_F(SSLClientSocketTest, CTCompliantEVHistogram) {
       kHistogramName,
       static_cast<int>(ct::CTPolicyCompliance::CT_POLICY_COMPLIES_VIA_SCTS), 1);
 }
+#endif  // !defined(STARBOARD)
 
 // Tests that OCSP stapling is requested, as per Certificate Transparency (RFC
 // 6962).
@@ -3612,6 +3620,7 @@ TEST_F(SSLClientSocketTest, CTIsRequired) {
   EXPECT_TRUE(sock_->IsConnected());
 }
 
+#if !defined(STARBOARD)
 // Test that the CT compliance status is recorded in a histogram.
 TEST_F(SSLClientSocketTest, CTComplianceStatusHistogram) {
   const char kHistogramName[] =
@@ -3811,6 +3820,7 @@ TEST_F(SSLClientSocketTest, CTRequiredHistogramNonCompliant) {
       kHistogramName,
       static_cast<int>(ct::CTPolicyCompliance::CT_POLICY_NOT_ENOUGH_SCTS), 1);
 }
+#endif  // !defined(STARBOARD)
 
 // Test that when CT is required (in this case, by an Expect-CT opt-in) but the
 // connection is not compliant, the relevant flag is set on the SSLInfo.
@@ -3880,6 +3890,7 @@ TEST_F(SSLClientSocketTest, CTRequirementsFlagMet) {
   EXPECT_TRUE(ssl_info.ct_policy_compliance_required);
 }
 
+#if !defined(STARBOARD)
 // Test that when CT is required (in this case, by a CT delegate), the CT
 // required histogram is not recorded for a locally installed root.
 TEST_F(SSLClientSocketTest, CTRequiredHistogramNonCompliantLocalRoot) {
@@ -3926,6 +3937,7 @@ TEST_F(SSLClientSocketTest, CTRequiredHistogramNonCompliantLocalRoot) {
 
   histograms.ExpectTotalCount(kHistogramName, 0);
 }
+#endif  // !defined(STARBOARD)
 
 // Test that when CT is required (in this case, by an Expect-CT opt-in), the
 // absence of CT information is a socket error.

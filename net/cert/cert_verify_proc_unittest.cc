@@ -1226,6 +1226,7 @@ TEST_P(CertVerifyProcInternalTest, GoogleDigiNotarTest) {
 TEST(CertVerifyProcTest, BlacklistIsSorted) {
 // Defines kBlacklistedSPKIs.
 #include "net/cert/cert_verify_proc_blacklist.inc"
+#include "starboard/memory.h"
   for (size_t i = 0; i < base::size(kBlacklistedSPKIs) - 1; ++i) {
     EXPECT_GT(0, memcmp(kBlacklistedSPKIs[i], kBlacklistedSPKIs[i + 1],
                         crypto::kSHA256Length))
@@ -1421,7 +1422,7 @@ class CertVerifyProcInspectSignatureAlgorithmsTest : public ::testing::Test {
     }
 
     memcpy(const_cast<char*>(algorithm_sequence->data()),
-           replacement_sequence.data(), replacement_sequence.size());
+                 replacement_sequence.data(), replacement_sequence.size());
     return true;
   }
 

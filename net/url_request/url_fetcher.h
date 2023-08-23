@@ -5,8 +5,6 @@
 #ifndef NET_URL_REQUEST_URL_FETCHER_H_
 #define NET_URL_REQUEST_URL_FETCHER_H_
 
-#include <stdint.h>
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,6 +15,7 @@
 #include "net/base/net_export.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "net/url_request/url_request.h"
+#include "starboard/types.h"
 
 class GURL;
 
@@ -25,7 +24,7 @@ class FilePath;
 class SequencedTaskRunner;
 class TaskRunner;
 class TimeDelta;
-}
+}  // namespace base
 
 namespace url {
 class Origin;
@@ -83,18 +82,21 @@ class NET_EXPORT URLFetcher {
  public:
   // Imposible http response code. Used to signal that no http response code
   // was received.
-  enum ResponseCode {
-    RESPONSE_CODE_INVALID = -1
-  };
+  enum ResponseCode { RESPONSE_CODE_INVALID = -1 };
 
   enum RequestType {
     GET,
     POST,
     HEAD,
-    DELETE_REQUEST,   // DELETE is already taken on Windows.
-                      // <winnt.h> defines a DELETE macro.
+    DELETE_REQUEST,  // DELETE is already taken on Windows.
+                     // <winnt.h> defines a DELETE macro.
     PUT,
     PATCH,
+#if defined(STARBOARD)
+    // Cobalt uses net for Cross-Origin-Resource-Sharing and requires OPTIONS
+    // method.
+    OPTIONS,
+#endif
   };
 
   // Used by SetURLRequestUserData.  The callback should make a fresh
@@ -309,10 +311,27 @@ class NET_EXPORT URLFetcher {
   virtual void SaveResponseToTemporaryFile(
       scoped_refptr<base::SequencedTaskRunner> file_task_runner) = 0;
 
+#if defined(STARBOARD)
+  // By default, the response is saved in a string without preallocation. Call
+  // this method when the response is expected to be large and the capacity
+  // should be reserved to the response's content size upfront to reduce
+  // fragmentation.
+  virtual void SaveResponseToLargeString() = 0;
+#endif
+
   // By default, the response is saved in a string. Call this method to use the
   // specified writer to save the response. Must be called before Start().
   virtual void SaveResponseWithWriter(
       std::unique_ptr<URLFetcherResponseWriter> response_writer) = 0;
+
+#if defined(STARBOARD)
+  // The functionality to provide custom response writer was not well exploited
+  // by Chromium, we do want to use it and need a proper way to retrieve it.
+  virtual URLFetcherResponseWriter* GetResponseWriter() const = 0;
+#endif
+
+  // Retrieve the request headers from the request.
+  virtual const HttpRequestHeaders& GetRequestHeaders() const = 0;
 
   // Retrieve the response headers from the request.  Must only be called after
   // the OnURLFetchComplete callback has run.
@@ -369,6 +388,15 @@ class NET_EXPORT URLFetcher {
   // Get the response as a string. Return false if the fetcher was not
   // set to store the response as a string.
   virtual bool GetResponseAsString(std::string* out_response_string) const = 0;
+
+  #if defined(STARBOARD)
+  // Get the resonse as a string when the response is expected to be large and
+  // the data should be "moved" and not copied. Should only be used in
+  // conjunction with SaveResponseToLargeString() and returns false if the
+  // fetcher was not set to store the response as a "large" string.
+  virtual bool GetResponseAsLargeString(std::string* out_response_string)
+      const = 0;
+  #endif
 
   // Get the path to the file containing the response body. Returns false
   // if the response body was not saved to a file. If take_ownership is

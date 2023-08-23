@@ -6,6 +6,7 @@
 
 #include "base/stl_util.h"
 #include "base/strings/utf_string_conversions.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -49,7 +50,11 @@ TEST(NtlmBufferWriterTest, EmptyWrite) {
   // no-op.
   std::vector<uint8_t> b;
   ASSERT_TRUE(writer.CanWrite(0));
+#ifdef STARBOARD
+  ASSERT_TRUE(writer.WriteBytes(base::span<const uint8_t>(b.data(), b.size())));
+#else
   ASSERT_TRUE(writer.WriteBytes(b));
+#endif
 
   ASSERT_EQ(0u, writer.GetLength());
   ASSERT_EQ(0u, writer.GetBuffer().size());
@@ -65,7 +70,12 @@ TEST(NtlmBufferWriterTest, EmptyWrite) {
   ASSERT_NE(nullptr, GetBufferPtr(writer2));
 
   ASSERT_TRUE(writer2.CanWrite(0));
+#ifdef STARBOARD
+  ASSERT_TRUE(
+      writer2.WriteBytes(base::span<const uint8_t>(b.data(), b.size())));
+#else
   ASSERT_TRUE(writer2.WriteBytes(b));
+#endif
 
   ASSERT_EQ(1u, writer2.GetLength());
   ASSERT_EQ(1u, writer2.GetBuffer().size());
@@ -84,8 +94,8 @@ TEST(NtlmBufferWriterTest, Write16) {
   ASSERT_EQ(base::size(expected), writer.GetLength());
   ASSERT_FALSE(writer.WriteUInt16(value));
 
-  ASSERT_EQ(0,
-            memcmp(expected, writer.GetBuffer().data(), base::size(expected)));
+  ASSERT_EQ(0, memcmp(expected, writer.GetBuffer().data(),
+                      base::size(expected)));
 }
 
 TEST(NtlmBufferWriterTest, Write16PastEob) {
@@ -105,7 +115,8 @@ TEST(NtlmBufferWriterTest, Write32) {
   ASSERT_TRUE(writer.IsEndOfBuffer());
   ASSERT_FALSE(writer.WriteUInt32(value));
 
-  ASSERT_EQ(0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
+  ASSERT_EQ(
+      0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
 }
 
 TEST(NtlmBufferWriterTest, Write32PastEob) {
@@ -125,7 +136,8 @@ TEST(NtlmBufferWriterTest, Write64) {
   ASSERT_TRUE(writer.IsEndOfBuffer());
   ASSERT_FALSE(writer.WriteUInt64(value));
 
-  ASSERT_EQ(0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
+  ASSERT_EQ(
+      0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
 }
 
 TEST(NtlmBufferWriterTest, Write64PastEob) {
@@ -140,12 +152,23 @@ TEST(NtlmBufferWriterTest, WriteBytes) {
 
   NtlmBufferWriter writer(base::size(expected));
 
+#ifdef STARBOARD
+  ASSERT_TRUE(
+      writer.WriteBytes(base::span<const uint8_t>(expected, sizeof(expected))));
+#else
   ASSERT_TRUE(writer.WriteBytes(expected));
-  ASSERT_EQ(0, memcmp(GetBufferPtr(writer), expected, base::size(expected)));
+#endif
+  ASSERT_EQ(
+      0, memcmp(GetBufferPtr(writer), expected, base::size(expected)));
   ASSERT_TRUE(writer.IsEndOfBuffer());
+#ifdef STARBOARD
+  ASSERT_FALSE(writer.WriteBytes(base::span<const uint8_t>(expected, 1)));
+#else
   ASSERT_FALSE(writer.WriteBytes(base::make_span(expected, 1)));
+#endif
 
-  ASSERT_EQ(0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
+  ASSERT_EQ(
+      0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
 }
 
 TEST(NtlmBufferWriterTest, WriteBytesPastEob) {
@@ -153,7 +176,12 @@ TEST(NtlmBufferWriterTest, WriteBytesPastEob) {
 
   NtlmBufferWriter writer(base::size(buffer) - 1);
 
+#ifdef STARBOARD
+  ASSERT_FALSE(
+      writer.WriteBytes(base::span<const uint8_t>(buffer, sizeof(buffer))));
+#else
   ASSERT_FALSE(writer.WriteBytes(buffer));
+#endif
 }
 
 TEST(NtlmBufferWriterTest, WriteSecurityBuffer) {
@@ -167,7 +195,8 @@ TEST(NtlmBufferWriterTest, WriteSecurityBuffer) {
   ASSERT_TRUE(writer.IsEndOfBuffer());
   ASSERT_FALSE(writer.WriteSecurityBuffer(SecurityBuffer(offset, length)));
 
-  ASSERT_EQ(0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
+  ASSERT_EQ(
+      0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
 }
 
 TEST(NtlmBufferWriterTest, WriteSecurityBufferPastEob) {
@@ -187,7 +216,8 @@ TEST(NtlmBufferWriterTest, WriteNarrowString) {
   ASSERT_TRUE(writer.IsEndOfBuffer());
   ASSERT_FALSE(writer.WriteUtf8String(value));
 
-  ASSERT_EQ(0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
+  ASSERT_EQ(
+      0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
 }
 
 TEST(NtlmBufferWriterTest, WriteAsciiStringPastEob) {
@@ -208,7 +238,8 @@ TEST(NtlmBufferWriterTest, WriteUtf16String) {
   ASSERT_TRUE(writer.IsEndOfBuffer());
   ASSERT_FALSE(writer.WriteUtf16String(value));
 
-  ASSERT_EQ(0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
+  ASSERT_EQ(
+      0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
 }
 
 TEST(NtlmBufferWriterTest, WriteUtf16StringPastEob) {
@@ -229,7 +260,8 @@ TEST(NtlmBufferWriterTest, WriteUtf8AsUtf16String) {
   ASSERT_TRUE(writer.IsEndOfBuffer());
   ASSERT_FALSE(writer.WriteUtf8AsUtf16String(input));
 
-  ASSERT_EQ(0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
+  ASSERT_EQ(
+      0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
 }
 
 TEST(NtlmBufferWriterTest, WriteSignature) {
@@ -239,7 +271,8 @@ TEST(NtlmBufferWriterTest, WriteSignature) {
   ASSERT_TRUE(writer.WriteSignature());
   ASSERT_TRUE(writer.IsEndOfBuffer());
 
-  ASSERT_EQ(0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
+  ASSERT_EQ(
+      0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
 }
 
 TEST(NtlmBufferWriterTest, WriteSignaturePastEob) {
@@ -273,7 +306,8 @@ TEST(NtlmBufferWriterTest, WriteAvPairHeader) {
   ASSERT_TRUE(writer.WriteAvPairHeader(TargetInfoAvId::kFlags, 0x2211));
   ASSERT_TRUE(writer.IsEndOfBuffer());
 
-  ASSERT_EQ(0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
+  ASSERT_EQ(
+      0, memcmp(expected, GetBufferPtr(writer), base::size(expected)));
 }
 
 TEST(NtlmBufferWriterTest, WriteAvPairHeaderPastEob) {

@@ -4,13 +4,14 @@
 
 #include "net/websockets/websocket_frame.h"
 
-#include <stdint.h>
 #include <algorithm>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/memory/aligned_memory.h"
 #include "net/base/net_errors.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

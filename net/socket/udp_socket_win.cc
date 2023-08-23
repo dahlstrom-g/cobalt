@@ -31,6 +31,8 @@
 #include "net/socket/socket_tag.h"
 #include "net/socket/udp_net_log_parameters.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace {
 
@@ -1031,7 +1033,7 @@ int UDPSocketWin::JoinGroup(const IPAddress& group_address) const {
       ip_mreq mreq;
       mreq.imr_interface.s_addr = htonl(multicast_interface_);
       memcpy(&mreq.imr_multiaddr, group_address.bytes().data(),
-             IPAddress::kIPv4AddressSize);
+                   IPAddress::kIPv4AddressSize);
       int rv = setsockopt(socket_, IPPROTO_IP, IP_ADD_MEMBERSHIP,
                           reinterpret_cast<const char*>(&mreq),
                           sizeof(mreq));
@@ -1045,7 +1047,7 @@ int UDPSocketWin::JoinGroup(const IPAddress& group_address) const {
       ipv6_mreq mreq;
       mreq.ipv6mr_interface = multicast_interface_;
       memcpy(&mreq.ipv6mr_multiaddr, group_address.bytes().data(),
-             IPAddress::kIPv6AddressSize);
+                   IPAddress::kIPv6AddressSize);
       int rv = setsockopt(socket_, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP,
                           reinterpret_cast<const char*>(&mreq),
                           sizeof(mreq));
@@ -1071,7 +1073,7 @@ int UDPSocketWin::LeaveGroup(const IPAddress& group_address) const {
       ip_mreq mreq;
       mreq.imr_interface.s_addr = htonl(multicast_interface_);
       memcpy(&mreq.imr_multiaddr, group_address.bytes().data(),
-             IPAddress::kIPv4AddressSize);
+                   IPAddress::kIPv4AddressSize);
       int rv = setsockopt(socket_, IPPROTO_IP, IP_DROP_MEMBERSHIP,
                           reinterpret_cast<const char*>(&mreq), sizeof(mreq));
       if (rv)
@@ -1084,7 +1086,7 @@ int UDPSocketWin::LeaveGroup(const IPAddress& group_address) const {
       ipv6_mreq mreq;
       mreq.ipv6mr_interface = multicast_interface_;
       memcpy(&mreq.ipv6mr_multiaddr, group_address.bytes().data(),
-             IPAddress::kIPv6AddressSize);
+                   IPAddress::kIPv6AddressSize);
       int rv = setsockopt(socket_, IPPROTO_IPV6, IP_DROP_MEMBERSHIP,
                           reinterpret_cast<const char*>(&mreq), sizeof(mreq));
       if (rv)

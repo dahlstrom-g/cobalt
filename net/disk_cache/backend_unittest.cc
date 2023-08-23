@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-
 #include "base/bind_helpers.h"
 #include "base/files/file.h"
 #include "base/files/file_util.h"
@@ -64,6 +62,8 @@ using testing::ByRef;
 
 #if defined(OS_WIN)
 #include "base/win/scoped_handle.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #endif
 
 // Provide a BackendImpl object to macros from histogram_macros.h.
@@ -3395,7 +3395,7 @@ TEST_F(DiskCacheBackendTest, MemoryOnlyUseAfterFree) {
   disk_cache::ScopedEntryPtr first_parent(entry);
 
   // Create a ton of entries, and keep them open, to put the cache well above
-  // its eviction threshhold.
+  // its eviction threshold.
   const int kTooManyEntriesCount = kMaxEntryCount * 2;
   std::list<disk_cache::ScopedEntryPtr> open_entries;
   std::string key_prefix("prefix");

@@ -4,6 +4,7 @@
 
 #include "net/third_party/quic/core/quic_socket_address_coder.h"
 #include "net/third_party/quic/platform/api/quic_string.h"
+#include "starboard/memory.h"
 
 namespace quic {
 

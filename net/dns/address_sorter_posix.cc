@@ -4,7 +4,11 @@
 
 #include "net/dns/address_sorter_posix.h"
 
+#if defined(STARBOARD)
+#include "starboard/client_porting/poem/inet_poem.h"
+#else
 #include <netinet/in.h>
+#endif
 
 #include <memory>
 #include <utility>
@@ -29,6 +33,9 @@
 
 #if defined(OS_LINUX)
 #include "net/base/address_tracker_linux.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #endif
 
 namespace net {
@@ -371,7 +378,8 @@ void AddressSorterPosix::OnIPAddressChanged() {
       struct in6_ifreq ifr = {};
       strncpy(ifr.ifr_name, ifa->ifa_name, sizeof(ifr.ifr_name) - 1);
       DCHECK_LE(ifa->ifa_addr->sa_len, sizeof(ifr.ifr_ifru.ifru_addr));
-      memcpy(&ifr.ifr_ifru.ifru_addr, ifa->ifa_addr, ifa->ifa_addr->sa_len);
+      memcpy(&ifr.ifr_ifru.ifru_addr, ifa->ifa_addr,
+                   ifa->ifa_addr->sa_len);
       int rv = ioctl(ioctl_socket, SIOCGIFAFLAG_IN6, &ifr);
       if (rv >= 0) {
         info.deprecated = ifr.ifr_ifru.ifru_flags & IN6_IFF_DEPRECATED;

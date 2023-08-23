@@ -4,8 +4,6 @@
 
 #include "net/cert/x509_certificate.h"
 
-#include <stdint.h>
-
 #include <memory>
 
 #include "base/files/file_path.h"
@@ -24,6 +22,8 @@
 #include "net/test/cert_test_util.h"
 #include "net/test/test_certificate_data.h"
 #include "net/test/test_data_directory.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::HexEncode;
@@ -367,8 +367,8 @@ TEST(X509CertificateTest, SerialNumbers) {
   };
 
   ASSERT_EQ(sizeof(google_serial), google_cert->serial_number().size());
-  EXPECT_TRUE(memcmp(google_cert->serial_number().data(), google_serial,
-                     sizeof(google_serial)) == 0);
+  EXPECT_TRUE(memcmp(google_cert->serial_number().data(),
+                     google_serial, sizeof(google_serial)) == 0);
 }
 
 TEST(X509CertificateTest, SerialNumberZeroPadded) {

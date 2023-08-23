@@ -9,6 +9,7 @@
 
 #include "base/logging.h"
 #include "net/spdy/spdy_buffer.h"
+#include "starboard/memory.h"
 
 namespace net {
 

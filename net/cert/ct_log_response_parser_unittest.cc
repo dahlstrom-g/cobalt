@@ -14,6 +14,7 @@
 #include "net/cert/ct_serialization.h"
 #include "net/cert/signed_tree_head.h"
 #include "net/test/ct_test_util.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

@@ -14,6 +14,7 @@
 #include "net/ntlm/ntlm_buffer_reader.h"
 #include "net/ntlm/ntlm_buffer_writer.h"
 #include "net/ntlm/ntlm_test_data.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -72,7 +73,12 @@ bool ReadString16Payload(NtlmBufferReader* reader, base::string16* str) {
     return false;
 
   std::vector<uint8_t> raw(sec_buf.length);
+#ifdef STARBOARD
+  if (!reader->ReadBytesFrom(sec_buf,
+                             base::span<uint8_t>(raw.data(), raw.size())))
+#else
   if (!reader->ReadBytesFrom(sec_buf, raw))
+#endif
     return false;
 
 #if defined(ARCH_CPU_BIG_ENDIAN)
@@ -288,11 +294,21 @@ TEST(NtlmClientTest, Type3WithoutUnicode) {
   NtlmClient client(NtlmFeatures(false));
 
   std::vector<uint8_t> result = GenerateAuthMsg(
+#ifdef STARBOARD
+      client,
+      base::span<const uint8_t>(test::kMinChallengeMessageNoUnicode,
+                                sizeof(test::kMinChallengeMessageNoUnicode))
+#else
       client, base::make_span(test::kMinChallengeMessageNoUnicode)
-                  .subspan<0, kMinChallengeHeaderLen>());
+#endif
+          .subspan<0, kMinChallengeHeaderLen>());
   ASSERT_FALSE(result.empty());
 
+#ifdef STARBOARD
+  NtlmBufferReader reader(base::span<uint8_t>(result.data(), result.size()));
+#else
   NtlmBufferReader reader(result);
+#endif
   ASSERT_TRUE(reader.MatchMessageHeader(MessageType::kAuthenticate));
 
   // Read the LM and NTLM Response Payloads.
@@ -302,10 +318,10 @@ TEST(NtlmClientTest, Type3WithoutUnicode) {
   ASSERT_TRUE(ReadBytesPayload(&reader, actual_lm_response));
   ASSERT_TRUE(ReadBytesPayload(&reader, actual_ntlm_response));
 
-  ASSERT_EQ(0, memcmp(test::kExpectedLmResponseWithV1SS, actual_lm_response,
-                      kResponseLenV1));
-  ASSERT_EQ(0, memcmp(test::kExpectedNtlmResponseWithV1SS, actual_ntlm_response,
-                      kResponseLenV1));
+  ASSERT_EQ(0, memcmp(test::kExpectedLmResponseWithV1SS,
+                      actual_lm_response, kResponseLenV1));
+  ASSERT_EQ(0, memcmp(test::kExpectedNtlmResponseWithV1SS,
+                      actual_ntlm_response, kResponseLenV1));
 
   std::string domain;
   std::string username;
@@ -332,11 +348,21 @@ TEST(NtlmClientTest, ClientDoesNotDowngradeSessionSecurity) {
   NtlmClient client(NtlmFeatures(false));
 
   std::vector<uint8_t> result =
+#ifdef STARBOARD
+      GenerateAuthMsg(client, base::span<const uint8_t>(
+                                  test::kMinChallengeMessageNoSS,
+                                  sizeof(test::kMinChallengeMessageNoSS))
+#else
       GenerateAuthMsg(client, base::make_span(test::kMinChallengeMessageNoSS)
+#endif
                                   .subspan<0, kMinChallengeHeaderLen>());
   ASSERT_FALSE(result.empty());
 
+#ifdef STARBOARD
+  NtlmBufferReader reader(base::span<uint8_t>(result.data(), result.size()));
+#else
   NtlmBufferReader reader(result);
+#endif
   ASSERT_TRUE(reader.MatchMessageHeader(MessageType::kAuthenticate));
 
   // Read the LM and NTLM Response Payloads.
@@ -349,10 +375,10 @@ TEST(NtlmClientTest, ClientDoesNotDowngradeSessionSecurity) {
   // The important part of this test is that even though the
   // server told the client to drop session security. The client
   // DID NOT drop it.
-  ASSERT_EQ(0, memcmp(test::kExpectedLmResponseWithV1SS, actual_lm_response,
-                      kResponseLenV1));
-  ASSERT_EQ(0, memcmp(test::kExpectedNtlmResponseWithV1SS, actual_ntlm_response,
-                      kResponseLenV1));
+  ASSERT_EQ(0, memcmp(test::kExpectedLmResponseWithV1SS,
+                      actual_lm_response, kResponseLenV1));
+  ASSERT_EQ(0, memcmp(test::kExpectedNtlmResponseWithV1SS,
+                      actual_ntlm_response, kResponseLenV1));
 
   base::string16 domain;
   base::string16 username;
@@ -394,8 +420,8 @@ TEST(NtlmClientTest, VerifyNegotiateMessageV2) {
   std::vector<uint8_t> result = client.GetNegotiateMessage();
   ASSERT_FALSE(result.empty());
   ASSERT_EQ(base::size(test::kExpectedNegotiateMsg), result.size());
-  ASSERT_EQ(0,
-            memcmp(test::kExpectedNegotiateMsg, result.data(), result.size()));
+  ASSERT_EQ(0, memcmp(test::kExpectedNegotiateMsg, result.data(),
+                      result.size()));
 }
 
 TEST(NtlmClientTest, VerifyAuthenticateMessageV2) {

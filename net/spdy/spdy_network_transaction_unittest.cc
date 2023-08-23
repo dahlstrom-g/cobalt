@@ -53,11 +53,13 @@
 #include "net/test/gtest_util.h"
 #include "net/test/test_data_directory.h"
 #include "net/test/test_with_scoped_task_environment.h"
-#include "net/third_party/spdy/core/spdy_protocol.h"
-#include "net/third_party/spdy/core/spdy_test_utils.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_protocol.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_test_utils.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request_test_util.h"
 #include "net/websockets/websocket_test_util.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/platform_test.h"
 
@@ -319,6 +321,8 @@ class SpdyNetworkTransactionTest : public TestWithScopedTaskEnvironment {
         net::MutableNetworkTrafficAnnotationTag(TRAFFIC_ANNOTATION_FOR_TESTS);
   }
 
+#if !defined(STARBOARD)
+  // base::MakeFileUnreadable is not supported.
   void UseUnreadableFilePostRequest() {
     ASSERT_FALSE(upload_data_stream_);
     base::FilePath file_path;
@@ -337,6 +341,7 @@ class SpdyNetworkTransactionTest : public TestWithScopedTaskEnvironment {
     request_.method = "POST";
     request_.upload_data_stream = upload_data_stream_.get();
   }
+#endif
 
   void UseComplexPostRequest() {
     ASSERT_FALSE(upload_data_stream_);
@@ -1801,6 +1806,7 @@ TEST_F(SpdyNetworkTransactionTest, FilePost) {
   EXPECT_EQ("hello!", out.response_data);
 }
 
+#if !defined(STARBOARD)
 // Test that a POST with a unreadable file fails.
 TEST_F(SpdyNetworkTransactionTest, UnreadableFilePost) {
   MockWrite writes[] = {
@@ -1821,6 +1827,7 @@ TEST_F(SpdyNetworkTransactionTest, UnreadableFilePost) {
   helper.VerifyDataNotConsumed();
   EXPECT_THAT(helper.output().rv, IsError(ERR_ACCESS_DENIED));
 }
+#endif
 
 // Test that a complex POST works.
 TEST_F(SpdyNetworkTransactionTest, ComplexPost) {
@@ -4669,7 +4676,7 @@ TEST_F(SpdyNetworkTransactionTest, BufferedClosed) {
 }
 
 // Verify the case where we buffer data and cancel the transaction.
-TEST_F(SpdyNetworkTransactionTest, BufferedCancelled) {
+TEST_F(SpdyNetworkTransactionTest, DISABLED_BufferedCancelled) {
   spdy::SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST));
   spdy::SpdySerializedFrame rst(

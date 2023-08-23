@@ -5,8 +5,6 @@
 #ifndef NET_WEBSOCKETS_WEBSOCKET_TEST_UTIL_H_
 #define NET_WEBSOCKETS_WEBSOCKET_TEST_UTIL_H_
 
-#include <stdint.h>
-
 #include <memory>
 #include <string>
 #include <utility>
@@ -17,11 +15,12 @@
 #include "net/http/http_request_headers.h"
 #include "net/http/http_stream_parser.h"
 #include "net/socket/client_socket_handle.h"
-#include "net/third_party/spdy/core/spdy_header_block.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_header_block.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_request_test_util.h"
 #include "net/websockets/websocket_handshake_stream_create_helper.h"
 #include "net/websockets/websocket_stream.h"
+#include "starboard/types.h"
 
 namespace url {
 class Origin;

@@ -90,6 +90,13 @@
 #include "net/android/network_library.h"
 #endif
 
+#include "starboard/client_porting/cwrappers/pow_wrapper.h"
+
+#if defined(STARBOARD)
+#include "starboard/memory.h"
+#include "starboard/types.h"
+#endif
+
 namespace net {
 
 namespace {
@@ -130,10 +137,11 @@ const char kOSErrorsForGetAddrinfoHistogramName[] =
     "Net.OSErrorsForGetAddrinfo_Mac";
 #elif defined(OS_LINUX)
     "Net.OSErrorsForGetAddrinfo_Linux";
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
     "Net.OSErrorsForGetAddrinfo";
 #endif
 
+#if !defined(STARBOARD)
 // Gets a list of the likely error codes that getaddrinfo() can return
 // (non-exhaustive). These are the error codes that we will track via
 // a histogram.
@@ -182,6 +190,7 @@ std::vector<int> GetAllGetAddrinfoOSErrors() {
 
   return base::CustomHistogram::ArrayToCustomEnumRanges(os_errors);
 }
+#endif  // !defined(STARBOARD)
 
 enum DnsResolveStatus {
   RESOLVE_STATUS_DNS_SUCCESS = 0,
@@ -297,14 +306,16 @@ bool ConfigureAsyncDnsNoFallbackFieldTrial() {
   return kDefault;
 }
 
+const base::Feature kSystemResolverPriorityExperiment = {
+    "SystemResolverPriorityExperiment", base::FEATURE_DISABLED_BY_DEFAULT};
+#if !defined(STARBOARD)
 const base::FeatureParam<base::TaskPriority>::Option prio_modes[] = {
     {base::TaskPriority::USER_VISIBLE, "default"},
     {base::TaskPriority::USER_BLOCKING, "user_blocking"}};
-const base::Feature kSystemResolverPriorityExperiment = {
-    "SystemResolverPriorityExperiment", base::FEATURE_DISABLED_BY_DEFAULT};
 const base::FeatureParam<base::TaskPriority> priority_mode{
     &kSystemResolverPriorityExperiment, "mode",
     base::TaskPriority::USER_VISIBLE, &prio_modes};
+#endif
 
 //-----------------------------------------------------------------------------
 
@@ -344,7 +355,7 @@ bool HaveOnlyLoopbackAddresses() {
   return false;
 #elif defined(OS_ANDROID)
   return android::HaveOnlyLoopbackAddresses();
-#elif defined(OS_NACL)
+#elif defined(OS_NACL) || defined(STARBOARD)
   NOTIMPLEMENTED();
   return false;
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
@@ -664,6 +675,24 @@ class HostResolverImpl::RequestImpl
     return address_results_;
   }
 
+#if defined(COBALT_QUIC46)
+  const base::Optional<HostCache::EntryStaleness>& GetStaleInfo()
+      const override {
+    DCHECK(complete_);
+    return stale_info_;
+  }
+
+  void set_stale_info(HostCache::EntryStaleness stale_info) {
+    // Should only be called at most once and before request is marked
+    // completed.
+    DCHECK(!complete_);
+    DCHECK(!stale_info_);
+    DCHECK(!parameters_.is_speculative);
+
+    stale_info_ = std::move(stale_info);
+  }
+#endif
+
   void set_address_results(const AddressList& address_results) {
     // Should only be called at most once and before request is marked
     // completed.
@@ -674,7 +703,11 @@ class HostResolverImpl::RequestImpl
     address_results_ = address_results;
   }
 
+#if defined(COBALT_QUIC46)
+  void ChangeRequestPriority(RequestPriority priority) override;
+#else
   void ChangeRequestPriority(RequestPriority priority);
+#endif
 
   void AssignJob(Job* job) {
     DCHECK(job);
@@ -752,6 +785,9 @@ class HostResolverImpl::RequestImpl
 
   bool complete_;
   base::Optional<AddressList> address_results_;
+#if defined(COBALT_QUIC46)
+  base::Optional<HostCache::EntryStaleness> stale_info_;
+#endif
 
   base::TimeTicks request_time_;
 
@@ -926,7 +962,7 @@ class HostResolverImpl::ProcTask {
           base::BindOnce(&ProcTask::StartLookupAttempt,
                          weak_ptr_factory_.GetWeakPtr()),
           params_.unresponsive_delay *
-              std::pow(params_.retry_factor, attempt_number_ - 1));
+              pow(params_.retry_factor, attempt_number_ - 1));
     }
   }
 
@@ -1033,9 +1069,11 @@ class HostResolverImpl::ProcTask {
       UMA_HISTOGRAM_ENUMERATION("DNS.AttemptFirstFailure", attempt_number, 100);
     }
 
+#if !defined(STARBOARD)
     UMA_HISTOGRAM_CUSTOM_ENUMERATION(kOSErrorsForGetAddrinfoHistogramName,
                                      std::abs(os_error),
                                      GetAllGetAddrinfoOSErrors());
+#endif
   }
 
   static void RecordAttemptHistograms(const base::TimeTicks& start_time,
@@ -2127,9 +2165,15 @@ HostResolverImpl::HostResolverImpl(const Options& options, NetLog* net_log)
 
   DCHECK_GE(dispatcher_->num_priorities(), static_cast<size_t>(NUM_PRIORITIES));
 
-  proc_task_runner_ = base::CreateTaskRunnerWithTraits(
-      {base::MayBlock(), priority_mode.Get(),
-       base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN});
+  proc_task_runner_ = base::CreateTaskRunnerWithTraits({
+    base::MayBlock(),
+#if defined(STARBOARD)
+        base::TaskPriority::USER_VISIBLE,
+#else
+        priority_mode.Get(),
+#endif
+        base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN
+  });
 
 #if defined(OS_WIN)
   EnsureWinsockInit();
@@ -2418,7 +2462,7 @@ int HostResolverImpl::Resolve(RequestImpl* request) {
       request->request_host(), request->parameters().dns_query_type,
       request->parameters().source, request->host_resolver_flags(),
       request->parameters().allow_cached_response, false /* allow_stale */,
-      nullptr /* stale_info */, request->source_net_log(), &addresses, &key);
+      nullptr /*stale_info*/, request->source_net_log(), &addresses, &key);
   if (rv == OK && !request->parameters().is_speculative) {
     request->set_address_results(
         EnsurePortOnAddressList(addresses, request->request_host().port()));

@@ -5,9 +5,6 @@
 #ifndef NET_BASE_IP_ADDRESS_H_
 #define NET_BASE_IP_ADDRESS_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <array>
 #include <string>
 #include <vector>
@@ -15,6 +12,7 @@
 #include "base/compiler_specific.h"
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -179,7 +177,7 @@ class NET_EXPORT IPAddress {
   //
   // When parsing fails, the original value of |this| will be overwritten such
   // that |this->empty()| and |!this->IsValid()|.
-  bool AssignFromIPLiteral(const base::StringPiece& ip_literal)
+  bool AssignFromIPLiteral(const ::base::StringPiece& ip_literal)
       WARN_UNUSED_RESULT;
 
   // Returns the underlying bytes.
@@ -268,7 +266,7 @@ NET_EXPORT bool ParseCIDRBlock(const std::string& cidr_literal,
 // In other words, |hostname| must be an IPv4 literal, or an IPv6 literal
 // surrounded by brackets as in [::1]. On failure |ip_address| may have been
 // overwritten and could contain an invalid IPAddress.
-NET_EXPORT bool ParseURLHostnameToAddress(const base::StringPiece& hostname,
+NET_EXPORT bool ParseURLHostnameToAddress(const ::base::StringPiece& hostname,
                                           IPAddress* ip_address)
     WARN_UNUSED_RESULT;
 

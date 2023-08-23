@@ -12,13 +12,13 @@
 #include <sys/types.h>
 #endif
 
-#include <stdint.h>
-
 #include "net/base/ip_address.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/sockaddr_storage.h"
 #include "net/socket/socket_test_util.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
+#include "starboard/common/string.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

@@ -10,7 +10,13 @@
 #include "base/macros.h"
 #include "base/metrics/histogram_macros.h"
 #include "net/base/io_buffer.h"
+#include "starboard/memory.h"
+#if defined(STARBOARD)
+#include <brotli/decode.h>
+#else
+#include "starboard/types.h"
 #include "third_party/brotli/include/brotli/decode.h"
+#endif
 
 namespace net {
 
@@ -160,7 +166,8 @@ class BrotliSourceStream : public FilterSourceStream {
   }
 
   void* AllocateMemoryInternal(size_t size) {
-    size_t* array = reinterpret_cast<size_t*>(malloc(size + sizeof(size_t)));
+    size_t* array =
+        reinterpret_cast<size_t*>(SbMemoryAllocate(size + sizeof(size_t)));
     if (!array)
       return nullptr;
     used_memory_ += size;
@@ -175,7 +182,7 @@ class BrotliSourceStream : public FilterSourceStream {
       return;
     size_t* array = reinterpret_cast<size_t*>(address);
     used_memory_ -= array[-1];
-    free(&array[-1]);
+    SbMemoryDeallocate(&array[-1]);
   }
 
   BrotliDecoderState* brotli_state_;

@@ -140,7 +140,10 @@ HttpNetworkTransaction::~HttpNetworkTransaction() {
 int HttpNetworkTransaction::Start(const HttpRequestInfo* request_info,
                                   CompletionOnceCallback callback,
                                   const NetLogWithSource& net_log) {
+#if !defined(STARBOARD)
+  // net_unittests::Dial* can hit it.
   DCHECK(request_info->traffic_annotation.is_valid());
+#endif
   net_log_ = net_log;
   request_ = request_info;
   url_ = request_->url;
@@ -619,7 +622,7 @@ void HttpNetworkTransaction::OnHttpsProxyTunnelResponse(
   stream_ = std::move(stream);
   stream_->SetRequestHeadersCallback(request_headers_callback_);
   stream_request_.reset();  // we're done with the stream request
-  OnIOComplete(ERR_HTTPS_PROXY_TUNNEL_RESPONSE);
+  OnIOComplete(ERR_HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT);
 }
 
 void HttpNetworkTransaction::OnQuicBroken() {
@@ -802,11 +805,11 @@ int HttpNetworkTransaction::DoCreateStreamComplete(int result) {
   // Version interference probes should not result in success.
   DCHECK(!server_ssl_config_.version_interference_probe || result != OK);
 
-  // If |result| is ERR_HTTPS_PROXY_TUNNEL_RESPONSE, then
+  // If |result| is ERR_HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT, then
   // DoCreateStreamComplete is being called from OnHttpsProxyTunnelResponse,
   // which resets the stream request first. Therefore, we have to grab the
   // connection attempts in *that* function instead of here in that case.
-  if (result != ERR_HTTPS_PROXY_TUNNEL_RESPONSE)
+  if (result != ERR_HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT)
     CopyConnectionAttemptsFromStreamRequest();
 
   if (result == OK) {
@@ -814,7 +817,7 @@ int HttpNetworkTransaction::DoCreateStreamComplete(int result) {
     DCHECK(stream_.get());
   } else if (result == ERR_SSL_CLIENT_AUTH_CERT_NEEDED) {
     result = HandleCertificateRequest(result);
-  } else if (result == ERR_HTTPS_PROXY_TUNNEL_RESPONSE) {
+  } else if (result == ERR_HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT) {
     // Return OK and let the caller read the proxy's error page
     next_state_ = STATE_NONE;
     return OK;

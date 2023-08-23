@@ -20,6 +20,7 @@
 #include "net/http/http_util.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/url_request/url_request_filter.h"
+#include "starboard/memory.h"
 
 namespace net {
 namespace {

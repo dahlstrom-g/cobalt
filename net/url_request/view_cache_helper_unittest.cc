@@ -16,6 +16,7 @@
 #include "net/http/http_transaction_test_util.h"
 #include "net/test/gtest_util.h"
 #include "net/url_request/url_request_context.h"
+#include "starboard/memory.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

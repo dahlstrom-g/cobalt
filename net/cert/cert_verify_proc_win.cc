@@ -30,6 +30,7 @@
 #include "net/cert/test_root_certs.h"
 #include "net/cert/x509_certificate.h"
 #include "net/cert/x509_util_win.h"
+#include "starboard/memory.h"
 
 #if !defined(CERT_TRUST_HAS_WEAK_SIGNATURE)
 // This was introduced in Windows 8 / Windows Server 2012, but retroactively

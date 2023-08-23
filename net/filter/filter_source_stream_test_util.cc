@@ -6,6 +6,7 @@
 
 #include "base/bit_cast.h"
 #include "base/logging.h"
+#include "starboard/memory.h"
 #include "third_party/zlib/zlib.h"
 
 namespace net {

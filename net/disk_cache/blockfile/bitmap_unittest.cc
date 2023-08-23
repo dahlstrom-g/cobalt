@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "net/disk_cache/blockfile/bitmap.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 TEST(BitmapTest, OverAllocate) {

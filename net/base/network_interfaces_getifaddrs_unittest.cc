@@ -6,6 +6,8 @@
 
 #include <string>
 
+#include "starboard/types.h"
+
 #include "build/build_config.h"
 #include "net/base/ip_endpoint.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -13,6 +15,9 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 #include <netinet/in.h>
+
+// Starboard platforms do not have socklen_t defined.
+#if !defined(STARBOARD)
 
 namespace net {
 namespace {
@@ -178,3 +183,5 @@ TEST(NetworkInterfacesTest, IfaddrsToNetworkInterfaceList) {
 
 }  // namespace
 }  // namespace net
+
+#endif  // !defined(STARBOARD)

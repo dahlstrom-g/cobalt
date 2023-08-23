@@ -5,7 +5,6 @@
 #include "net/socket/socket_test_util.h"
 
 #include <inttypes.h>  // For SCNx64
-#include <stdint.h>
 #include <stdio.h>
 
 #include <algorithm>
@@ -43,6 +42,8 @@
 #include "net/ssl/ssl_connection_status_flags.h"
 #include "net/ssl/ssl_info.h"
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 #define NET_TRACE(level, s) VLOG(level) << s << __FUNCTION__ << "() "

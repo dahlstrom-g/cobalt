@@ -28,6 +28,7 @@
 #include "net/log/net_log_source.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/stream_socket.h"
+#include "starboard/memory.h"
 #include "url/url_constants.h"
 
 namespace net {

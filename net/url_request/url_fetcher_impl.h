@@ -14,8 +14,6 @@
 #ifndef NET_URL_REQUEST_URL_FETCHER_IMPL_H_
 #define NET_URL_REQUEST_URL_FETCHER_IMPL_H_
 
-#include <stdint.h>
-
 #include <string>
 
 #include "base/macros.h"
@@ -23,6 +21,7 @@
 #include "net/base/net_export.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "net/url_request/url_fetcher.h"
+#include "starboard/types.h"
 
 namespace net {
 class URLFetcherCore;
@@ -80,8 +79,15 @@ class NET_EXPORT_PRIVATE URLFetcherImpl : public URLFetcher {
       scoped_refptr<base::SequencedTaskRunner> file_task_runner) override;
   void SaveResponseToTemporaryFile(
       scoped_refptr<base::SequencedTaskRunner> file_task_runner) override;
+#if defined(STARBOARD)
+  void SaveResponseToLargeString() override;
+#endif
   void SaveResponseWithWriter(
       std::unique_ptr<URLFetcherResponseWriter> response_writer) override;
+#if defined(STARBOARD)
+  URLFetcherResponseWriter* GetResponseWriter() const override;
+#endif
+  const HttpRequestHeaders& GetRequestHeaders() const override;
   HttpResponseHeaders* GetResponseHeaders() const override;
   HostPortPair GetSocketAddress() const override;
   const ProxyServer& ProxyServerUsed() const override;
@@ -96,6 +102,10 @@ class NET_EXPORT_PRIVATE URLFetcherImpl : public URLFetcher {
   int GetResponseCode() const override;
   void ReceivedContentWasMalformed() override;
   bool GetResponseAsString(std::string* out_response_string) const override;
+#if defined(STARBOARD)
+  bool GetResponseAsLargeString(std::string* out_response_string)
+      const override;
+#endif
   bool GetResponseAsFilePath(bool take_ownership,
                              base::FilePath* out_response_path) const override;
 

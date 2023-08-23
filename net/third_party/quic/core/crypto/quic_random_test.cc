@@ -5,6 +5,7 @@
 #include "net/third_party/quic/core/crypto/quic_random.h"
 
 #include "net/third_party/quic/platform/api/quic_test.h"
+#include "starboard/memory.h"
 
 namespace quic {
 namespace test {

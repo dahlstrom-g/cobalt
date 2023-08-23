@@ -621,7 +621,6 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory {
 
   DISALLOW_COPY_AND_ASSIGN(HttpCache);
 };
-
 }  // namespace net
 
 #endif  // NET_HTTP_HTTP_CACHE_H_

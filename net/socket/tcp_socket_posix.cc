@@ -38,6 +38,7 @@
 #include "net/socket/socket_posix.h"
 #include "net/socket/socket_tag.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
+#include "starboard/types.h"
 
 // If we don't have a definition for TCPI_OPT_SYN_DATA, create one.
 #if !defined(TCPI_OPT_SYN_DATA)
@@ -652,10 +653,12 @@ void TCPSocketPosix::ConnectCompleted(CompletionOnceCallback callback, int rv) {
 }
 
 int TCPSocketPosix::HandleConnectCompleted(int rv) {
+  SbSocketError socket_error = connect_socket_error_;
+  connect_socket_error_ = kSbSocketOk;
   // Log the end of this attempt (and any OS error it threw).
   if (rv != OK) {
     net_log_.EndEvent(NetLogEventType::TCP_CONNECT_ATTEMPT,
-                      NetLog::IntCallback("os_error", errno));
+                      NetLog::IntCallback("sb_socket_error", errno));
     tag_ = SocketTag();
   } else {
     net_log_.EndEvent(NetLogEventType::TCP_CONNECT_ATTEMPT);

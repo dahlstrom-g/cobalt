@@ -9,6 +9,7 @@
 #include "base/logging.h"
 #include "net/server/web_socket.h"
 #include "net/socket/stream_socket.h"
+#include "starboard/memory.h"
 
 namespace net {
 

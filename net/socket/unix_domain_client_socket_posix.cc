@@ -13,6 +13,8 @@
 #include "net/base/sockaddr_storage.h"
 #include "net/socket/socket_posix.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -52,7 +54,8 @@ bool UnixDomainClientSocket::FillAddress(const std::string& socket_path,
   socket_addr->sun_family = AF_UNIX;
   address->addr_len = path_size + offsetof(struct sockaddr_un, sun_path);
   if (!use_abstract_namespace) {
-    memcpy(socket_addr->sun_path, socket_path.c_str(), socket_path.size());
+    memcpy(socket_addr->sun_path, socket_path.c_str(),
+                 socket_path.size());
     return true;
   }
 
@@ -62,7 +65,8 @@ bool UnixDomainClientSocket::FillAddress(const std::string& socket_path,
   // length of the structure exactly, as potentially the socket name may
   // have '\0' characters embedded (although we don't support this).
   // Note that addr.sun_path is already zero initialized.
-  memcpy(socket_addr->sun_path + 1, socket_path.c_str(), socket_path.size());
+  memcpy(socket_addr->sun_path + 1, socket_path.c_str(),
+               socket_path.size());
   return true;
 #else
   return false;

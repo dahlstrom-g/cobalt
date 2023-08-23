@@ -5,8 +5,6 @@
 #ifndef NET_SOCKET_STREAM_SOCKET_H_
 #define NET_SOCKET_STREAM_SOCKET_H_
 
-#include <stdint.h>
-
 #include "base/bind.h"
 #include "base/macros.h"
 #include "net/base/net_errors.h"
@@ -14,6 +12,7 @@
 #include "net/socket/connection_attempts.h"
 #include "net/socket/next_proto.h"
 #include "net/socket/socket.h"
+#include "starboard/types.h"
 
 namespace crypto {
 class ECPrivateKey;
@@ -184,7 +183,7 @@ class NET_EXPORT StreamSocket : public Socket {
   // Dumps memory allocation stats into |stats|. |stats| can be assumed as being
   // default initialized upon entry. Implementations should override fields in
   // |stats|. Default implementation does nothing.
-  virtual void DumpMemoryStats(SocketMemoryStats* stats) const {}
+  virtual void DumpMemoryStats(SocketMemoryStats* /*stats*/) const {}
 
   // Apply |tag| to this socket. If socket isn't yet connected, tag will be
   // applied when socket is later connected. If Connect() fails or socket

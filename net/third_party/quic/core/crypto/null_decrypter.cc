@@ -10,6 +10,7 @@
 #include "net/third_party/quic/core/quic_utils.h"
 #include "net/third_party/quic/platform/api/quic_bug_tracker.h"
 #include "net/third_party/quic/platform/api/quic_uint128.h"
+#include "starboard/memory.h"
 
 namespace quic {
 
@@ -38,8 +39,7 @@ bool NullDecrypter::SetDiversificationNonce(const DiversificationNonce& nonce) {
   return true;
 }
 
-bool NullDecrypter::DecryptPacket(QuicTransportVersion version,
-                                  QuicPacketNumber /*packet_number*/,
+bool NullDecrypter::DecryptPacket(uint64_t /*packet_number*/,
                                   QuicStringPiece associated_data,
                                   QuicStringPiece ciphertext,
                                   char* output,
@@ -58,7 +58,7 @@ bool NullDecrypter::DecryptPacket(QuicTransportVersion version,
     QUIC_BUG << "Output buffer must be larger than the plaintext.";
     return false;
   }
-  if (hash != ComputeHash(version, associated_data, plaintext)) {
+  if (hash != ComputeHash(associated_data, plaintext)) {
     return false;
   }
   // Copy the plaintext to output.
@@ -97,21 +97,15 @@ bool NullDecrypter::ReadHash(QuicDataReader* reader, QuicUint128* hash) {
   return true;
 }
 
-QuicUint128 NullDecrypter::ComputeHash(QuicTransportVersion version,
-                                       const QuicStringPiece data1,
+QuicUint128 NullDecrypter::ComputeHash(const QuicStringPiece data1,
                                        const QuicStringPiece data2) const {
   QuicUint128 correct_hash;
-  if (version > QUIC_VERSION_35) {
-    if (perspective_ == Perspective::IS_CLIENT) {
-      // Peer is a server.
-      correct_hash = QuicUtils::FNV1a_128_Hash_Three(data1, data2, "Server");
-
-    } else {
-      // Peer is a client.
-      correct_hash = QuicUtils::FNV1a_128_Hash_Three(data1, data2, "Client");
-    }
+  if (perspective_ == Perspective::IS_CLIENT) {
+    // Peer is a server.
+    correct_hash = QuicUtils::FNV1a_128_Hash_Three(data1, data2, "Server");
   } else {
-    correct_hash = QuicUtils::FNV1a_128_Hash_Two(data1, data2);
+    // Peer is a client.
+    correct_hash = QuicUtils::FNV1a_128_Hash_Three(data1, data2, "Client");
   }
   QuicUint128 mask = MakeQuicUint128(UINT64_C(0x0), UINT64_C(0xffffffff));
   mask <<= 96;

@@ -43,7 +43,17 @@ static_assert(arraysize(g_max_sockets_per_pool) ==
 // be the same as the limit for ws. Also note that Firefox uses a limit of 200.
 // See http://crbug.com/486800
 int g_max_sockets_per_group[] = {
-    6,   // NORMAL_SOCKET_POOL
+#ifdef STARBOARD
+    // Low number of max sockets per group will stall proxy connections if
+    // too many are made simultaneously. Some Cobalt unit tests involve proxies
+    // and send out large quantity of requests at the same time.
+    // The number 30 is chosen by experiments and is proven to avoid
+    // proxy connection stalling in cobalt unit tests. Again, see
+    // http://crbug.com/12066 for details and discussion.
+    30,
+#else
+    6,  // NORMAL_SOCKET_POOL
+#endif
     255  // WEBSOCKET_SOCKET_POOL
 };
 
@@ -156,7 +166,13 @@ int InitSocketPoolHelper(ClientSocketPoolManager::SocketGroupType group_type,
                                   resolution_callback,
                                   non_ssl_combine_connect_and_write_policy));
 
+#if defined(COBALT_QUIC46)
+    // HTTPS QUIC proxy should be disabled, these changes can be removed
+    // in next rebase.
+    if (proxy_info.is_http() || proxy_info.is_https()) {
+#else
     if (proxy_info.is_http() || proxy_info.is_https() || proxy_info.is_quic()) {
+#endif
       // TODO(mmenke):  Would it be better to split these into two different
       //     socket pools?  And maybe socks4/socks5 as well?
       if (proxy_info.is_http()) {
@@ -169,7 +185,13 @@ int InitSocketPoolHelper(ClientSocketPoolManager::SocketGroupType group_type,
       request_extra_headers.GetHeader(HttpRequestHeaders::kUserAgent,
                                       &user_agent);
       scoped_refptr<SSLSocketParams> ssl_params;
+#if defined(COBALT_QUIC46)
+      // HTTPS QUIC proxy should be disabled, these changes can be removed
+      // in next rebase.
+      if (proxy_info.is_https()) {
+#else
       if (!proxy_info.is_http()) {
+#endif
         proxy_tcp_params = new TransportSocketParams(
             *proxy_host_port, disable_resolver_cache, resolution_callback,
             ssl_combine_connect_and_write_policy);

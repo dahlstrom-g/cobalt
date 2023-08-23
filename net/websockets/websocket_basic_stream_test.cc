@@ -8,8 +8,6 @@
 
 #include "net/websockets/websocket_basic_stream.h"
 
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>  // for memcpy() and memset().
 #include <utility>
 
@@ -22,6 +20,8 @@
 #include "net/socket/socket_test_util.h"
 #include "net/test/gtest_util.h"
 #include "net/test/test_with_scoped_task_environment.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -206,7 +206,12 @@ class WebSocketBasicStreamSocketChunkedReadTest
       reads_.push_back(MockRead(mode, start, len));
       start += len;
     }
+#ifdef STARBOARD
+    CreateStream(base::span<MockRead>(reads_.data(), reads_.size()),
+                 base::span<MockWrite>());
+#else
     CreateStream(reads_, base::span<MockWrite>());
+#endif
   }
 
   std::vector<MockRead> reads_;
@@ -230,8 +235,7 @@ class WebSocketBasicStreamSocketWriteTest
                            WebSocketFrameHeader::kMaskingKeyLength);
     frame->data = base::MakeRefCounted<IOBuffer>(payload_size);
     memcpy(frame->data->data(),
-           kWriteFrame + kWriteFrameSize - payload_size,
-           payload_size);
+                 kWriteFrame + kWriteFrameSize - payload_size, payload_size);
     WebSocketFrameHeader& header = frame->header;
     header.final = true;
     header.masked = true;
@@ -665,9 +669,8 @@ TEST_F(WebSocketBasicStreamSocketSingleReadTest,
   ASSERT_EQ(1U, frames_.size());
   EXPECT_EQ(WebSocketFrameHeader::kOpCodeClose, frames_[0]->header.opcode);
   EXPECT_EQ(kCloseFrameSize - 2, frames_[0]->header.payload_length);
-  EXPECT_EQ(
-      0,
-      memcmp(frames_[0]->data->data(), kCloseFrame + 2, kCloseFrameSize - 2));
+  EXPECT_EQ(0, memcmp(frames_[0]->data->data(), kCloseFrame + 2,
+                      kCloseFrameSize - 2));
 }
 
 // Check that a control frame which partially arrives at the end of the response

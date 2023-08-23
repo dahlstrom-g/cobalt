@@ -17,6 +17,7 @@
 #include "net/log/net_log_event_type.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
+#include "starboard/memory.h"
 
 namespace net {
 
@@ -27,8 +28,10 @@ const uint8_t SOCKS5ClientSocket::kSOCKS5Version = 0x05;
 const uint8_t SOCKS5ClientSocket::kTunnelCommand = 0x01;
 const uint8_t SOCKS5ClientSocket::kNullByte = 0x00;
 
+#if !defined(STARBOARD)
 static_assert(sizeof(struct in_addr) == 4, "incorrect system size of IPv4");
 static_assert(sizeof(struct in6_addr) == 16, "incorrect system size of IPv6");
+#endif
 
 SOCKS5ClientSocket::SOCKS5ClientSocket(
     std::unique_ptr<ClientSocketHandle> transport_socket,
@@ -290,7 +293,7 @@ int SOCKS5ClientSocket::DoGreetWrite() {
   size_t handshake_buf_len = buffer_.size() - bytes_sent_;
   handshake_buf_ = base::MakeRefCounted<IOBuffer>(handshake_buf_len);
   memcpy(handshake_buf_->data(), &buffer_.data()[bytes_sent_],
-         handshake_buf_len);
+               handshake_buf_len);
   return transport_->socket()->Write(handshake_buf_.get(), handshake_buf_len,
                                      io_callback_, traffic_annotation_);
 }
@@ -389,7 +392,7 @@ int SOCKS5ClientSocket::DoHandshakeWrite() {
   DCHECK_LT(0, handshake_buf_len);
   handshake_buf_ = base::MakeRefCounted<IOBuffer>(handshake_buf_len);
   memcpy(handshake_buf_->data(), &buffer_[bytes_sent_],
-         handshake_buf_len);
+               handshake_buf_len);
   return transport_->socket()->Write(handshake_buf_.get(), handshake_buf_len,
                                      io_callback_, traffic_annotation_);
 }
@@ -466,9 +469,17 @@ int SOCKS5ClientSocket::DoHandshakeReadComplete(int result) {
     if (address_type == kEndPointDomain)
       read_header_size += static_cast<uint8_t>(buffer_[4]);
     else if (address_type == kEndPointResolvedIPv4)
+#if defined(STARBOARD)
+      read_header_size += 4 - 1;
+#else
       read_header_size += sizeof(struct in_addr) - 1;
+#endif
     else if (address_type == kEndPointResolvedIPv6)
+#if defined(STARBOARD)
+      read_header_size += 16 - 1;
+#else
       read_header_size += sizeof(struct in6_addr) - 1;
+#endif
     else {
       net_log_.AddEvent(NetLogEventType::SOCKS_UNKNOWN_ADDRESS_TYPE,
                         NetLog::IntCallback("address_type", buffer_[3]));

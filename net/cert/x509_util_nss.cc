@@ -20,6 +20,8 @@
 #include "base/strings/stringprintf.h"
 #include "crypto/nss_util.h"
 #include "crypto/scoped_nss_types.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "third_party/boringssl/src/include/openssl/pool.h"
 
 namespace net {

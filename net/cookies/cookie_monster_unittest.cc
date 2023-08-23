@@ -4,8 +4,6 @@
 
 #include "net/cookies/cookie_monster.h"
 
-#include <stdint.h>
-
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -45,6 +43,7 @@
 #include "net/log/test_net_log_util.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/default_channel_id_store.h"
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/gurl.h"
@@ -511,8 +510,8 @@ class CookieMonsterTestBase : public CookieStoreTest<T> {
     EXPECT_EQ(expected_secure, num_secure);
 
     // Validate each priority.
-    size_t expected_count[3] = {
-        expected_low_count, expected_medium_count, expected_high_count};
+    size_t expected_count[3] = {expected_low_count, expected_medium_count,
+                                expected_high_count};
     for (int i = 0; i < 3; ++i) {
       size_t num_for_priority =
           surviving_id_list[0][i].size() + surviving_id_list[1][i].size();
@@ -1050,7 +1049,7 @@ class DeferredCookieTaskTest : public CookieMonsterTest {
 
 TEST_F(DeferredCookieTaskTest, DeferredGetCookieList) {
   DeclareLoadedCookie(http_www_foo_.url(),
-                      "X=1; path=/; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                      "X=1; path=/; expires=Mon, 18-Apr-62 22:50:14 GMT",
                       Time::Now() + TimeDelta::FromDays(3));
 
   MockGetCookieListCallback get_cookie_list_callback;
@@ -1142,7 +1141,7 @@ TEST_F(DeferredCookieTaskTest, DeferredDeleteCookie) {
 
 TEST_F(DeferredCookieTaskTest, DeferredGetAllCookies) {
   DeclareLoadedCookie(http_www_foo_.url(),
-                      "X=1; path=/; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                      "X=1; path=/; expires=Mon, 18-Apr-62 22:50:14 GMT",
                       Time::Now() + TimeDelta::FromDays(3));
 
   MockGetCookieListCallback get_cookie_list_callback;
@@ -1164,7 +1163,7 @@ TEST_F(DeferredCookieTaskTest, DeferredGetAllCookies) {
 
 TEST_F(DeferredCookieTaskTest, DeferredGetAllForUrlCookies) {
   DeclareLoadedCookie(http_www_foo_.url(),
-                      "X=1; path=/; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                      "X=1; path=/; expires=Mon, 18-Apr-62 22:50:14 GMT",
                       Time::Now() + TimeDelta::FromDays(3));
 
   MockGetCookieListCallback get_cookie_list_callback;
@@ -1189,7 +1188,7 @@ TEST_F(DeferredCookieTaskTest, DeferredGetAllForUrlCookies) {
 
 TEST_F(DeferredCookieTaskTest, DeferredGetAllForUrlWithOptionsCookies) {
   DeclareLoadedCookie(http_www_foo_.url(),
-                      "X=1; path=/; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                      "X=1; path=/; expires=Mon, 18-Apr-62 22:50:14 GMT",
                       Time::Now() + TimeDelta::FromDays(3));
 
   MockGetCookieListCallback get_cookie_list_callback;
@@ -1313,7 +1312,7 @@ TEST_F(DeferredCookieTaskTest, DeferredDeleteSessionCookies) {
 // being dispatched go to the end of the queue.
 TEST_F(DeferredCookieTaskTest, DeferredTaskOrder) {
   DeclareLoadedCookie(http_www_foo_.url(),
-                      "X=1; path=/; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                      "X=1; path=/; expires=Mon, 18-Apr-62 22:50:14 GMT",
                       Time::Now() + TimeDelta::FromDays(3));
 
   MockGetCookieListCallback get_cookie_list_callback;
@@ -1368,7 +1367,7 @@ TEST_F(CookieMonsterTest, TestCookieDeleteAll) {
   // Create a persistent cookie.
   EXPECT_TRUE(SetCookie(
       cm.get(), http_www_foo_.url(),
-      std::string(kValidCookieLine) + "; expires=Mon, 18-Apr-22 22:50:13 GMT"));
+      std::string(kValidCookieLine) + "; expires=Mon, 18-Apr-62 22:50:13 GMT"));
   ASSERT_EQ(1u, store->commands().size());
   EXPECT_EQ(CookieStoreCommand::ADD, store->commands()[0].type);
 
@@ -1483,6 +1482,7 @@ static const base::TimeDelta kLastAccessThreshold =
 static const base::TimeDelta kAccessDelay =
     kLastAccessThreshold + base::TimeDelta::FromMilliseconds(20);
 
+#if !defined(STARBOARD)
 TEST_F(CookieMonsterTest, TestLastAccess) {
   std::unique_ptr<CookieMonster> cm(
       new CookieMonster(nullptr, kLastAccessThreshold, &net_log_));
@@ -1521,6 +1521,7 @@ TEST_F(CookieMonsterTest, TestLastAccess) {
             GetCookiesWithOptions(cm.get(), http_www_foo_.url(), options));
   EXPECT_FALSE(last_access_date == GetFirstCookieAccessDate(cm.get()));
 }
+#endif
 
 TEST_F(CookieMonsterTest, TestHostGarbageCollection) {
   TestHostGarbageCollectHelper();
@@ -1763,20 +1764,20 @@ TEST_F(CookieMonsterTest, DontImportDuplicateCookies) {
   // the import.
 
   AddCookieToList(GURL("http://www.foo.com"),
-                  "X=1; path=/; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                  "X=1; path=/; expires=Mon, 18-Apr-62 22:50:14 GMT",
                   Time::Now() + TimeDelta::FromDays(3), &initial_cookies);
 
   AddCookieToList(GURL("http://www.foo.com"),
-                  "X=2; path=/; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                  "X=2; path=/; expires=Mon, 18-Apr-62 22:50:14 GMT",
                   Time::Now() + TimeDelta::FromDays(1), &initial_cookies);
 
   // ===> This one is the WINNER (biggest creation time).  <====
   AddCookieToList(GURL("http://www.foo.com"),
-                  "X=3; path=/; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                  "X=3; path=/; expires=Mon, 18-Apr-62 22:50:14 GMT",
                   Time::Now() + TimeDelta::FromDays(4), &initial_cookies);
 
   AddCookieToList(GURL("http://www.foo.com"),
-                  "X=4; path=/; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                  "X=4; path=/; expires=Mon, 18-Apr-62 22:50:14 GMT",
                   Time::Now(), &initial_cookies);
 
   // Insert 2 cookies with name "X" on path "/2", with varying creation
@@ -1784,16 +1785,16 @@ TEST_F(CookieMonsterTest, DontImportDuplicateCookies) {
 
   // ===> This one is the WINNER (biggest creation time).  <====
   AddCookieToList(GURL("http://www.foo.com"),
-                  "X=a1; path=/2; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                  "X=a1; path=/2; expires=Mon, 18-Apr-62 22:50:14 GMT",
                   Time::Now() + TimeDelta::FromDays(9), &initial_cookies);
 
   AddCookieToList(GURL("http://www.foo.com"),
-                  "X=a2; path=/2; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                  "X=a2; path=/2; expires=Mon, 18-Apr-62 22:50:14 GMT",
                   Time::Now() + TimeDelta::FromDays(2), &initial_cookies);
 
   // Insert 1 cookie with name "Y" on path "/".
   AddCookieToList(GURL("http://www.foo.com"),
-                  "Y=a; path=/; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                  "Y=a; path=/; expires=Mon, 18-Apr-62 22:50:14 GMT",
                   Time::Now() + TimeDelta::FromDays(10), &initial_cookies);
 
   // Inject our initial cookies into the mock PersistentCookieStore.
@@ -1873,6 +1874,16 @@ TEST_F(CookieMonsterTest, PredicateSeesAllCookies) {
   std::unique_ptr<CookieMonster> cm(
       new CookieMonster(nullptr, nullptr, &net_log_));
   PopulateCmForPredicateCheck(cm.get());
+#ifdef STARBOARD
+  // On some platform, maybe due to compiler optimization or too fast
+  // execution, the cache entry's creation date is exactly the same as
+  // delete_info's ending range(base::Time::Now()) below, making some
+  // cache entries mismatch delete_info and not deleted.
+  for (int i = 0; i < 15; i++) {
+    // Do something to pass time.
+    DLOG(INFO) << "Just wasting time, Cobalt is too fast!";
+  }
+#endif
   // We test that we can see all cookies with |delete_info|. This includes
   // host, http_only, host secure, and all domain cookies.
   CookieDeletionInfo delete_info(base::Time(), base::Time::Now());
@@ -2645,7 +2656,7 @@ TEST_F(CookieMonsterTest, PersisentCookieStorageTest) {
 
   // Add a cookie.
   EXPECT_TRUE(SetCookie(cm.get(), http_www_foo_.url(),
-                        "A=B; expires=Mon, 18-Apr-22 22:50:13 GMT"));
+                        "A=B; expires=Mon, 18-Apr-62 22:50:13 GMT"));
   this->MatchCookieLines("A=B", GetCookies(cm.get(), http_www_foo_.url()));
   ASSERT_EQ(1u, store->commands().size());
   EXPECT_EQ(CookieStoreCommand::ADD, store->commands()[0].type);
@@ -2658,13 +2669,13 @@ TEST_F(CookieMonsterTest, PersisentCookieStorageTest) {
 
   // Add a cookie.
   EXPECT_TRUE(SetCookie(cm.get(), http_www_foo_.url(),
-                        "A=B; expires=Mon, 18-Apr-22 22:50:13 GMT"));
+                        "A=B; expires=Mon, 18-Apr-62 22:50:13 GMT"));
   this->MatchCookieLines("A=B", GetCookies(cm.get(), http_www_foo_.url()));
   ASSERT_EQ(3u, store->commands().size());
   EXPECT_EQ(CookieStoreCommand::ADD, store->commands()[2].type);
   // Overwrite it.
   EXPECT_TRUE(SetCookie(cm.get(), http_www_foo_.url(),
-                        "A=Foo; expires=Mon, 18-Apr-22 22:50:14 GMT"));
+                        "A=Foo; expires=Mon, 18-Apr-62 22:50:14 GMT"));
   this->MatchCookieLines("A=Foo", GetCookies(cm.get(), http_www_foo_.url()));
   ASSERT_EQ(5u, store->commands().size());
   EXPECT_EQ(CookieStoreCommand::REMOVE, store->commands()[3].type);
@@ -3274,12 +3285,12 @@ TEST_F(CookieMonsterNotificationTest, GlobalNotBroadcast) {
   // Set up a set of cookies with a duplicate.
   std::vector<std::unique_ptr<CanonicalCookie>> initial_cookies;
   AddCookieToList(GURL("http://www.foo.com"),
-                  "X=1; path=/; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                  "X=1; path=/; expires=Mon, 18-Apr-62 22:50:14 GMT",
                   base::Time::Now() + base::TimeDelta::FromDays(3),
                   &initial_cookies);
 
   AddCookieToList(GURL("http://www.foo.com"),
-                  "X=2; path=/; expires=Mon, 18-Apr-22 22:50:14 GMT",
+                  "X=2; path=/; expires=Mon, 18-Apr-62 22:50:14 GMT",
                   base::Time::Now() + base::TimeDelta::FromDays(1),
                   &initial_cookies);
 

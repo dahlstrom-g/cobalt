@@ -32,7 +32,7 @@
 #include "net/test/cert_test_util.h"
 #include "net/test/gtest_util.h"
 #include "net/test/test_data_directory.h"
-#include "net/third_party/spdy/core/spdy_protocol.h"
+#include "net/third_party/quiche/src/spdy/core/spdy_protocol.h"
 #include "net/url_request/url_request_test_util.h"
 #include "net/websockets/websocket_basic_handshake_stream.h"
 #include "net/websockets/websocket_frame.h"
@@ -1572,6 +1572,8 @@ TEST_P(WebSocketStreamCreateDigestAuthTest, DigestPasswordInUrl) {
   EXPECT_EQ(101, response_info_->headers->response_code());
 }
 
+// TODO: User Metrics Actions (UMA) might not be supported in Starboard. Verify
+// that this test does not need that.
 TEST_P(WebSocketMultiProtocolStreamCreateTest, Incomplete) {
   base::HistogramTester histogram_tester;
 

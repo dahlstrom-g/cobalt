@@ -5,9 +5,6 @@
 #ifndef NET_DNS_HOST_RESOLVER_H_
 #define NET_DNS_HOST_RESOLVER_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,6 +18,7 @@
 #include "net/dns/dns_config.h"
 #include "net/dns/host_cache.h"
 #include "net/dns/host_resolver_source.h"
+#include "starboard/types.h"
 
 namespace base {
 class Value;
@@ -94,6 +92,22 @@ class NET_EXPORT HostResolver {
     // TODO(crbug.com/821021): Implement other GetResults() methods for requests
     // that return other data (eg DNS TXT requests).
     virtual const base::Optional<AddressList>& GetAddressResults() const = 0;
+
+#if defined(COBALT_QUIC46)
+    // Information about the result's staleness in the host cache. Only
+    // available if results were received from the host cache.
+    //
+    // Should only be called after Start() signals completion, either by
+    // invoking the callback or by returning a result other than
+    // |ERR_IO_PENDING|.
+    virtual const base::Optional<HostCache::EntryStaleness>& GetStaleInfo()
+        const = 0;
+
+    // Changes the priority of the specified request. Can only be called while
+    // the request is running (after Start() returns |ERR_IO_PENDING| and before
+    // the callback is invoked).
+    virtual void ChangeRequestPriority(RequestPriority priority) {}
+#endif
   };
 
   // |max_concurrent_resolves| is how many resolve requests will be allowed to
@@ -204,6 +218,21 @@ class NET_EXPORT HostResolver {
     // specified, results can still come from cache, resolving "localhost" or
     // IP literals, etc.
     HostResolverSource source = HostResolverSource::ANY;
+
+#if defined(COBALT_QUIC46)
+    enum class CacheUsage {
+      // Results may come from the host cache if non-stale.
+      ALLOWED,
+
+      // Results may come from the host cache even if stale (by expiration or
+      // network changes).
+      STALE_ALLOWED,
+
+      // Results will not come from the host cache.
+      DISALLOWED,
+    };
+    CacheUsage cache_usage = CacheUsage::ALLOWED;
+#endif
 
     // If |false|, results will not come from the host cache.
     bool allow_cached_response = true;
@@ -330,8 +359,8 @@ class NET_EXPORT HostResolver {
   virtual void SetNoIPv6OnWifi(bool no_ipv6_on_wifi);
   virtual bool GetNoIPv6OnWifi();
 
-  virtual void SetRequestContext(URLRequestContext* request_context) {}
-  virtual void AddDnsOverHttpsServer(std::string spec, bool use_post) {}
+  virtual void SetRequestContext(URLRequestContext* /*request_context*/) {}
+  virtual void AddDnsOverHttpsServer(std::string /*spec*/, bool /*use_post*/) {}
   virtual void ClearDnsOverHttpsServers() {}
 
   // Returns the currently configured DNS over HTTPS servers. Returns nullptr if

@@ -45,7 +45,7 @@ bool WriteFakeIndexFile(const base::FilePath& file_name) {
                                  sizeof(file_contents));
   if (bytes_written != sizeof(file_contents)) {
     LOG(ERROR) << "Failed to write fake index file: "
-               << file_name.LossyDisplayName();
+               << file_name.LossyDisplayName().c_str();
     return false;
   }
   return true;
@@ -215,12 +215,17 @@ SimpleCacheConsistencyResult UpgradeSimpleCacheOnDisk(
     LogMessageFailedUpgradeFromVersion(file_header.version);
     return SimpleCacheConsistencyResult::kWriteFakeIndexFileFailed;
   }
+#if defined(STARBOARD)
+  NOTIMPLEMENTED() << "Starboard does not support file replacement.";
+  return SimpleCacheConsistencyResult::kReplaceFileFailed;
+#else
   if (!base::ReplaceFile(temp_fake_index, fake_index, NULL)) {
     LOG(ERROR) << "Failed to replace the fake index.";
     LogMessageFailedUpgradeFromVersion(file_header.version);
     return SimpleCacheConsistencyResult::kReplaceFileFailed;
   }
   return SimpleCacheConsistencyResult::kOK;
+#endif
 }
 
 }  // namespace disk_cache

@@ -12,6 +12,7 @@
 #include "net/base/parse_number.h"
 #include "net/http/http_security_headers.h"
 #include "net/http/http_util.h"
+#include "starboard/memory.h"
 #include "url/gurl.h"
 
 namespace net {

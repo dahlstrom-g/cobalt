@@ -13,6 +13,7 @@
 #include "base/metrics/statistics_recorder.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
+#include "starboard/memory.h"
 
 namespace {
 

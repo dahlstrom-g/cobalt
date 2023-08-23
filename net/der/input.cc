@@ -9,6 +9,8 @@
 #include <algorithm>
 
 #include "base/logging.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace net {
 

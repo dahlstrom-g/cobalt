@@ -18,6 +18,7 @@
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/http/transport_security_state.h"
 #include "net/test/test_with_scoped_task_environment.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -285,8 +286,8 @@ TEST_F(TransportSecurityPersisterTest, PublicKeyPins) {
   EXPECT_TRUE(state_.GetDynamicPKPState(kTestDomain, &new_pkp_state));
   EXPECT_EQ(1u, new_pkp_state.spki_hashes.size());
   EXPECT_EQ(sha256.tag(), new_pkp_state.spki_hashes[0].tag());
-  EXPECT_EQ(0, memcmp(new_pkp_state.spki_hashes[0].data(), sha256.data(),
-                      sha256.size()));
+  EXPECT_EQ(0, memcmp(new_pkp_state.spki_hashes[0].data(),
+                      sha256.data(), sha256.size()));
   EXPECT_EQ(report_uri, new_pkp_state.report_uri);
 }
 
@@ -374,8 +375,8 @@ TEST_F(TransportSecurityPersisterTest, ExpectCTWithSTSAndPKPDataPresent) {
   TransportSecurityState::PKPState pkp_state;
   EXPECT_TRUE(state_.GetDynamicPKPState(kTestDomain, &pkp_state));
   EXPECT_EQ(1u, pkp_state.spki_hashes.size());
-  EXPECT_EQ(0, memcmp(pkp_state.spki_hashes[0].data(), spki_hash.data(),
-                      spki_hash.size()));
+  EXPECT_EQ(0, memcmp(pkp_state.spki_hashes[0].data(),
+                      spki_hash.data(), spki_hash.size()));
 }
 
 // Tests that Expect-CT state is not serialized and persisted when the feature

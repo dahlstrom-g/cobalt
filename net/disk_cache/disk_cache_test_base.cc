@@ -38,9 +38,11 @@ DiskCacheTest::DiskCacheTest() {
 
 DiskCacheTest::~DiskCacheTest() = default;
 
+#if !defined(STARBOARD)
+// Starboard does not support copy directory.
 bool DiskCacheTest::CopyTestCache(const std::string& name) {
   base::FilePath path;
-  base::PathService::Get(base::DIR_SOURCE_ROOT, &path);
+  base::PathService::Get(base::DIR_SOURCE_ROOT_FOR_TESTING, &path);
   path = path.AppendASCII("net");
   path = path.AppendASCII("data");
   path = path.AppendASCII("cache_tests");
@@ -50,6 +52,7 @@ bool DiskCacheTest::CopyTestCache(const std::string& name) {
     return false;
   return base::CopyDirectory(path, cache_path_, false);
 }
+#endif
 
 bool DiskCacheTest::CleanupCacheDir() {
   return DeleteCache(cache_path_);

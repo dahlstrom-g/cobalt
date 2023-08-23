@@ -5,7 +5,6 @@
 #ifndef NET_URL_REQUEST_URL_REQUEST_TEST_UTIL_H_
 #define NET_URL_REQUEST_URL_REQUEST_TEST_UTIL_H_
 
-#include <stdint.h>
 #include <stdlib.h>
 
 #include <map>
@@ -16,7 +15,7 @@
 #include "base/compiler_specific.h"
 #include "base/memory/ref_counted.h"
 #include "base/path_service.h"
-#include "base/single_thread_task_runner.h"
+#include "base/sequenced_task_runner.h"
 #include "base/strings/string16.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
@@ -44,6 +43,7 @@
 #include "net/url_request/url_request_context_getter.h"
 #include "net/url_request/url_request_context_storage.h"
 #include "net/url_request/url_request_job_factory.h"
+#include "starboard/types.h"
 #include "url/url_util.h"
 
 using base::TimeDelta;
@@ -116,16 +116,16 @@ class TestURLRequestContextGetter : public URLRequestContextGetter {
  public:
   // |network_task_runner| must not be NULL.
   explicit TestURLRequestContextGetter(
-      const scoped_refptr<base::SingleThreadTaskRunner>& network_task_runner);
+      const scoped_refptr<base::SequencedTaskRunner>& network_task_runner);
 
   // Use to pass a pre-initialized |context|.
   TestURLRequestContextGetter(
-      const scoped_refptr<base::SingleThreadTaskRunner>& network_task_runner,
+      const scoped_refptr<base::SequencedTaskRunner>& network_task_runner,
       std::unique_ptr<TestURLRequestContext> context);
 
   // URLRequestContextGetter implementation.
   TestURLRequestContext* GetURLRequestContext() override;
-  scoped_refptr<base::SingleThreadTaskRunner> GetNetworkTaskRunner()
+  scoped_refptr<base::SequencedTaskRunner> GetNetworkTaskRunner()
       const override;
 
   // see NotifyContextShuttingDown() in the base class.
@@ -135,7 +135,7 @@ class TestURLRequestContextGetter : public URLRequestContextGetter {
   ~TestURLRequestContextGetter() override;
 
  private:
-  const scoped_refptr<base::SingleThreadTaskRunner> network_task_runner_;
+  const scoped_refptr<base::SequencedTaskRunner> network_task_runner_;
   std::unique_ptr<TestURLRequestContext> context_;
   bool is_shut_down_ = false;
 };
@@ -156,7 +156,11 @@ class TestDelegate : public URLRequest::Delegate {
 
   // Sets the closure to be run on completion, for tests which need more fine-
   // grained control than RunUntilComplete().
+#ifdef STARBOARD
+  void set_on_complete(base::Closure on_complete) {
+#else
   void set_on_complete(base::OnceClosure on_complete) {
+#endif
     use_legacy_on_complete_ = false;
     on_complete_ = std::move(on_complete);
   }
@@ -232,9 +236,18 @@ class TestDelegate : public URLRequest::Delegate {
   bool use_legacy_on_complete_ = true;
 
   // Used to register RunLoop quit closures, to implement the Until*() closures.
+#ifdef STARBOARD
+  // Some Cobalt platform, at least PS4, triggers copy constructor of
+  // TestDelegate when instantiating std::vector<TestDelegate>(#container_size).
+  // And the copy constructor is deleted if there are move-only members.
+  base::Closure on_complete_;
+  base::Closure on_redirect_;
+  base::Closure on_auth_required_;
+#else
   base::OnceClosure on_complete_;
   base::OnceClosure on_redirect_;
   base::OnceClosure on_auth_required_;
+#endif
 
   // tracks status of callbacks
   int response_started_count_ = 0;

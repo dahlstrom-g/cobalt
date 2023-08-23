@@ -13,6 +13,7 @@
 #if defined(USE_NSS_CERTS)
 #include "crypto/nss_util.h"
 #include "crypto/scoped_nss_types.h"
+#include "starboard/memory.h"
 #endif
 
 namespace net {

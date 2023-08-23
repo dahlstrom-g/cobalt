@@ -16,6 +16,9 @@
 #endif
 
 #include "net/base/net_export.h"
+#include "starboard/types.h"
+
+#if !defined(STARBOARD)
 
 namespace net {
 
@@ -31,5 +34,7 @@ struct NET_EXPORT SockaddrStorage {
 };
 
 }  // namespace net
+
+#endif  // !defined(STARBOARD)
 
 #endif  // NET_BASE_SOCKADDR_STORAGE_H_

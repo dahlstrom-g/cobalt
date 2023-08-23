@@ -21,6 +21,8 @@
 #include "net/base/winsock_init.h"
 #include "net/base/winsock_util.h"
 #include "net/dns/dns_config_service.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace net {
 

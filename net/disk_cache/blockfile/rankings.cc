@@ -4,9 +4,11 @@
 
 #include "net/disk_cache/blockfile/rankings.h"
 
-#include <stdint.h>
-
 #include <limits>
+
+#include "starboard/types.h"
+
+#include "starboard/memory.h"
 
 #include "base/macros.h"
 #include "base/process/process.h"

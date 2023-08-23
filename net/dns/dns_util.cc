@@ -24,6 +24,9 @@
 #include "url/gurl.h"
 #include "url/url_canon.h"
 
+#include "starboard/memory.h"
+#include "starboard/types.h"
+
 namespace {
 
 // RFC 1035, section 2.3.4: labels 63 octets or less.
@@ -172,6 +175,14 @@ bool IsValidDoHTemplate(const string& server_template,
   return true;
 }
 
+#if defined(STARBOARD)
+base::TimeDelta GetTimeDeltaForConnectionTypeFromFieldTrialOrDefault(
+    const char* field_trial,
+    base::TimeDelta default_delta,
+    NetworkChangeNotifier::ConnectionType type) {
+  return default_delta;
+}
+#else
 #if !defined(OS_NACL)
 namespace {
 
@@ -208,6 +219,7 @@ base::TimeDelta GetTimeDeltaForConnectionTypeFromFieldTrialOrDefault(
   return out;
 }
 #endif  // !defined(OS_NACL)
+#endif  // defined(STARBOARD)
 
 AddressListDeltaType FindAddressListDeltaType(const AddressList& a,
                                               const AddressList& b) {

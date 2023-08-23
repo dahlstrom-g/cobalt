@@ -7,12 +7,14 @@
 
 #if defined(_MSC_VER)
 #include <intrin.h>
+
+#include "starboard/types.h"
 #endif
 
 namespace quic {
 
 inline void QuicPrefetchT0Impl(const void* addr) {
-#if defined(__GNUC__)
+#if defined(__GNUC__) || (defined(_M_ARM64) && defined(__clang__))
   __builtin_prefetch(addr, 0, 3);
 #elif defined(_MSC_VER)
   _mm_prefetch(reinterpret_cast<const char*>(addr), _MM_HINT_T0);

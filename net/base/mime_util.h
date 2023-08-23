@@ -17,13 +17,12 @@
 // All constants in mime_util.cc must be written in lower case, except parameter
 // values, which can be any case.
 
-#include <stddef.h>
-
 #include <string>
 #include <vector>
 
 #include "base/files/file_path.h"
 #include "net/base/net_export.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -51,6 +50,10 @@ NET_EXPORT bool GetMimeTypeFromFile(const base::FilePath& file_path,
 NET_EXPORT bool GetPreferredExtensionForMimeType(
     const std::string& mime_type,
     base::FilePath::StringType* extension);
+
+#if defined(STARBOARD)
+NET_EXPORT bool IsSupportedImageMimeType(const std::string& mime_type);
+#endif
 
 // Returns true if this the mime_type_pattern matches a given mime-type.
 // Checks for absolute matching and wildcards. MIME types are case insensitive.

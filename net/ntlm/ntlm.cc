@@ -13,6 +13,8 @@
 #include "net/base/net_string_util.h"
 #include "net/ntlm/ntlm_buffer_writer.h"
 #include "net/ntlm/ntlm_constants.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "third_party/boringssl/src/include/openssl/des.h"
 #include "third_party/boringssl/src/include/openssl/hmac.h"
 #include "third_party/boringssl/src/include/openssl/md4.h"
@@ -99,7 +101,8 @@ void UpdateTargetInfoAvPairs(bool is_mic_enabled,
     if (!channel_bindings.empty()) {
       GenerateChannelBindingHashV2(
           channel_bindings,
-          base::make_span<kChannelBindingsHashLen>(channel_bindings_hash));
+          base::span<uint8_t, kChannelBindingsHashLen>(
+              channel_bindings_hash.data(), channel_bindings_hash.size()));
     }
 
     av_pairs->emplace_back(TargetInfoAvId::kChannelBindings,
@@ -242,7 +245,8 @@ void GenerateLMResponseV1WithSessionSecurity(
   // In NTLM v1 with Session Security (aka NTLM2) the lm_response is 8 bytes of
   // client challenge and 16 bytes of zeros. (See 3.3.1)
   memcpy(lm_response.data(), client_challenge.data(), kChallengeLen);
-  memset(lm_response.data() + kChallengeLen, 0, kResponseLenV1 - kChallengeLen);
+  memset(lm_response.data() + kChallengeLen, 0,
+              kResponseLenV1 - kChallengeLen);
 }
 
 void GenerateSessionHashV1WithSessionSecurity(

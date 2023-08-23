@@ -15,8 +15,6 @@
 #include <wrl/client.h>
 #endif
 
-#include <stdint.h>
-
 #include <algorithm>
 #include <limits>
 #include <memory>
@@ -48,7 +46,11 @@
 #include "base/test/scoped_feature_list.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/values.h"
+#if defined(STARBOARD)
+#include "base/buildflag.h"
+#else
 #include "build/buildflag.h"
+#endif
 #include "net/base/chunked_upload_data_stream.h"
 #include "net/base/directory_listing.h"
 #include "net/base/elements_upload_data_stream.h"
@@ -176,6 +178,9 @@ namespace {
 
 namespace test_default {
 #include "net/http/transport_security_state_static_unittest_default.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 }
 
 const base::string16 kChrome(ASCIIToUTF16("chrome"));
@@ -364,9 +369,10 @@ class PriorityMonitoringURLRequestJob : public URLRequestTestJob {
 
 // Do a case-insensitive search through |haystack| for |needle|.
 bool ContainsString(const std::string& haystack, const char* needle) {
-  std::string::const_iterator it = std::search(
-      haystack.begin(), haystack.end(), needle, needle + strlen(needle),
-      base::CaseInsensitiveCompareASCII<char>());
+  std::string::const_iterator it =
+      std::search(haystack.begin(), haystack.end(), needle,
+                  needle + strlen(needle),
+                  base::CaseInsensitiveCompareASCII<char>());
   return it != haystack.end();
 }
 
@@ -1321,7 +1327,7 @@ TEST_F(URLRequestTest, FileDirCancelTest) {
   TestDelegate d;
   {
     base::FilePath file_path;
-    base::PathService::Get(base::DIR_SOURCE_ROOT, &file_path);
+    base::PathService::Get(base::DIR_TEST_DATA, &file_path);
     file_path = file_path.Append(FILE_PATH_LITERAL("net"));
     file_path = file_path.Append(FILE_PATH_LITERAL("data"));
 
@@ -1340,6 +1346,8 @@ TEST_F(URLRequestTest, FileDirCancelTest) {
   NetModule::SetResourceProvider(NULL);
 }
 
+#if !defined(STARBOARD)
+// Starboard does not support url_request_file_dir_job.
 TEST_F(URLRequestTest, FileDirOutputSanity) {
   // Verify the general sanity of the the output of the file:
   // directory lister by checking for the output of a known existing
@@ -1347,7 +1355,7 @@ TEST_F(URLRequestTest, FileDirOutputSanity) {
   const char sentinel_name[] = "filedir-sentinel";
 
   base::FilePath path;
-  base::PathService::Get(base::DIR_SOURCE_ROOT, &path);
+  base::PathService::Get(base::DIR_TEST_DATA, &path);
   path = path.Append(kTestFilePath);
 
   TestDelegate d;
@@ -1359,11 +1367,13 @@ TEST_F(URLRequestTest, FileDirOutputSanity) {
 
   // Generate entry for the sentinel file.
   base::FilePath sentinel_path = path.AppendASCII(sentinel_name);
+
   base::File::Info info;
   EXPECT_TRUE(base::GetFileInfo(sentinel_path, &info));
   EXPECT_GT(info.size, 0);
   std::string sentinel_output = GetDirectoryListingEntry(
-      base::string16(sentinel_name, sentinel_name + strlen(sentinel_name)),
+      base::string16(sentinel_name,
+                     sentinel_name + strlen(sentinel_name)),
       std::string(sentinel_name), false /* is_dir */, info.size,
 
       info.last_modified);
@@ -1382,7 +1392,7 @@ TEST_F(URLRequestTest, FileDirRedirectNoCrash) {
   // redirects does not crash.  See http://crbug.com/18686.
 
   base::FilePath path;
-  base::PathService::Get(base::DIR_SOURCE_ROOT, &path);
+  base::PathService::Get(base::DIR_TEST_DATA, &path);
   path = path.Append(kTestFilePath);
 
   TestDelegate d;
@@ -1397,6 +1407,7 @@ TEST_F(URLRequestTest, FileDirRedirectNoCrash) {
   ASSERT_FALSE(d.request_failed());
   EXPECT_EQ(OK, d.request_status());
 }
+#endif
 
 #if defined(OS_WIN)
 // Don't accept the url "file:///" on windows. See http://crbug.com/1474.
@@ -1448,7 +1459,7 @@ TEST_F(URLRequestTest, InvalidReferrerTest) {
 #if defined(OS_WIN)
 TEST_F(URLRequestTest, ResolveShortcutTest) {
   base::FilePath app_path;
-  base::PathService::Get(base::DIR_SOURCE_ROOT, &app_path);
+  base::PathService::Get(base::DIR_TEST_DATA, &app_path);
   app_path = app_path.Append(kTestFilePath);
   app_path = app_path.AppendASCII("with-headers.html");
 
@@ -5147,6 +5158,7 @@ TEST_F(URLRequestTestHTTP, GetTest_NoCache) {
   }
 }
 
+#if !SB_IS(COMPILER_MSVC)
 // This test has the server send a large number of cookies to the client.
 // To ensure that no number of cookies causes a crash, a galloping binary
 // search is used to estimate that maximum number of cookies that are accepted
@@ -5188,6 +5200,7 @@ TEST_F(URLRequestTestHTTP, MAYBE_GetTest_ManyCookies) {
   }
   // Success: the test did not crash.
 }
+#endif  // !SB_IS(COMPILER_MSVC)
 
 TEST_F(URLRequestTestHTTP, GetTest) {
   ASSERT_TRUE(http_test_server()->Start());
@@ -5271,6 +5284,8 @@ TEST_F(URLRequestTestHTTP, GetTestLoadTiming) {
   }
 }
 
+// Use of SpawnedTestServer is not supported by Starboard.
+#if !defined(STARBOARD)
 // TODO(svaldez): Update tests to use EmbeddedTestServer.
 #if !defined(OS_IOS)
 TEST_F(URLRequestTestHTTP, GetZippedTest) {
@@ -5294,7 +5309,7 @@ TEST_F(URLRequestTestHTTP, GetZippedTest) {
       { true, true, false, false, true };
 
   base::FilePath file_path;
-  base::PathService::Get(base::DIR_SOURCE_ROOT, &file_path);
+  base::PathService::Get(base::DIR_TEST_DATA, &file_path);
   file_path = file_path.Append(kTestFilePath);
   file_path = file_path.Append(FILE_PATH_LITERAL("BullRunSpeech.txt"));
   std::string expected_content;
@@ -5341,6 +5356,7 @@ TEST_F(URLRequestTestHTTP, GetZippedTest) {
   }
 }
 #endif  // !defined(OS_IOS)
+#endif  // !defined(STARBOARD)
 
 TEST_F(URLRequestTestHTTP, RedirectLoadTiming) {
   ASSERT_TRUE(http_test_server()->Start());
@@ -5920,7 +5936,7 @@ TEST_F(URLRequestTestHTTP, NetworkDelegateInfoAuth) {
 }
 
 // TODO(svaldez): Update tests to use EmbeddedTestServer.
-#if !defined(OS_IOS)
+#if !defined(OS_IOS) && !defined(STARBOARD)
 // Tests handling of delegate info from a URLRequest::Delegate.
 TEST_F(URLRequestTestHTTP, URLRequestDelegateInfo) {
   SpawnedTestServer test_server(SpawnedTestServer::TYPE_HTTP,
@@ -6366,12 +6382,15 @@ TEST_F(URLRequestTestHTTP, PostFileTest) {
 
     base::FilePath dir;
     base::PathService::Get(base::DIR_EXE, &dir);
+#if !defined(STARBOARD)
+    // Not supported by Starboard.
     base::SetCurrentDirectory(dir);
+#endif
 
     std::vector<std::unique_ptr<UploadElementReader>> element_readers;
 
     base::FilePath path;
-    base::PathService::Get(base::DIR_SOURCE_ROOT, &path);
+    base::PathService::Get(base::DIR_TEST_DATA, &path);
     path = path.Append(kTestFilePath);
     path = path.Append(FILE_PATH_LITERAL("with-headers.html"));
     element_readers.push_back(std::make_unique<UploadFileElementReader>(
@@ -6431,7 +6450,14 @@ TEST_F(URLRequestTestHTTP, PostUnreadableFileTest) {
     EXPECT_TRUE(d.request_failed());
     EXPECT_FALSE(d.received_data_before_response());
     EXPECT_EQ(0, d.bytes_received());
+#ifdef STARBOARD
+    // Depending on the Starboard implementation on defferent platforms, the
+    // error code can sometimes just be the general ERR_FAILED without detailed
+    // reason.
+    EXPECT_NE(OK, d.request_status());
+#else
     EXPECT_EQ(ERR_FILE_NOT_FOUND, d.request_status());
+#endif
   }
 }
 
@@ -7099,6 +7125,7 @@ class MockCTPolicyEnforcer : public CTPolicyEnforcer {
   ct::CTPolicyCompliance default_result_;
 };
 
+#if BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
 // Tests that Expect CT headers for the preload list are processed correctly.
 TEST_F(URLRequestTestHTTP, PreloadExpectCTHeader) {
   SetTransportSecurityStateSourceForTesting(&test_default::kHSTSSource);
@@ -7158,6 +7185,7 @@ TEST_F(URLRequestTestHTTP, PreloadExpectCTHeader) {
 
   EXPECT_EQ(1u, reporter.num_failures());
 }
+#endif
 
 // Tests that Expect CT HTTP headers are processed correctly.
 TEST_F(URLRequestTestHTTP, ExpectCTHeader) {
@@ -8246,7 +8274,7 @@ TEST_F(URLRequestTestHTTP, DeferredRedirect) {
     EXPECT_EQ(OK, d.request_status());
 
     base::FilePath path;
-    base::PathService::Get(base::DIR_SOURCE_ROOT, &path);
+    base::PathService::Get(base::DIR_TEST_DATA, &path);
     path = path.Append(kTestFilePath);
     path = path.Append(FILE_PATH_LITERAL("with-headers.html"));
 
@@ -8283,7 +8311,7 @@ TEST_F(URLRequestTestHTTP, DeferredRedirect_GetFullRequestHeaders) {
     EXPECT_EQ(OK, d.request_status());
 
     base::FilePath path;
-    base::PathService::Get(base::DIR_SOURCE_ROOT, &path);
+    base::PathService::Get(base::DIR_TEST_DATA, &path);
     path = path.Append(kTestFilePath);
     path = path.Append(FILE_PATH_LITERAL("with-headers.html"));
 
@@ -9484,6 +9512,7 @@ class URLRequestTestReferrerPolicy : public URLRequestTest {
         origin_server_->GetURL("/server-redirect?" + destination_url.spec());
 
     TestDelegate d;
+
     std::unique_ptr<URLRequest> req(default_context().CreateRequest(
         origin_url, DEFAULT_PRIORITY, &d, TRAFFIC_ANNOTATION_FOR_TESTS));
     req->set_referrer_policy(policy);
@@ -9591,6 +9620,7 @@ TEST_F(URLRequestTestReferrerPolicy, HTTPToCrossOriginHTTP) {
 
   VerifyReferrerAfterRedirect(URLRequest::NO_REFERRER, GURL(), GURL());
 }
+
 
 TEST_F(URLRequestTestReferrerPolicy, HTTPSToSameOriginHTTPS) {
   InstantiateSameOriginServers(net::EmbeddedTestServer::TYPE_HTTPS);
@@ -9866,6 +9896,7 @@ TEST_F(HTTPSRequestTest, HTTPSExpiredTest) {
   }
 }
 
+#if BUILDFLAG(INCLUDE_TRANSPORT_SECURITY_STATE_PRELOAD_LIST)
 // TODO(svaldez): iOS tests are flaky with EmbeddedTestServer and transport
 // security state. (see http://crbug.com/550977).
 #if !defined(OS_IOS)
@@ -9989,6 +10020,7 @@ TEST_F(HTTPSRequestTest, HTTPSErrorsNoClobberTSSTest) {
   EXPECT_EQ(new_static_pkp_state.bad_spki_hashes,
             static_pkp_state.bad_spki_hashes);
 }
+#endif
 
 // Make sure HSTS preserves a POST request's method and body.
 TEST_F(HTTPSRequestTest, HSTSPreservesPosts) {
@@ -10081,7 +10113,8 @@ TEST_F(HTTPSRequestTest, HSTSCrossOriginAddHeaders) {
                                         test_server.host_port_pair().port()));
   url::Replacements<char> replacements;
   const char kNewScheme[] = "https";
-  replacements.SetScheme(kNewScheme, url::Component(0, strlen(kNewScheme)));
+  replacements.SetScheme(kNewScheme,
+                         url::Component(0, strlen(kNewScheme)));
   GURL hsts_https_url = hsts_http_url.ReplaceComponents(replacements);
 
   TestDelegate d;
@@ -10451,7 +10484,9 @@ TEST_F(HTTPSRequestTest, ClientAuthFailSigningRetry) {
     EXPECT_EQ(0, d.bytes_received());
   }
 }
-
+#endif  // !defiend(OS_IOS)
+#if !defined(STARBOARD)
+#if !defined(OS_IOS)
 TEST_F(HTTPSRequestTest, ResumeTest) {
   // Test that we attempt a session resume when making two connections to the
   // same host.
@@ -11905,8 +11940,8 @@ class URLRequestTestFTP : public URLRequestTest {
 
   std::string GetTestFileContents() {
     base::FilePath path;
-    EXPECT_TRUE(base::PathService::Get(base::DIR_SOURCE_ROOT, &path));
-    path = path.Append(kTestFilePath);
+    EXPECT_TRUE(base::PathService::Get(base::DIR_TEST_DATA, &path));
+    path = path.Append(kTestFistarboardlePath);
     path = path.AppendASCII(kFtpTestFile);
     std::string contents;
     EXPECT_TRUE(base::ReadFileToString(path, &contents));
@@ -12201,6 +12236,7 @@ TEST_F(URLRequestTestFTP, RawBodyBytes) {
 }
 
 #endif  // !BUILDFLAG(DISABLE_FTP_SUPPORT)
+#endif  // !defined(STARBOARD)
 
 TEST_F(URLRequestTest, NetworkAccessedClearOnDataRequest) {
   TestDelegate d;
@@ -12438,6 +12474,8 @@ TEST_F(URLRequestTestHTTP, HeadersCallbacksAuthRetry) {
   EXPECT_FALSE(r2->is_pending());
   ASSERT_EQ(raw_req_headers.size(), 3u);
   ASSERT_EQ(raw_resp_headers.size(), 3u);
+  // Google for the "If-None-Match" request header to see its relation to
+  // HTTP cache.
   EXPECT_TRUE(raw_req_headers[2]->FindHeaderForTest("If-None-Match", &value));
   EXPECT_NE(raw_resp_headers[2].get(), r2->response_headers());
   EXPECT_EQ(304, raw_resp_headers[2]->response_code());

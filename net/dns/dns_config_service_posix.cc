@@ -39,6 +39,8 @@
 #include "net/base/address_tracker_linux.h"
 #include "net/base/network_change_notifier.h"
 #include "net/base/network_interfaces.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #endif
 
 namespace net {

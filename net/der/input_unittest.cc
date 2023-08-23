@@ -6,6 +6,7 @@
 
 #include "base/logging.h"
 #include "base/stl_util.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

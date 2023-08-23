@@ -14,6 +14,7 @@
 #include "base/values.h"
 #include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_with_source.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -76,13 +77,13 @@ EventCreator::EventCreator(NetLogWithSource net_log)
       past_effective_connection_type_(EFFECTIVE_CONNECTION_TYPE_UNKNOWN) {}
 
 EventCreator::~EventCreator() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 }
 
 void EventCreator::MaybeAddNetworkQualityChangedEventToNetLog(
     EffectiveConnectionType effective_connection_type,
     const NetworkQuality& network_quality) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   // Check if any of the network quality metrics changed meaningfully.
   bool effective_connection_type_changed =

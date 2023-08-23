@@ -11,8 +11,14 @@
 #include "base/task_runner.h"
 #include "base/task_runner_util.h"
 #include "base/threading/thread_restrictions.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/values.h"
 #include "net/base/net_errors.h"
+
+#ifdef STARBOARD
+#include "base/message_loop/message_loop.h"
+#include "base/single_thread_task_runner.h"
+#endif
 
 #if defined(OS_ANDROID)
 #include "base/android/content_uri_utils.h"
@@ -43,6 +49,18 @@ FileStream::Context::IOResult FileStream::Context::IOResult::FromOSError(
     logging::SystemErrorCode os_error) {
   return IOResult(MapSystemError(os_error), os_error);
 }
+
+#if defined(STARBOARD)
+//static
+FileStream::Context::IOResult FileStream::Context::IOResult::FromFileError(
+    base::File::Error file_error, logging::SystemErrorCode os_error) {
+  if (file_error == base::File::FILE_ERROR_NOT_FOUND) {
+    return IOResult(ERR_FILE_NOT_FOUND, os_error);
+  } else {
+    return IOResult(ERR_FAILED, os_error);
+  }
+}
+#endif
 
 // ---------------------------------------------------------------------
 
@@ -152,7 +170,7 @@ bool FileStream::Context::IsOpen() const {
 
 FileStream::Context::OpenResult FileStream::Context::OpenFileImpl(
     const base::FilePath& path, int open_flags) {
-#if defined(OS_POSIX)
+#if defined(OS_POSIX) || defined(STARBOARD)
   // Always use blocking IO.
   open_flags &= ~base::File::FLAG_ASYNC;
 #endif
@@ -177,8 +195,14 @@ FileStream::Context::OpenResult FileStream::Context::OpenFileImpl(
   }
 #endif  // defined(OS_ANDROID)
   if (!file.IsValid()) {
+#if defined(STARBOARD)
+    return OpenResult(
+        base::File(), IOResult::FromFileError(
+            file.error_details(), logging::GetLastSystemErrorCode()));
+#else
     return OpenResult(base::File(),
                       IOResult::FromOSError(logging::GetLastSystemErrorCode()));
+#endif
   }
 
   return OpenResult(std::move(file), IOResult(OK, 0));
@@ -217,6 +241,15 @@ void FileStream::Context::CloseAndDelete() {
   DCHECK(!async_in_progress_);
 
   if (file_.IsValid()) {
+#ifdef STARBOARD
+    // On Windows, holding file_ will prevent re-creation immediately after
+    // CloseAndDelete is called, failing some tests.
+    if (base::ThreadTaskRunnerHandle::Get() == task_runner_.get()) {
+      file_.Close();
+      delete this;
+      return;
+    }
+#endif
     bool posted = task_runner_.get()->PostTask(
         FROM_HERE, base::BindOnce(base::IgnoreResult(&Context::CloseFileImpl),
                                   base::Owned(this)));

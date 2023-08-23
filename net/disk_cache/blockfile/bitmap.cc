@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "base/logging.h"
+#include "starboard/memory.h"
 
 namespace {
 
@@ -75,7 +76,7 @@ void Bitmap::Resize(int num_bits, bool clear_bits) {
     // Always clear the unused bits in the last word.
     new_map[array_size_ - 1] = 0;
     memcpy(new_map, map_,
-           sizeof(*map_) * std::min(array_size_, old_array_size));
+                 sizeof(*map_) * std::min(array_size_, old_array_size));
     if (alloc_)
       delete[] map_;  // No need to check for NULL.
     map_ = new_map;
@@ -151,7 +152,7 @@ void Bitmap::SetRange(int begin, int end, bool value) {
 
   // Set all the words in the middle.
   memset(map_ + (begin / kIntBits), (value ? 0xFF : 0x00),
-         ((end / kIntBits) - (begin / kIntBits)) * sizeof(*map_));
+              ((end / kIntBits) - (begin / kIntBits)) * sizeof(*map_));
 }
 
 // Return true if any bit between begin inclusive and end exclusive

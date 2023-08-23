@@ -5,8 +5,6 @@
 #ifndef NET_NQE_EVENT_CREATOR_H_
 #define NET_NQE_EVENT_CREATOR_H_
 
-#include <stdint.h>
-
 #include "base/macros.h"
 #include "base/threading/thread_checker.h"
 #include "base/time/time.h"
@@ -14,6 +12,7 @@
 #include "net/log/net_log_with_source.h"
 #include "net/nqe/effective_connection_type.h"
 #include "net/nqe/network_quality.h"
+#include "starboard/types.h"
 
 namespace net {
 
@@ -47,7 +46,7 @@ class NET_EXPORT_PRIVATE EventCreator {
   //  The network quality when the net log event was last added.
   NetworkQuality past_network_quality_;
 
-  base::ThreadChecker thread_checker_;
+  THREAD_CHECKER(thread_checker_);
 
   DISALLOW_COPY_AND_ASSIGN(EventCreator);
 };

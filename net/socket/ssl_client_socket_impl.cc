@@ -62,7 +62,14 @@
 #include "third_party/boringssl/src/include/openssl/ssl.h"
 
 #if !defined(NET_DISABLE_BROTLI)
+#if defined(STARBOARD)
+// #include "third_party/brotli/c/include/brotli/decode.h"
+#include <brotli/decode.h>
+#else
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "third_party/brotli/include/brotli/decode.h"
+#endif  // defined(STARBOARD)
 #endif
 
 namespace net {
@@ -674,6 +681,10 @@ bool SSLClientSocketImpl::GetSSLInfo(SSLInfo* ssl_info) {
   ssl_info->security_bits = SSL_CIPHER_get_bits(cipher, NULL);
   // Historically, the "group" was known as "curve".
   ssl_info->key_exchange_group = SSL_get_curve_id(ssl_.get());
+#if defined(COBALT_QUIC46)
+  ssl_info->peer_signature_algorithm =
+      SSL_get_peer_signature_algorithm(ssl_.get());
+#endif
 
   SSLConnectionStatusSetCipherSuite(
       static_cast<uint16_t>(SSL_CIPHER_get_id(cipher)),
@@ -855,8 +866,10 @@ int SSLClientSocketImpl::Init() {
   if (!ssl_session_cache_shard_.empty()) {
     bssl::UniquePtr<SSL_SESSION> session =
         context->session_cache()->Lookup(GetSessionCacheKey());
-    if (session)
+    if (session) {
+      DLOG(INFO) << "set session: " << session.get();
       SSL_set_session(ssl_.get(), session.get());
+    }
   }
 
   transport_adapter_.reset(
@@ -879,6 +892,11 @@ int SSLClientSocketImpl::Init() {
 
   SSL_set_early_data_enabled(ssl_.get(), ssl_config_.early_data_enabled);
 
+// QUIC46
+// SSL_set_tls13_variant is removed from the new boringssl. Instead, Chromium
+// m74 only has feature flags to enforce TLS13 to turn off TLS 1.3's
+// server-random-based downgrade protection.
+#if !defined(COBALT_QUIC46)
   switch (ssl_config_.tls13_variant) {
     case kTLS13VariantDraft23:
       SSL_set_tls13_variant(ssl_.get(), tls13_draft23);
@@ -887,6 +905,7 @@ int SSLClientSocketImpl::Init() {
       SSL_set_tls13_variant(ssl_.get(), tls13_rfc);
       break;
   }
+#endif
 
   // OpenSSL defaults some options to on, others to off. To avoid ambiguity,
   // set everything we care about to an absolute value.

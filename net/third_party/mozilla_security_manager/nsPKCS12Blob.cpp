@@ -47,6 +47,8 @@
 #include "base/strings/string_util.h"
 #include "crypto/nss_util_internal.h"
 #include "net/base/net_errors.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace mozilla_security_manager {
 

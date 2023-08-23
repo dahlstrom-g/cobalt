@@ -11,6 +11,8 @@
 #include "base/logging.h"
 #include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace net {
 namespace ntlm {
@@ -100,12 +102,22 @@ bool NtlmBufferWriter::WriteAvPair(const AvPair& pair) {
       return false;
     return WriteUInt32(static_cast<uint32_t>(pair.flags));
   } else {
+#if defined(STARBOARD)
+    return WriteBytes(
+        base::span<const uint8_t>(pair.buffer.data(), pair.buffer.size()));
+#else
     return WriteBytes(pair.buffer);
+#endif
   }
 }
 
 bool NtlmBufferWriter::WriteUtf8String(const std::string& str) {
+#if defined(STARBOARD)
+  return WriteBytes(
+      base::as_bytes(base::span<const char>(str.data(), str.size())));
+#else
   return WriteBytes(base::as_bytes(base::make_span(str)));
+#endif
 }
 
 bool NtlmBufferWriter::WriteUtf16AsUtf8String(const base::string16& str) {
@@ -138,7 +150,7 @@ bool NtlmBufferWriter::WriteUtf16String(const base::string16& str) {
   }
 #else
   memcpy(reinterpret_cast<void*>(GetBufferPtrAtCursor()), str.c_str(),
-         num_bytes);
+               num_bytes);
 
 #endif
 

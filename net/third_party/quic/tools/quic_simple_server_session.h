@@ -1,13 +1,11 @@
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-//
+
 // A toy server specific QuicSession subclass.
 
 #ifndef NET_THIRD_PARTY_QUIC_TOOLS_QUIC_SIMPLE_SERVER_SESSION_H_
 #define NET_THIRD_PARTY_QUIC_TOOLS_QUIC_SIMPLE_SERVER_SESSION_H_
-
-#include <stdint.h>
 
 #include <list>
 #include <memory>
@@ -25,6 +23,7 @@
 #include "net/third_party/quic/tools/quic_backend_response.h"
 #include "net/third_party/quic/tools/quic_simple_server_backend.h"
 #include "net/third_party/quic/tools/quic_simple_server_stream.h"
+#include "starboard/types.h"
 
 namespace quic {
 
@@ -54,6 +53,7 @@ class QuicSimpleServerSession : public QuicServerSessionBase {
 
   // Takes ownership of |connection|.
   QuicSimpleServerSession(const QuicConfig& config,
+                          const ParsedQuicVersionVector& supported_versions,
                           QuicConnection* connection,
                           QuicSession::Visitor* visitor,
                           QuicCryptoServerStream::Helper* helper,
@@ -64,11 +64,6 @@ class QuicSimpleServerSession : public QuicServerSessionBase {
   QuicSimpleServerSession& operator=(const QuicSimpleServerSession&) = delete;
 
   ~QuicSimpleServerSession() override;
-
-  // When a stream is marked draining, it will decrease the number of open
-  // streams. If it is an outgoing stream, try to open a new stream to send
-  // remaing push responses.
-  void StreamDraining(QuicStreamId id) override;
 
   // Override base class to detact client sending data on server push stream.
   void OnStreamFrame(const QuicStreamFrame& frame) override;
@@ -83,13 +78,14 @@ class QuicSimpleServerSession : public QuicServerSessionBase {
       QuicStreamId original_stream_id,
       const spdy::SpdyHeaderBlock& original_request_headers);
 
+  void OnCanCreateNewOutgoingStream() override;
+
  protected:
   // QuicSession methods:
-  QuicSpdyStream* CreateIncomingDynamicStream(QuicStreamId id) override;
-  QuicSimpleServerStream* CreateOutgoingDynamicStream() override;
-  // Closing an outgoing stream can reduce open outgoing stream count, try
-  // to handle queued promised streams right now.
-  void CloseStreamInner(QuicStreamId stream_id, bool locally_reset) override;
+  QuicSpdyStream* CreateIncomingStream(QuicStreamId id) override;
+  QuicSpdyStream* CreateIncomingStream(PendingStream pending) override;
+  QuicSimpleServerStream* CreateOutgoingBidirectionalStream() override;
+  QuicSimpleServerStream* CreateOutgoingUnidirectionalStream() override;
   // Override to return true for locally preserved server push stream.
   void HandleFrameOnNonexistentOutgoingStream(QuicStreamId stream_id) override;
   // Override to handle reseting locally preserved streams.

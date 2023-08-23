@@ -9,6 +9,8 @@
 #include <sys/socket.h>
 #include <utility>
 
+#include "starboard/types.h"
+
 #include "base/callback_helpers.h"
 #include "base/files/file_util.h"
 #include "base/logging.h"
@@ -79,7 +81,7 @@ SocketPosix::~SocketPosix() {
 }
 
 int SocketPosix::Open(int address_family) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_EQ(kInvalidSocket, socket_fd_);
   DCHECK(address_family == AF_INET ||
          address_family == AF_INET6 ||
@@ -114,7 +116,7 @@ int SocketPosix::AdoptConnectedSocket(SocketDescriptor socket,
 }
 
 int SocketPosix::AdoptUnconnectedSocket(SocketDescriptor socket) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_EQ(kInvalidSocket, socket_fd_);
 
   socket_fd_ = socket;
@@ -136,7 +138,7 @@ SocketDescriptor SocketPosix::ReleaseConnectedSocket() {
 }
 
 int SocketPosix::Bind(const SockaddrStorage& address) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_NE(kInvalidSocket, socket_fd_);
 
   int rv = bind(socket_fd_, address.addr, address.addr_len);
@@ -149,7 +151,7 @@ int SocketPosix::Bind(const SockaddrStorage& address) {
 }
 
 int SocketPosix::Listen(int backlog) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_NE(kInvalidSocket, socket_fd_);
   DCHECK_LT(0, backlog);
 
@@ -164,7 +166,7 @@ int SocketPosix::Listen(int backlog) {
 
 int SocketPosix::Accept(std::unique_ptr<SocketPosix>* socket,
                         CompletionOnceCallback callback) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_NE(kInvalidSocket, socket_fd_);
   DCHECK(accept_callback_.is_null());
   DCHECK(socket);
@@ -188,7 +190,7 @@ int SocketPosix::Accept(std::unique_ptr<SocketPosix>* socket,
 
 int SocketPosix::Connect(const SockaddrStorage& address,
                          CompletionOnceCallback callback) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_NE(kInvalidSocket, socket_fd_);
   DCHECK(!waiting_connect_);
   DCHECK(!callback.is_null());
@@ -231,7 +233,7 @@ int SocketPosix::Connect(const SockaddrStorage& address,
 }
 
 bool SocketPosix::IsConnected() const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   if (socket_fd_ == kInvalidSocket || waiting_connect_)
     return false;
@@ -274,7 +276,7 @@ bool SocketPosix::IsConnected() const {
 }
 
 bool SocketPosix::IsConnectedAndIdle() const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   if (socket_fd_ == kInvalidSocket || waiting_connect_)
     return false;
@@ -326,7 +328,7 @@ int SocketPosix::Read(IOBuffer* buf,
 int SocketPosix::ReadIfReady(IOBuffer* buf,
                              int buf_len,
                              CompletionOnceCallback callback) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_NE(kInvalidSocket, socket_fd_);
   DCHECK(!waiting_connect_);
   CHECK(read_if_ready_callback_.is_null());
@@ -363,7 +365,7 @@ int SocketPosix::Write(
     int buf_len,
     CompletionOnceCallback callback,
     const NetworkTrafficAnnotationTag& /* traffic_annotation */) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_NE(kInvalidSocket, socket_fd_);
   DCHECK(!waiting_connect_);
   CHECK(write_callback_.is_null());
@@ -380,7 +382,7 @@ int SocketPosix::Write(
 int SocketPosix::WaitForWrite(IOBuffer* buf,
                               int buf_len,
                               CompletionOnceCallback callback) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK_NE(kInvalidSocket, socket_fd_);
   DCHECK(write_callback_.is_null());
   // Synchronous operation not supported
@@ -401,7 +403,7 @@ int SocketPosix::WaitForWrite(IOBuffer* buf,
 }
 
 int SocketPosix::GetLocalAddress(SockaddrStorage* address) const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(address);
 
   if (getsockname(socket_fd_, address->addr, &address->addr_len) < 0)
@@ -410,7 +412,7 @@ int SocketPosix::GetLocalAddress(SockaddrStorage* address) const {
 }
 
 int SocketPosix::GetPeerAddress(SockaddrStorage* address) const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   DCHECK(address);
 
   if (!HasPeerAddress())
@@ -421,7 +423,7 @@ int SocketPosix::GetPeerAddress(SockaddrStorage* address) const {
 }
 
 void SocketPosix::SetPeerAddress(const SockaddrStorage& address) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   // |peer_address_| will be non-NULL if Connect() has been called. Unless
   // Close() is called to reset the internal state, a second call to Connect()
   // is not allowed.
@@ -434,12 +436,12 @@ void SocketPosix::SetPeerAddress(const SockaddrStorage& address) {
 }
 
 bool SocketPosix::HasPeerAddress() const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   return peer_address_ != NULL;
 }
 
 void SocketPosix::Close() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
   StopWatchingAndCleanUp();
 
@@ -451,7 +453,7 @@ void SocketPosix::Close() {
 }
 
 void SocketPosix::DetachFromThread() {
-  thread_checker_.DetachFromThread();
+  DETACH_FROM_THREAD(thread_checker_);
 }
 
 void SocketPosix::OnFileCanReadWithoutBlocking(int fd) {

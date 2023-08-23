@@ -4,8 +4,6 @@
 
 #include "net/url_request/url_request_http_job.h"
 
-#include <stdint.h>
-
 #include <cstddef>
 #include <memory>
 #include <utility>
@@ -51,6 +49,7 @@
 #if defined(OS_ANDROID)
 #include "base/android/jni_android.h"
 #include "jni/AndroidNetworkLibraryTestUtil_jni.h"
+#include "starboard/types.h"
 #endif
 
 using net::test::IsError;
@@ -283,6 +282,14 @@ TEST(URLRequestHttpJobWithProxy, TestSuccessfulWithOneProxy) {
   // When request fails due to proxy connection errors, the proxy server should
   // still be set on the |request|.
   EXPECT_EQ(proxy_server, request->proxy_server());
+  // This bool is set by HttpNetworkTransaction but not by HTTPCacheTransaction.
+  // If Cobalt use HTTPNetworkLayer instead of HTTPCache as the transaction
+  // factory, the behavior is then different in this case.
+  // HTTPNetworkTransaction sets this boolean in OnStreamReady which is called
+  // after successfully creating a stream. It's arguable wheather this boolean
+  // should be set at this moment or not.
+  // But since the request fails here, was_fetched_via_proxy is meaningless and
+  // unimportant.
   EXPECT_FALSE(request->was_fetched_via_proxy());
   EXPECT_EQ(0, request->received_response_content_length());
   EXPECT_EQ(CountWriteBytes(writes), request->GetTotalSentBytes());
@@ -487,6 +494,7 @@ TEST_F(URLRequestHttpJobWithMockSocketsTest, TestSuccessfulCachedHeadRequest) {
   {
     MockWrite writes[] = {MockWrite(kSimpleGetMockWrite)};
     MockRead reads[] = {MockRead("HTTP/1.1 200 OK\r\n"
+                                 "Content-Type: example/unit_test\r\n"
                                  "Content-Length: 12\r\n\r\n"),
                         MockRead("Test Content")};
 

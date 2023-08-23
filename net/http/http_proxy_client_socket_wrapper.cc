@@ -49,7 +49,9 @@ HttpProxyClientSocketWrapper::HttpProxyClientSocketWrapper(
     HttpAuthCache* http_auth_cache,
     HttpAuthHandlerFactory* http_auth_handler_factory,
     SpdySessionPool* spdy_session_pool,
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
     QuicStreamFactory* quic_stream_factory,
+#endif
     bool is_trusted_proxy,
     bool tunnel,
     const NetworkTrafficAnnotationTag& traffic_annotation,
@@ -73,7 +75,9 @@ HttpProxyClientSocketWrapper::HttpProxyClientSocketWrapper(
       tunnel_(tunnel),
       using_spdy_(false),
       is_trusted_proxy_(is_trusted_proxy),
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
       quic_stream_request_(quic_stream_factory),
+#endif
       http_auth_controller_(
           tunnel ? new HttpAuthController(
                        HttpAuth::AUTH_PROXY,
@@ -93,9 +97,11 @@ HttpProxyClientSocketWrapper::HttpProxyClientSocketWrapper(
   // |transport_params| is null. Otherwise, |quic_version| must be
   // quic::QUIC_VERSION_UNSUPPORTED, and exactly one of |transport_params| or
   // |ssl_params| must be set.
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   DCHECK(quic_version_ == quic::QUIC_VERSION_UNSUPPORTED
              ? (bool)transport_params != (bool)ssl_params
              : !transport_params && ssl_params);
+#endif
 }
 
 HttpProxyClientSocketWrapper::~HttpProxyClientSocketWrapper() {
@@ -408,13 +414,25 @@ int HttpProxyClientSocketWrapper::DoLoop(int result) {
         break;
       case STATE_QUIC_PROXY_CREATE_SESSION:
         DCHECK_EQ(OK, rv);
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
         rv = DoQuicProxyCreateSession();
+#else
+        NOTREACHED();
+#endif
         break;
       case STATE_QUIC_PROXY_CREATE_STREAM:
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
         rv = DoQuicProxyCreateStream(rv);
+#else
+        NOTREACHED();
+#endif
         break;
       case STATE_QUIC_PROXY_CREATE_STREAM_COMPLETE:
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
         rv = DoQuicProxyCreateStreamComplete(rv);
+#else
+        NOTREACHED();
+#endif
         break;
       case STATE_RESTART_WITH_AUTH:
         DCHECK_EQ(OK, rv);
@@ -436,7 +454,11 @@ int HttpProxyClientSocketWrapper::DoLoop(int result) {
 int HttpProxyClientSocketWrapper::DoBeginConnect() {
   connect_start_time_ = base::TimeTicks::Now();
   SetConnectTimer(connect_timeout_duration_);
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   if (quic_version_ != quic::QUIC_VERSION_UNSUPPORTED) {
+#else
+  if (false) {
+#endif
     next_state_ = STATE_QUIC_PROXY_CREATE_SESSION;
   } else if (transport_params_) {
     next_state_ = STATE_TCP_CONNECT;
@@ -638,6 +660,7 @@ int HttpProxyClientSocketWrapper::DoSpdyProxyCreateStreamComplete(int result) {
       &HttpProxyClientSocketWrapper::OnIOComplete, base::Unretained(this)));
 }
 
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
 int HttpProxyClientSocketWrapper::DoQuicProxyCreateSession() {
   DCHECK(ssl_params_);
   DCHECK(tunnel_);
@@ -659,12 +682,17 @@ int HttpProxyClientSocketWrapper::DoQuicProxyCreateStream(int result) {
     return result;
 
   next_state_ = STATE_QUIC_PROXY_CREATE_STREAM_COMPLETE;
+
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   quic_session_ = quic_stream_request_.ReleaseSessionHandle();
   return quic_session_->RequestStream(
       false,
       base::Bind(&HttpProxyClientSocketWrapper::OnIOComplete,
                  base::Unretained(this)),
       traffic_annotation_);
+#else
+  return ERR_NOT_IMPLEMENTED;
+#endif
 }
 
 int HttpProxyClientSocketWrapper::DoQuicProxyCreateStreamComplete(int result) {
@@ -672,6 +700,8 @@ int HttpProxyClientSocketWrapper::DoQuicProxyCreateStreamComplete(int result) {
     return result;
 
   next_state_ = STATE_HTTP_PROXY_CONNECT_COMPLETE;
+
+#if !defined(QUIC_DISABLED_FOR_STARBOARD)
   std::unique_ptr<QuicChromiumClientStream::Handle> quic_stream =
       quic_session_->ReleaseStream();
 
@@ -684,7 +714,11 @@ int HttpProxyClientSocketWrapper::DoQuicProxyCreateStreamComplete(int result) {
       net_log_, http_auth_controller_.get()));
   return transport_socket_->Connect(base::Bind(
       &HttpProxyClientSocketWrapper::OnIOComplete, base::Unretained(this)));
+#else
+  return ERR_NOT_IMPLEMENTED;
+#endif
 }
+#endif
 
 int HttpProxyClientSocketWrapper::DoRestartWithAuth() {
   DCHECK(transport_socket_);

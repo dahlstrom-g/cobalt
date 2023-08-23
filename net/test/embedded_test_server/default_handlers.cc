@@ -36,6 +36,7 @@
 #include "net/test/embedded_test_server/http_request.h"
 #include "net/test/embedded_test_server/http_response.h"
 #include "net/test/embedded_test_server/request_handler_util.h"
+#include "starboard/types.h"
 
 namespace net {
 namespace test_server {
@@ -101,7 +102,12 @@ std::unique_ptr<HttpResponse> HandleEchoHeader(const std::string& url,
 
   http_response->AddCustomHeader("Vary", vary);
   http_response->set_content(content);
+#if defined(STARBOARD)
+  // Cobalt does not currently support text/plain caching.
+  http_response->set_content_type("text/html");
+#else
   http_response->set_content_type("text/plain");
+#endif
   http_response->AddCustomHeader("Cache-Control", cache_control);
   return std::move(http_response);
 }
@@ -386,7 +392,7 @@ std::unique_ptr<HttpResponse> HandleAuthBasic(const HttpRequest& request) {
       base::FilePath().AppendASCII(request.relative_url.substr(1));
   if (file_path.FinalExtension() == FILE_PATH_LITERAL("gif")) {
     base::FilePath server_root;
-    base::PathService::Get(base::DIR_SOURCE_ROOT, &server_root);
+    base::PathService::Get(base::DIR_TEST_DATA, &server_root);
     base::FilePath gif_path = server_root.AppendASCII(kLogoPath);
     std::string gif_data;
     base::ReadFileToString(gif_path, &gif_data);

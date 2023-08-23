@@ -173,6 +173,13 @@ void TestURLFetcher::SaveResponseToTemporaryFile(
   SaveResponseToFileAtPath(path, file_task_runner);
 }
 
+#if defined(STARBOARD)
+void TestURLFetcher::SaveResponseToLargeString() {
+  // TODO(b/158043520): implement when dependent unit tests are enabled.
+  CHECK(false) << "Unimplemented";
+}
+#endif
+
 void TestURLFetcher::SaveResponseWithWriter(
     std::unique_ptr<URLFetcherResponseWriter> response_writer) {
   // In class URLFetcherCore this method is called by all three:
@@ -202,6 +209,14 @@ void TestURLFetcher::SaveResponseWithWriter(
   } else {
     NOTREACHED();
   }
+}
+
+URLFetcherResponseWriter* TestURLFetcher::GetResponseWriter() const {
+  return response_writer_.get();
+}
+
+const HttpRequestHeaders& TestURLFetcher::GetRequestHeaders() const {
+  return fake_extra_request_headers_;
 }
 
 HttpResponseHeaders* TestURLFetcher::GetResponseHeaders() const {
@@ -276,6 +291,15 @@ bool TestURLFetcher::GetResponseAsString(
   *out_response_string = fake_response_string_;
   return true;
 }
+
+#if defined(STARBOARD)
+bool TestURLFetcher::GetResponseAsLargeString(
+    std::string* out_response_string) const {
+  // TODO(b/158043520): implement when dependent unit tests are enabled.
+  CHECK(false) << "Unimplemented";
+  return false;
+}
+#endif
 
 bool TestURLFetcher::GetResponseAsFilePath(
     bool take_ownership, base::FilePath* out_response_path) const {

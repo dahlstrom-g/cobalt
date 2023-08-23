@@ -22,6 +22,7 @@
 #include "net/ntlm/ntlm_test_data.h"
 #include "net/ssl/ssl_info.h"
 #include "net/test/gtest_util.h"
+#include "starboard/memory.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
@@ -118,7 +119,12 @@ class HttpAuthHandlerNtlmPortableTest : public PlatformTest {
     EXPECT_EQ(0, sec_buf.length % 2);
 
     std::vector<uint8_t> raw(sec_buf.length);
+#ifdef STARBOARD
+    EXPECT_TRUE(reader->ReadBytesFrom(
+        sec_buf, base::span<uint8_t>(raw.data(), raw.size())));
+#else
     EXPECT_TRUE(reader->ReadBytesFrom(sec_buf, raw));
+#endif
 
 #if defined(ARCH_CPU_BIG_ENDIAN)
     for (size_t i = 0; i < raw.size(); i += 2) {
@@ -232,9 +238,10 @@ TEST_F(HttpAuthHandlerNtlmPortableTest, NtlmV1AuthenticationSuccess) {
   ASSERT_TRUE(DecodeChallenge(token, &decoded));
   ASSERT_EQ(arraysize(ntlm::test::kExpectedAuthenticateMsgSpecResponseV1),
             decoded.size());
-  ASSERT_EQ(0, memcmp(decoded.data(),
-                      ntlm::test::kExpectedAuthenticateMsgSpecResponseV1,
-                      decoded.size()));
+  ASSERT_EQ(0,
+            memcmp(decoded.data(),
+                   ntlm::test::kExpectedAuthenticateMsgSpecResponseV1,
+                   decoded.size()));
 }
 
 }  // namespace net

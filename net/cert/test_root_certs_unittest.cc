@@ -20,6 +20,7 @@
 #include <nss.h>
 
 #include "net/cert/x509_util_nss.h"
+#include "starboard/types.h"
 #endif
 
 using net::test::IsOk;
@@ -41,6 +42,13 @@ TEST(TestRootCertsTest, AddFromPointer) {
       ImportCertFromFile(GetTestCertsDirectory(), kRootCertificateFile);
   ASSERT_NE(static_cast<X509Certificate*>(NULL), root_cert.get());
 
+#if defined(STARBOARD)
+  // Some bad test might have used TestRootCerts singleton before, make sure
+  // it's clear before we start this basic test.
+  if (TestRootCerts::HasInstance()) {
+    TestRootCerts::GetInstance()->Clear();
+  }
+#endif
   TestRootCerts* test_roots = TestRootCerts::GetInstance();
   ASSERT_NE(static_cast<TestRootCerts*>(NULL), test_roots);
   EXPECT_TRUE(test_roots->IsEmpty());

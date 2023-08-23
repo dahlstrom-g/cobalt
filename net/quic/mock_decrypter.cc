@@ -6,6 +6,7 @@
 
 #include "net/third_party/quic/core/quic_utils.h"
 #include "net/third_party/quic/platform/api/quic_bug_tracker.h"
+#include "starboard/memory.h"
 
 using quic::DiversificationNonce;
 using quic::Perspective;
@@ -39,8 +40,7 @@ bool MockDecrypter::SetDiversificationNonce(const DiversificationNonce& nonce) {
   return true;
 }
 
-bool MockDecrypter::DecryptPacket(QuicTransportVersion version,
-                                  QuicPacketNumber /*packet_number*/,
+bool MockDecrypter::DecryptPacket(uint64_t /*packet_number*/,
                                   QuicStringPiece associated_data,
                                   QuicStringPiece ciphertext,
                                   char* output,

@@ -5,6 +5,7 @@
 #include "net/third_party/quic/core/crypto/transport_parameters.h"
 
 #include "net/third_party/quic/core/crypto/crypto_framer.h"
+#include "starboard/memory.h"
 #include "third_party/boringssl/src/include/openssl/bytestring.h"
 
 namespace quic {

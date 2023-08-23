@@ -5,7 +5,6 @@
 #include "net/websockets/websocket_channel.h"
 
 #include <limits.h>
-#include <stddef.h>
 #include <string.h>
 
 #include <algorithm>
@@ -39,10 +38,18 @@
 #include "net/websockets/websocket_handshake_request_info.h"
 #include "net/websockets/websocket_handshake_response_info.h"
 #include "net/websockets/websocket_handshake_stream_create_helper.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/gurl.h"
 #include "url/origin.h"
+
+#ifdef STARBOARD
+#include "net/base/completion_repeating_callback.h"
+#include "net/base/io_buffer.h"
+#endif
 
 // Hacky macros to construct the body of a Close message from a code and a
 // string, while ensuring the result is a compile-time constant string.
@@ -108,6 +115,7 @@ using ::base::TimeDelta;
 
 using ::testing::AnyNumber;
 using ::testing::DefaultValue;
+using ::testing::DoAll;
 using ::testing::InSequence;
 using ::testing::MockFunction;
 using ::testing::NotNull;
@@ -222,6 +230,11 @@ class MockWebSocketEventInterface : public WebSocketEventInterface {
                    scoped_refptr<HttpResponseHeaders>,
                    const HostPortPair&,
                    base::Optional<AuthCredentials>*));
+#if defined(STARBOARD)
+  // We don't mock this in order to avoid significant modifications to this
+  // file for a Cobalt-specific addition.
+  void OnWriteDone(uint64_t bytes_written) override {};
+#endif
 };
 
 // This fake EventInterface is for tests which need a WebSocketEventInterface
@@ -257,6 +270,9 @@ class FakeWebSocketEventInterface : public WebSocketEventInterface {
     *credentials = base::nullopt;
     return OK;
   }
+#if defined(STARBOARD)
+  void OnWriteDone(uint64_t bytes_written) override {};
+#endif
 };
 
 // This fake WebSocketStream is for tests that require a WebSocketStream but are
@@ -354,7 +370,8 @@ std::vector<std::unique_ptr<WebSocketFrame>> CreateFrameVector(
   for (size_t i = 0; i < N; ++i) {
     const InitFrame& source_frame = source_frames[i];
     auto result_frame = std::make_unique<WebSocketFrame>(source_frame.opcode);
-    size_t frame_length = source_frame.data ? strlen(source_frame.data) : 0;
+    size_t frame_length =
+        source_frame.data ? strlen(source_frame.data) : 0;
     WebSocketFrameHeader& result_header = result_frame->header;
     result_header.final = (source_frame.final == FINAL_FRAME);
     result_header.masked = (source_frame.masked == MASKED);
@@ -423,8 +440,7 @@ class EqualsFramesMatcher : public ::testing::MatcherInterface<
         return false;
       }
       if (expected_length != 0 &&
-          memcmp(actual_frame.data->data(),
-                 expected_frame.data,
+          memcmp(actual_frame.data->data(), expected_frame.data,
                  actual_frame.header.payload_length) != 0) {
         *listener << "the data content differs";
         return false;
@@ -2572,7 +2588,8 @@ TEST_F(WebSocketChannelStreamTest, WrittenBinaryFramesAre8BitClean) {
   const WebSocketFrame* out_frame = (*frames)[0].get();
   EXPECT_EQ(kBinaryBlobSize, out_frame->header.payload_length);
   ASSERT_TRUE(out_frame->data.get());
-  EXPECT_EQ(0, memcmp(kBinaryBlob, out_frame->data->data(), kBinaryBlobSize));
+  EXPECT_EQ(0, memcmp(kBinaryBlob, out_frame->data->data(),
+                      kBinaryBlobSize));
 }
 
 // Test the read path for 8-bit cleanliness as well.

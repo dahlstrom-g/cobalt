@@ -6,9 +6,14 @@
 
 #include <cerrno>
 
+#include "starboard/types.h"
+
 #include "build/build_config.h"
 #include "net/base/net_errors.h"
 
+#if defined(STARBOARD)
+#include "starboard/common/socket.h"
+#else
 #if defined(OS_WIN)
 #include <winsock2.h>
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
@@ -16,10 +21,13 @@
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #endif
-
+#endif  // defined(STARBOARD)
 namespace net {
 
 int SetTCPNoDelay(SocketDescriptor fd, bool no_delay) {
+#if defined(STARBOARD)
+  return SbSocketSetTcpNoDelay(fd, no_delay) ? OK : ERR_FAILED;
+#else
 #if defined(OS_WIN)
   BOOL on = no_delay ? TRUE : FALSE;
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
@@ -28,9 +36,13 @@ int SetTCPNoDelay(SocketDescriptor fd, bool no_delay) {
   int rv = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY,
                       reinterpret_cast<const char*>(&on), sizeof(on));
   return rv == -1 ? MapSystemError(errno) : OK;
+#endif
 }
 
 int SetReuseAddr(SocketDescriptor fd, bool reuse) {
+#if defined(STARBOARD)
+  return SbSocketSetReuseAddress(fd, reuse) ? OK : ERR_FAILED;
+#else
 // SO_REUSEADDR is useful for server sockets to bind to a recently unbound
 // port. When a socket is closed, the end point changes its state to TIME_WAIT
 // and wait for 2 MSL (maximum segment lifetime) to ensure the remote peer
@@ -53,9 +65,13 @@ int SetReuseAddr(SocketDescriptor fd, bool reuse) {
                       reinterpret_cast<const char*>(&boolean_value),
                       sizeof(boolean_value));
   return rv == -1 ? MapSystemError(errno) : OK;
+#endif
 }
 
 int SetSocketReceiveBufferSize(SocketDescriptor fd, int32_t size) {
+#if defined(STARBOARD)
+  return SbSocketSetReceiveBufferSize(fd, size) ? OK : ERR_FAILED;
+#else
   int rv = setsockopt(fd, SOL_SOCKET, SO_RCVBUF,
                       reinterpret_cast<const char*>(&size), sizeof(size));
 #if defined(OS_WIN)
@@ -66,9 +82,13 @@ int SetSocketReceiveBufferSize(SocketDescriptor fd, int32_t size) {
   int net_error = (rv == -1) ? MapSystemError(os_error) : OK;
   DCHECK(!rv) << "Could not set socket receive buffer size: " << net_error;
   return net_error;
+#endif
 }
 
 int SetSocketSendBufferSize(SocketDescriptor fd, int32_t size) {
+#if defined(STARBOARD)
+  return SbSocketSetSendBufferSize(fd, size) ? OK : ERR_FAILED;
+#else
   int rv = setsockopt(fd, SOL_SOCKET, SO_SNDBUF,
                       reinterpret_cast<const char*>(&size), sizeof(size));
 #if defined(OS_WIN)
@@ -79,6 +99,7 @@ int SetSocketSendBufferSize(SocketDescriptor fd, int32_t size) {
   int net_error = (rv == -1) ? MapSystemError(os_error) : OK;
   DCHECK(!rv) << "Could not set socket receive buffer size: " << net_error;
   return net_error;
+#endif
 }
 
 }  // namespace net

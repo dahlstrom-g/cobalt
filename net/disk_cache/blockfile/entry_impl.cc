@@ -21,6 +21,7 @@
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_source_type.h"
+#include "starboard/memory.h"
 
 // Provide a BackendImpl object to macros from histogram_macros.h.
 #define CACHE_UMA_BACKEND_IMPL_OBJ backend_
@@ -424,7 +425,8 @@ bool EntryImpl::CreateEntry(Addr node_address,
   Trace("Create entry In");
   EntryStore* entry_store = entry_.Data();
   RankingsNode* node = node_.Data();
-  memset(entry_store, 0, sizeof(EntryStore) * entry_.address().num_blocks());
+  memset(entry_store, 0,
+              sizeof(EntryStore) * entry_.address().num_blocks());
   memset(node, 0, sizeof(RankingsNode));
   if (!node_.LazyInit(backend_->File(node_address), node_address))
     return false;

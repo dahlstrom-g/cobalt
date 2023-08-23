@@ -6,6 +6,7 @@
 
 #include "net/third_party/quic/core/quic_data_writer.h"
 #include "net/third_party/quic/core/quic_utils.h"
+#include "starboard/memory.h"
 
 using quic::DiversificationNonce;
 using quic::Perspective;
@@ -29,8 +30,7 @@ bool MockEncrypter::SetIV(QuicStringPiece iv) {
   return iv.empty();
 }
 
-bool MockEncrypter::EncryptPacket(QuicTransportVersion version,
-                                  QuicPacketNumber /*packet_number*/,
+bool MockEncrypter::EncryptPacket(uint64_t /*packet_number*/,
                                   QuicStringPiece associated_data,
                                   QuicStringPiece plaintext,
                                   char* output,

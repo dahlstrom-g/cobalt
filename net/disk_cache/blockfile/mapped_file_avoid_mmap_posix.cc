@@ -8,6 +8,8 @@
 
 #include "base/files/file_path.h"
 #include "base/logging.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace disk_cache {
 
@@ -19,13 +21,13 @@ void* MappedFile::Init(const base::FilePath& name, size_t size) {
   if (!size)
     size = GetLength();
 
-  buffer_ = malloc(size);
-  snapshot_ = malloc(size);
+  buffer_ = SbMemoryAllocate(size);
+  snapshot_ = SbMemoryAllocate(size);
   if (buffer_ && snapshot_ && Read(buffer_, size, 0)) {
     memcpy(snapshot_, buffer_, size);
   } else {
-    free(buffer_);
-    free(snapshot_);
+    SbMemoryDeallocate(buffer_);
+    SbMemoryDeallocate(snapshot_);
     buffer_ = snapshot_ = 0;
   }
 
@@ -56,8 +58,8 @@ MappedFile::~MappedFile() {
   if (buffer_ && snapshot_) {
     Flush();
   }
-  free(buffer_);
-  free(snapshot_);
+  SbMemoryDeallocate(buffer_);
+  SbMemoryDeallocate(snapshot_);
 }
 
 }  // namespace disk_cache

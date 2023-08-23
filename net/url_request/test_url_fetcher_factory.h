@@ -5,8 +5,6 @@
 #ifndef NET_URL_REQUEST_TEST_URL_FETCHER_FACTORY_H_
 #define NET_URL_REQUEST_TEST_URL_FETCHER_FACTORY_H_
 
-#include <stdint.h>
-
 #include <list>
 #include <map>
 #include <memory>
@@ -26,6 +24,7 @@
 #include "net/traffic_annotation/network_traffic_annotation_test_helper.h"
 #include "net/url_request/url_fetcher_factory.h"
 #include "net/url_request/url_request_status.h"
+#include "starboard/types.h"
 #include "url/gurl.h"
 
 namespace net {
@@ -134,8 +133,15 @@ class TestURLFetcher : public URLFetcher {
       scoped_refptr<base::SequencedTaskRunner> file_task_runner) override;
   void SaveResponseToTemporaryFile(
       scoped_refptr<base::SequencedTaskRunner> file_task_runner) override;
+#if defined(STARBOARD)
+  void SaveResponseToLargeString() override;
+#endif
   void SaveResponseWithWriter(
       std::unique_ptr<URLFetcherResponseWriter> response_writer) override;
+#if defined(STARBOARD)
+  URLFetcherResponseWriter* GetResponseWriter() const override;
+#endif
+  const HttpRequestHeaders& GetRequestHeaders() const override;
   HttpResponseHeaders* GetResponseHeaders() const override;
   HostPortPair GetSocketAddress() const override;
   const ProxyServer& ProxyServerUsed() const override;
@@ -158,6 +164,10 @@ class TestURLFetcher : public URLFetcher {
   void ReceivedContentWasMalformed() override;
   // Override response access functions to return fake data.
   bool GetResponseAsString(std::string* out_response_string) const override;
+#if defined(STARBOARD)
+  bool GetResponseAsLargeString(std::string* out_response_string)
+      const override;
+#endif
   bool GetResponseAsFilePath(bool take_ownership,
                              base::FilePath* out_response_path) const override;
 

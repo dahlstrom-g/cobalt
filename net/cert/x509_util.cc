@@ -26,6 +26,8 @@
 #include "net/der/encode_values.h"
 #include "net/der/input.h"
 #include "net/der/parse_values.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "third_party/boringssl/src/include/openssl/bytestring.h"
 #include "third_party/boringssl/src/include/openssl/digest.h"
 #include "third_party/boringssl/src/include/openssl/evp.h"

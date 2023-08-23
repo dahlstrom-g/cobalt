@@ -38,6 +38,8 @@
 #include "net/cert/x509_util.h"
 #include "net/cert/x509_util_ios_and_mac.h"
 #include "net/cert/x509_util_mac.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 // CSSM functions are deprecated as of OSX 10.7, but have no replacement.
 // https://bugs.chromium.org/p/chromium/issues/detail?id=590914#c1

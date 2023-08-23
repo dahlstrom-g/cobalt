@@ -5,16 +5,15 @@
 #ifndef NET_QUIC_QUIC_STREAM_FACTORY_PEER_H_
 #define NET_QUIC_QUIC_STREAM_FACTORY_PEER_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include "base/macros.h"
 #include "base/sequenced_task_runner.h"
+#include "base/time/tick_clock.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/privacy_mode.h"
 #include "net/third_party/quic/core/quic_packets.h"
 #include "net/third_party/quic/core/quic_server_id.h"
 #include "net/third_party/quic/core/quic_time.h"
+#include "starboard/types.h"
 
 namespace quic {
 class QuicAlarmFactory;
@@ -62,6 +61,9 @@ class QuicStreamFactoryPeer {
 
   static bool IsLiveSession(QuicStreamFactory* factory,
                             QuicChromiumClientSession* session);
+
+  static void SetTickClock(QuicStreamFactory* factory,
+                           const base::TickClock* tick_clock);
 
   static void SetTaskRunner(QuicStreamFactory* factory,
                             base::SequencedTaskRunner* task_runner);

@@ -12,6 +12,8 @@
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/http_util.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace net {
 

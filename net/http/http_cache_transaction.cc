@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "base/auto_reset.h"
 #include "base/bind.h"
@@ -49,6 +50,7 @@
 #include "net/log/net_log_event_type.h"
 #include "net/ssl/ssl_cert_request_info.h"
 #include "net/ssl/ssl_config_service.h"
+#include "starboard/types.h"
 
 using base::Time;
 using base::TimeDelta;
@@ -59,6 +61,16 @@ namespace net {
 using CacheEntryStatus = HttpResponseInfo::CacheEntryStatus;
 
 namespace {
+
+#if defined(STARBOARD)
+// Default allowlist based off MIME types associated with top
+// resource types defined in resource_type.h.
+static const char* const kMimeTypesCacheAllowlist[] = {
+    "text/html", "text/css",      "image/gif",  "image/jpeg",
+    "image/png", "image/svg+xml", "image/webp", "font/otf",
+    "font/ttf",  "font/woff",     "font/woff2", "text/javascript",
+    "example/unit_test", "application/javascript"};
+#endif
 
 constexpr TimeDelta kStaleRevalidateTimeout = TimeDelta::FromSeconds(60);
 
@@ -283,8 +295,9 @@ int HttpCache::Transaction::Start(const HttpRequestInfo* request,
 
   // Setting this here allows us to check for the existence of a callback_ to
   // determine if we are still inside Start.
-  if (rv == ERR_IO_PENDING)
+  if (rv == ERR_IO_PENDING) {
     callback_ = std::move(callback);
+  }
 
   return rv;
 }
@@ -1126,6 +1139,7 @@ int HttpCache::Transaction::DoInitEntry() {
 
   if (!cache_.get()) {
     TransitionToState(STATE_FINISH_HEADERS);
+    NOTIMPLEMENTED() << "HTTP cache not implemented";
     return ERR_UNEXPECTED;
   }
 
@@ -2079,7 +2093,6 @@ int HttpCache::Transaction::DoFinishHeaders(int result) {
   }
 
   TransitionToState(STATE_FINISH_HEADERS_COMPLETE);
-
   // If it was an auth failure, this transaction should continue to be
   // headers_transaction till consumer takes an action, so no need to do
   // anything now.
@@ -3068,7 +3081,24 @@ int HttpCache::Transaction::WriteResponseInfoToEntry(bool truncated) {
   // (even though the cert status contains the actual errors) and no SSL
   // blocking page is shown.  An alternative would be to reverse-map the cert
   // status to a net error and replay the net error.
-  if ((response_.headers->HasHeaderValue("cache-control", "no-store")) ||
+
+#if defined(STARBOARD)
+  // Only allow caching for specific mime types.
+  std::string mime_type;
+  response_.headers->GetMimeType(&mime_type);
+  bool is_allowed_mime_type = false;
+  for (auto allowed_type : kMimeTypesCacheAllowlist) {
+    if (mime_type.compare(allowed_type) == 0) {
+      is_allowed_mime_type = true;
+      break;
+    }
+  }
+#else
+  bool is_allowed_mime_type = true;
+#endif
+
+  if (!is_allowed_mime_type ||
+      (response_.headers->HasHeaderValue("cache-control", "no-store")) ||
       IsCertStatusError(response_.ssl_info.cert_status)) {
     bool stopped = StopCachingImpl(false);
     DCHECK(stopped);

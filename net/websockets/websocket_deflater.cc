@@ -11,6 +11,8 @@
 #include "base/containers/circular_deque.h"
 #include "base/logging.h"
 #include "net/base/io_buffer.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "third_party/zlib/zlib.h"
 
 namespace net {
