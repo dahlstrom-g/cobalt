@@ -5,7 +5,6 @@
 #include "base/debug/stack_trace.h"
 
 #include <android/log.h>
-#include <stddef.h>
 #include <unwind.h>
 
 #include <algorithm>
@@ -14,6 +13,8 @@
 #include "base/debug/proc_maps_linux.h"
 #include "base/strings/stringprintf.h"
 #include "base/threading/thread_restrictions.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 #ifdef __LP64__
 #define FMT_ADDR  "0x%016lx"

@@ -5,12 +5,11 @@
 #ifndef BASE_NUMERICS_CHECKED_MATH_H_
 #define BASE_NUMERICS_CHECKED_MATH_H_
 
-#include <stddef.h>
-
 #include <limits>
 #include <type_traits>
 
 #include "base/numerics/checked_math_impl.h"
+#include "starboard/types.h"
 
 namespace base {
 namespace internal {
@@ -200,23 +199,23 @@ class CheckedNumeric {
         SafeUnsignedAbs(state_.value()), state_.is_valid());
   }
 
-  constexpr CheckedNumeric& operator++() {
+  constexpr CheckedNumeric& operator++() const {
     *this += 1;
     return *this;
   }
 
-  constexpr CheckedNumeric operator++(int) {
+  constexpr CheckedNumeric operator++(int) const {
     CheckedNumeric value = *this;
     *this += 1;
     return value;
   }
 
-  constexpr CheckedNumeric& operator--() {
+  constexpr CheckedNumeric& operator--() const {
     *this -= 1;
     return *this;
   }
 
-  constexpr CheckedNumeric operator--(int) {
+  constexpr CheckedNumeric operator--(int) const {
     CheckedNumeric value = *this;
     *this -= 1;
     return value;

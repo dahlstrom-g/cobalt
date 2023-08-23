@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include "starboard/memory.h"
+
 // Entry point for LibFuzzer.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   if (size < 2)

@@ -5,11 +5,15 @@
 #include "base/strings/stringprintf.h"
 
 #include <errno.h>
-#include <stddef.h>
 
 #include "base/macros.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+#if defined(STARBOARD)
+#include "starboard/common/string.h"
+#include "starboard/types.h"
+#endif
 
 namespace base {
 
@@ -115,10 +119,14 @@ TEST(StringPrintfTest, Grow) {
 
   const int kRefSize = 320000;
   char* ref = new char[kRefSize];
+#if defined(STARBOARD)
+  SbStringFormatF(ref, kRefSize, fmt, src, src, src, src, src, src, src);
+#else
 #if defined(OS_WIN)
   sprintf_s(ref, kRefSize, fmt, src, src, src, src, src, src, src);
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   snprintf(ref, kRefSize, fmt, src, src, src, src, src, src, src);
+#endif
 #endif
 
   EXPECT_STREQ(ref, out.c_str());

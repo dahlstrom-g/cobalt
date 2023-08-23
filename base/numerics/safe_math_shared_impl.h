@@ -5,9 +5,6 @@
 #ifndef BASE_NUMERICS_SAFE_MATH_SHARED_IMPL_H_
 #define BASE_NUMERICS_SAFE_MATH_SHARED_IMPL_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <cassert>
 #include <climits>
 #include <cmath>
@@ -22,8 +19,11 @@
     ((defined(__clang__) &&                                \
       ((__clang_major__ > 3) ||                            \
        (__clang_major__ == 3 && __clang_minor__ >= 4))) || \
-     (defined(__GNUC__) && __GNUC__ >= 5))
+     (defined(__GNUC__) && __GNUC__ >= 5)) &&              \
+    !defined(STARBOARD) || (__clang_major__ > 3)
+    // Cobalt clang 3.6 compiler does not have safe math support.
 #include "base/numerics/safe_math_clang_gcc_impl.h"
+#include "starboard/types.h"
 #define BASE_HAS_OPTIMIZED_SAFE_MATH (1)
 #else
 #define BASE_HAS_OPTIMIZED_SAFE_MATH (0)

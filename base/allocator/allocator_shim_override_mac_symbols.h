@@ -8,6 +8,7 @@
 #define BASE_ALLOCATOR_ALLOCATOR_SHIM_OVERRIDE_MAC_SYMBOLS_H_
 
 #include "base/allocator/malloc_zone_functions_mac.h"
+#include "starboard/memory.h"
 #include "third_party/apple_apsl/malloc.h"
 
 namespace base {

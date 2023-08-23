@@ -6,6 +6,7 @@
 
 #include "base/allocator/winheap_stubs_win.h"
 #include "base/logging.h"
+#include "starboard/memory.h"
 
 namespace {
 

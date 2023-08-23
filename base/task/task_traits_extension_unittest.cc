@@ -16,6 +16,8 @@ TEST(TaskTraitsExtensionTest, NoExtension) {
             TaskTraitsExtensionStorage::kInvalidExtensionId);
 }
 
+#if !defined(STARBOARD)
+// Cobalt does not support task traits with extension yet.
 TEST(TaskTraitsExtensionTest, CreateWithOneExtensionTrait) {
   constexpr TaskTraits traits = {TestExtensionEnumTrait::kB};
 
@@ -43,5 +45,6 @@ TEST(TaskTraitsExtensionTest, CreateWithBaseAndExtensionTraits) {
             TestExtensionEnumTrait::kC);
   EXPECT_TRUE(traits.GetExtension<TestTaskTraitsExtension>().bool_trait());
 }
+#endif  // !defined(STARBOARD)
 
 }  // namespace base

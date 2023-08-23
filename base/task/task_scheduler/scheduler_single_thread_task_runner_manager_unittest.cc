@@ -7,6 +7,7 @@
 #include "base/bind.h"
 #include "base/bind_helpers.h"
 #include "base/memory/ptr_util.h"
+#include "base/metrics/statistics_recorder.h"
 #include "base/synchronization/atomic_flag.h"
 #include "base/synchronization/lock.h"
 #include "base/synchronization/waitable_event.h"
@@ -30,6 +31,7 @@
 
 #include "base/win/com_init_util.h"
 #include "base/win/current_module.h"
+#include "starboard/types.h"
 #endif  // defined(OS_WIN)
 
 namespace base {
@@ -40,7 +42,9 @@ namespace {
 class TaskSchedulerSingleThreadTaskRunnerManagerTest : public testing::Test {
  public:
   TaskSchedulerSingleThreadTaskRunnerManagerTest()
-      : service_thread_("TaskSchedulerServiceThread") {}
+      : service_thread_("TaskSchedulerServiceThread"),
+        recorder_for_testing_(StatisticsRecorder::CreateTemporaryForTesting()) {
+  }
 
   void SetUp() override {
     service_thread_.Start();
@@ -68,6 +72,8 @@ class TaskSchedulerSingleThreadTaskRunnerManagerTest : public testing::Test {
   }
 
   Thread service_thread_;
+
+  std::unique_ptr<StatisticsRecorder> recorder_for_testing_;
   TaskTracker task_tracker_ = {"Test"};
   DelayedTaskManager delayed_task_manager_;
   std::unique_ptr<SchedulerSingleThreadTaskRunnerManager>

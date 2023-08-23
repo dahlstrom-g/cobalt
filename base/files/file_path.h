@@ -102,8 +102,6 @@
 #ifndef BASE_FILES_FILE_PATH_H_
 #define BASE_FILES_FILE_PATH_H_
 
-#include <stddef.h>
-
 #include <iosfwd>
 #include <string>
 #include <vector>
@@ -114,12 +112,13 @@
 #include "base/strings/string16.h"
 #include "base/strings/string_piece.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 
 // Windows-style drive letter support and pathname separator characters can be
 // enabled and disabled independently, to aid testing.  These #defines are
 // here so that the same setting can be used in both the implementation and
 // in the unit test.
-#if defined(OS_WIN)
+#if defined(OS_WIN) || SB_IS(COMPILER_MSVC)
 #define FILE_PATH_USES_DRIVE_LETTERS
 #define FILE_PATH_USES_WIN_SEPARATORS
 #endif  // OS_WIN
@@ -127,14 +126,18 @@
 // To print path names portably use PRFilePath (based on PRIuS and friends from
 // C99 and format_macros.h) like this:
 // base::StringPrintf("Path is %" PRFilePath ".\n", path.value().c_str());
-#if defined(OS_WIN)
+#if defined(STARBOARD)
+#define PRFilePath "s"
+#elif defined(OS_WIN)
 #define PRFilePath "ls"
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
 #define PRFilePath "s"
 #endif  // OS_WIN
 
 // Macros for string literal initialization of FilePath::CharType[].
-#if defined(OS_WIN)
+#if defined(STARBOARD)
+#define FILE_PATH_LITERAL(x) x
+#elif defined(OS_WIN)
 #define FILE_PATH_LITERAL(x) L##x
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
 #define FILE_PATH_LITERAL(x) x
@@ -153,7 +156,7 @@ class BASE_EXPORT FilePath {
   // On Windows, for Unicode-aware applications, native pathnames are wchar_t
   // arrays encoded in UTF-16.
   typedef std::wstring StringType;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
   // On most platforms, native pathnames are char arrays, and the encoding
   // may or may not be specified.  On Mac OS X, native pathnames are encoded
   // in UTF-8.

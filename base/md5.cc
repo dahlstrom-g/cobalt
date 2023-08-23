@@ -23,7 +23,8 @@
 
 #include "base/md5.h"
 
-#include <stddef.h>
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace {
 
@@ -251,9 +252,9 @@ void MD5Final(MD5Digest* digest, MD5Context* context) {
 
   /* Append length in bits and transform */
   memcpy(&ctx->in[14 * sizeof(ctx->bits[0])], &ctx->bits[0],
-         sizeof(ctx->bits[0]));
+               sizeof(ctx->bits[0]));
   memcpy(&ctx->in[15 * sizeof(ctx->bits[1])], &ctx->bits[1],
-         sizeof(ctx->bits[1]));
+               sizeof(ctx->bits[1]));
 
   MD5Transform(ctx->buf, reinterpret_cast<uint32_t*>(ctx->in));
   byteReverse(reinterpret_cast<uint8_t*>(ctx->buf), 4);

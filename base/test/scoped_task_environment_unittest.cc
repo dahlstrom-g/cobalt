@@ -9,6 +9,7 @@
 #include "base/atomicops.h"
 #include "base/bind.h"
 #include "base/bind_helpers.h"
+#include "base/metrics/statistics_recorder.h"
 #include "base/synchronization/atomic_flag.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/task/post_task.h"
@@ -23,6 +24,7 @@
 #if defined(OS_POSIX)
 #include <unistd.h>
 #include "base/files/file_descriptor_watcher_posix.h"
+#include "starboard/types.h"
 #endif  // defined(OS_POSIX)
 
 namespace base {
@@ -271,6 +273,7 @@ TEST_F(ScopedTaskEnvironmentTest, SupportsFileDescriptorWatcherOnIOMainThread) {
 // |ScopedTaskEnvironment::GetMockTickClock| gets updated when the
 // FastForward(By|UntilNoTasksRemain) functions are called.
 TEST_F(ScopedTaskEnvironmentTest, FastForwardAdvanceTickClock) {
+  auto recorder = StatisticsRecorder::CreateTemporaryForTesting();
   // Use a QUEUED execution-mode environment, so that no tasks are actually
   // executed until RunUntilIdle()/FastForwardBy() are invoked.
   ScopedTaskEnvironment scoped_task_environment(
@@ -311,10 +314,12 @@ INSTANTIATE_TEST_CASE_P(
     MainThreadMockTime,
     ScopedTaskEnvironmentTest,
     ::testing::Values(ScopedTaskEnvironment::MainThreadType::MOCK_TIME));
+#if !defined(STARBOARD)
 INSTANTIATE_TEST_CASE_P(
     MainThreadUI,
     ScopedTaskEnvironmentTest,
     ::testing::Values(ScopedTaskEnvironment::MainThreadType::UI));
+#endif  // !defined(STARBOARD)
 INSTANTIATE_TEST_CASE_P(
     MainThreadIO,
     ScopedTaskEnvironmentTest,

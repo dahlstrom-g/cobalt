@@ -4,9 +4,11 @@
 
 #include "base/environment.h"
 
-#include <stddef.h>
-
 #include <vector>
+
+#include "starboard/types.h"
+
+#include "starboard/memory.h"
 
 #include "base/memory/ptr_util.h"
 #include "base/strings/string_piece.h"
@@ -56,7 +58,10 @@ class EnvironmentImpl : public Environment {
 
  private:
   bool GetVarImpl(StringPiece variable_name, std::string* result) {
-#if defined(OS_WIN)
+#if defined(STARBOARD)
+    // Environment variables are not supported on Starboard.
+    return false;
+#elif defined(OS_WIN)
     DWORD value_length =
         ::GetEnvironmentVariable(UTF8ToWide(variable_name).c_str(), nullptr, 0);
     if (value_length == 0)
@@ -80,7 +85,9 @@ class EnvironmentImpl : public Environment {
   }
 
   bool SetVarImpl(StringPiece variable_name, const std::string& new_value) {
-#if defined(OS_WIN)
+#if defined(STARBOARD)
+    return false;
+#elif defined(OS_WIN)
     // On success, a nonzero value is returned.
     return !!SetEnvironmentVariable(UTF8ToWide(variable_name).c_str(),
                                     UTF8ToWide(new_value).c_str());
@@ -91,7 +98,9 @@ class EnvironmentImpl : public Environment {
   }
 
   bool UnSetVarImpl(StringPiece variable_name) {
-#if defined(OS_WIN)
+#if defined(STARBOARD)
+    return false;
+#elif defined(OS_WIN)
     // On success, a nonzero value is returned.
     return !!SetEnvironmentVariable(UTF8ToWide(variable_name).c_str(), nullptr);
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
@@ -101,6 +110,7 @@ class EnvironmentImpl : public Environment {
   }
 };
 
+#if !defined(STARBOARD)
 // Parses a null-terminated input string of an environment block. The key is
 // placed into the given string, and the total length of the line, including
 // the terminating null, is returned.
@@ -117,6 +127,7 @@ size_t ParseEnvLine(const NativeEnvironmentString::value_type* input,
     cur++;
   return cur + 1;
 }
+#endif
 
 }  // namespace
 

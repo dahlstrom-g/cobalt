@@ -4,14 +4,13 @@
 
 #include "base/i18n/break_iterator.h"
 
-#include <stddef.h>
-
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -142,7 +141,9 @@ TEST(BreakIteratorTest, BreakWordThai) {
 // dictionary to detect word boundaries in Thai, Chinese, Japanese, Burmese,
 // and Khmer. Due to the size of such a table, the part for Chinese and
 // Japanese is not shipped on mobile.
-#if !(defined(OS_IOS) || defined(OS_ANDROID))
+// Cobalt does not support Chinese/Japanese word breaking yet. This feature
+// requires a big dictionary(cjdict.txt) to support.
+#if !(defined(OS_IOS) || defined(OS_ANDROID) || defined(STARBOARD))
 
 TEST(BreakIteratorTest, BreakWordChinese) {
   // Terms in Traditional Chinese, without spaces in between.
@@ -437,19 +438,29 @@ TEST(BreakIteratorTest, BreakLineWide32) {
 }
 
 TEST(BreakIteratorTest, BreakCharacter) {
-  static const wchar_t* kCharacters[] = {
-    // An English word consisting of four ASCII characters.
-    L"w", L"o", L"r", L"d", L" ",
-    // A Hindi word (which means "Hindi") consisting of three Devanagari
-    // characters.
-    L"\x0939\x093F", L"\x0928\x094D", L"\x0926\x0940", L" ",
-    // A Thai word (which means "feel") consisting of three Thai characters.
-    L"\x0E23\x0E39\x0E49", L"\x0E2A\x0E36", L"\x0E01", L" ",
+  static const char* kCharacters[] = {
+      // An English word consisting of four ASCII characters.
+      "w",
+      "o",
+      "r",
+      "d",
+      " ",
+      // A Hindi word (which means "Hindi") consisting of two Devanagari
+      // grapheme clusters.
+      "\u0939\u093F",
+      "\u0928\u094D\u0926\u0940",
+      " ",
+      // A Thai word (which means "feel") consisting of three Thai grapheme
+      // clusters.
+      "\u0E23\u0E39\u0E49",
+      "\u0E2A\u0E36",
+      "\u0E01",
+      " ",
   };
   std::vector<string16> characters;
   string16 text;
-  for (size_t i = 0; i < arraysize(kCharacters); ++i) {
-    characters.push_back(WideToUTF16(kCharacters[i]));
+  for (auto*& i : kCharacters) {
+    characters.push_back(base::UTF8ToUTF16(i));
     text.append(characters.back());
   }
   BreakIterator iter(text, BreakIterator::BREAK_CHARACTER);

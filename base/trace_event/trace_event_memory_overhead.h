@@ -5,13 +5,12 @@
 #ifndef BASE_TRACE_EVENT_TRACE_EVENT_MEMORY_OVERHEAD_H_
 #define BASE_TRACE_EVENT_TRACE_EVENT_MEMORY_OVERHEAD_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <unordered_map>
+#include <string>
 
 #include "base/base_export.h"
 #include "base/macros.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -71,7 +70,9 @@ class BASE_EXPORT TraceEventMemoryOverhead {
   // Adds up and merges all the values from |other| to this instance.
   void Update(const TraceEventMemoryOverhead& other);
 
+#if !defined(STARBOARD)
   void DumpInto(const char* base_name, ProcessMemoryDump* pmd) const;
+#endif
 
  private:
   struct ObjectCountAndSize {

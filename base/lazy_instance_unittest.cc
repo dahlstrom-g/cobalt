@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-
 #include <memory>
 #include <vector>
 
@@ -18,6 +16,7 @@
 #include "base/threading/simple_thread.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
@@ -191,12 +190,19 @@ TEST(LazyInstanceTest, Alignment) {
       LAZY_INSTANCE_INITIALIZER;
   static LazyInstance<AlignedData<32>>::DestructorAtExit align32 =
       LAZY_INSTANCE_INITIALIZER;
+#if !defined(STARBOARD)
   static LazyInstance<AlignedData<4096>>::DestructorAtExit align4096 =
       LAZY_INSTANCE_INITIALIZER;
+#endif
 
   EXPECT_ALIGNED(align4.Pointer(), 4);
   EXPECT_ALIGNED(align32.Pointer(), 32);
+// At least on Raspi, alignas with big alignment numbers does not work and
+// that is compliant with C++ standard as the alignment is larger than
+// std::max_align_t.
+#if !defined(STARBOARD)
   EXPECT_ALIGNED(align4096.Pointer(), 4096);
+#endif
 }
 
 namespace {

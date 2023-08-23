@@ -7,6 +7,7 @@
 #include "base/logging.h"
 #include "base/md5.h"
 #include "base/sys_byteorder.h"
+#include "starboard/memory.h"
 
 namespace base {
 

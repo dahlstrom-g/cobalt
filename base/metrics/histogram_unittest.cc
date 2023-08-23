@@ -5,8 +5,6 @@
 #include "base/metrics/histogram.h"
 
 #include <limits.h>
-#include <stddef.h>
-#include <stdint.h>
 
 #include <climits>
 #include <memory>
@@ -28,6 +26,7 @@
 #include "base/strings/stringprintf.h"
 #include "base/test/gtest_util.h"
 #include "base/time/time.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -55,15 +54,13 @@ class HistogramTest : public testing::TestWithParam<bool> {
  protected:
   const int32_t kAllocatorMemorySize = 8 << 20;  // 8 MiB
 
-  HistogramTest() : use_persistent_histogram_allocator_(GetParam()) {}
+  HistogramTest()
+      : statistics_recorder_(StatisticsRecorder::CreateTemporaryForTesting()),
+        use_persistent_histogram_allocator_(GetParam()) {}
 
   void SetUp() override {
     if (use_persistent_histogram_allocator_)
       CreatePersistentHistogramAllocator();
-
-    // Each test will have a clean state (no Histogram / BucketRanges
-    // registered).
-    InitializeStatisticsRecorder();
   }
 
   void TearDown() override {
@@ -71,17 +68,7 @@ class HistogramTest : public testing::TestWithParam<bool> {
       ASSERT_FALSE(allocator_->IsFull());
       ASSERT_FALSE(allocator_->IsCorrupt());
     }
-    UninitializeStatisticsRecorder();
     DestroyPersistentHistogramAllocator();
-  }
-
-  void InitializeStatisticsRecorder() {
-    DCHECK(!statistics_recorder_);
-    statistics_recorder_ = StatisticsRecorder::CreateTemporaryForTesting();
-  }
-
-  void UninitializeStatisticsRecorder() {
-    statistics_recorder_.reset();
   }
 
   void CreatePersistentHistogramAllocator() {

@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "base/base_export.h"
+#include "base/bind.h"
 #include "base/callback.h"
 #include "base/sequenced_task_runner_helpers.h"
 #include "base/task_runner.h"
@@ -140,6 +141,25 @@ class BASE_EXPORT SequencedTaskRunner : public TaskRunner {
                                        object);
   }
 
+#if defined(STARBOARD)
+  // Like PostTask, but blocks until the posted task completes. Returns false
+  // and does not block if task was not posted.
+  virtual void PostBlockingTask(const base::Location& from_here,
+                                const Closure& task);
+
+  // Adds a fence at the end of this MessageLoop's task queue, and then blocks
+  // until it has been reached. It is forbidden to call this method from the
+  // thread of the MessageLoop being posted to. One should exercise extreme
+  // caution when using this, as blocking between MessageLoops can cause
+  // deadlocks and is contraindicated in the Actor model of multiprogramming.
+  void WaitForFence() {
+    struct Fence {
+      static void Task() {}
+    };
+    PostBlockingTask(FROM_HERE, base::Bind(&Fence::Task));
+  }
+#endif
+
  protected:
   ~SequencedTaskRunner() override = default;
 
@@ -160,6 +180,9 @@ struct BASE_EXPORT OnTaskRunnerDeleter {
 
   OnTaskRunnerDeleter(OnTaskRunnerDeleter&&);
   OnTaskRunnerDeleter& operator=(OnTaskRunnerDeleter&&);
+#ifdef STARBOARD
+  OnTaskRunnerDeleter(const OnTaskRunnerDeleter&) = default;
+#endif
 
   // For compatibility with std:: deleters.
   template <typename T>

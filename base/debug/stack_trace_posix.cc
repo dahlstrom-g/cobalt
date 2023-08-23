@@ -7,8 +7,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,6 +52,9 @@
 
 #if defined(USE_SYMBOLIZE)
 #include "base/third_party/symbolize/symbolize.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #endif
 
 namespace base {
@@ -221,7 +222,8 @@ void ProcessBacktrace(void* const* trace,
 void PrintToStderr(const char* output) {
   // NOTE: This code MUST be async-signal safe (it's used by in-process
   // stack dumping signal handler). NO malloc or stdio is allowed here.
-  ignore_result(HANDLE_EINTR(write(STDERR_FILENO, output, strlen(output))));
+  ignore_result(
+      HANDLE_EINTR(write(STDERR_FILENO, output, strlen(output))));
 }
 
 void StackDumpSignalHandler(int signal, siginfo_t* info, void* void_context) {

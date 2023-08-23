@@ -51,7 +51,6 @@
 #ifndef BASE_TIME_TIME_H_
 #define BASE_TIME_TIME_H_
 
-#include <stdint.h>
 #include <time.h>
 
 #include <iosfwd>
@@ -60,8 +59,13 @@
 #include "base/base_export.h"
 #include "base/compiler_specific.h"
 #include "base/logging.h"
+#include "base/numerics/clamped_math.h"
 #include "base/numerics/safe_math.h"
 #include "build/build_config.h"
+
+#if defined(STARBOARD)
+#include "starboard/time.h"
+#endif
 
 #if defined(OS_FUCHSIA)
 #include <zircon/types.h>
@@ -85,6 +89,7 @@
 #if defined(OS_WIN)
 #include "base/gtest_prod_util.h"
 #include "base/win/windows_types.h"
+#include "starboard/types.h"
 #endif
 
 namespace base {
@@ -177,6 +182,10 @@ class BASE_EXPORT TimeDelta {
     return delta_ == std::numeric_limits<int64_t>::min();
   }
 
+#if defined(STARBOARD)
+  SbTime ToSbTime() const;
+#endif
+
 #if defined(OS_POSIX) || defined(OS_FUCHSIA)
   struct timespec ToTimeSpec() const;
 #endif
@@ -197,7 +206,7 @@ class BASE_EXPORT TimeDelta {
   int64_t InMillisecondsRoundedUp() const;
   constexpr int64_t InMicroseconds() const;
   constexpr double InMicrosecondsF() const;
-  constexpr int64_t InNanoseconds() const;
+  int64_t InNanoseconds() const;
 
   // Computations with other deltas. Can easily be made constexpr with C++17 but
   // hard to do until then per limitations around
@@ -569,6 +578,11 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
   static Time FromJsTime(double ms_since_epoch);
   double ToJsTime() const;
 
+#if defined(STARBOARD)
+  static Time FromSbTime(SbTime t);
+  SbTime ToSbTime() const;
+#endif
+
   // Converts to/from Java convention for times, a number of milliseconds since
   // the epoch. Because the Java format has less resolution, converting to Java
   // time is a lossy operation.
@@ -713,6 +727,47 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
                                    const Exploded& rhs) WARN_UNUSED_RESULT;
 };
 
+template <typename T>
+constexpr TimeDelta Days(T n) {
+  return TimeDelta::FromInternalValue(MakeClampedNum(n) *
+                                      Time::kMicrosecondsPerDay);
+}
+template <typename T>
+constexpr TimeDelta Hours(T n) {
+  return TimeDelta::FromInternalValue(MakeClampedNum(n) *
+                                      Time::kMicrosecondsPerHour);
+}
+template <typename T>
+constexpr TimeDelta Minutes(T n) {
+  return TimeDelta::FromInternalValue(MakeClampedNum(n) *
+                                      Time::kMicrosecondsPerMinute);
+}
+template <typename T>
+constexpr TimeDelta Seconds(T n) {
+  return TimeDelta::FromInternalValue(MakeClampedNum(n) *
+                                      Time::kMicrosecondsPerSecond);
+}
+template <typename T>
+constexpr TimeDelta Milliseconds(T n) {
+  return TimeDelta::FromInternalValue(MakeClampedNum(n) *
+                                      Time::kMicrosecondsPerMillisecond);
+}
+template <typename T>
+constexpr TimeDelta Microseconds(T n) {
+  return TimeDelta::FromInternalValue(MakeClampedNum(n));
+}
+template <typename T>
+constexpr TimeDelta Nanoseconds(T n) {
+  return TimeDelta::FromInternalValue(MakeClampedNum(n) /
+                                      Time::kNanosecondsPerMicrosecond);
+}
+template <typename T>
+constexpr TimeDelta Hertz(T n) {
+  return n ? TimeDelta::FromInternalValue(Time::kMicrosecondsPerSecond /
+                                          MakeClampedNum(n))
+           : TimeDelta::Max();
+}
+
 // static
 constexpr TimeDelta TimeDelta::FromDays(int days) {
   return days == std::numeric_limits<int>::max()
@@ -834,14 +889,6 @@ constexpr double TimeDelta::InMicrosecondsF() const {
   return DivideOrMax<double>(1);
 }
 
-constexpr int64_t TimeDelta::InNanoseconds() const {
-  if (is_max()) {
-    // Preserve max to prevent overflow.
-    return std::numeric_limits<int64_t>::max();
-  }
-  return delta_ * Time::kNanosecondsPerMicrosecond;
-}
-
 // static
 constexpr TimeDelta TimeDelta::FromDouble(double value) {
   // TODO(crbug.com/612601): Use saturated_cast<int64_t>(value) once we sort out
@@ -856,7 +903,10 @@ constexpr TimeDelta TimeDelta::FromDouble(double value) {
 // static
 constexpr TimeDelta TimeDelta::FromProduct(int64_t value,
                                            int64_t positive_value) {
+#if !defined(STARBOARD)
+  // C++11 doesn't like DCHECKs inside of constexpr.
   DCHECK(positive_value > 0);  // NOLINT, DCHECK_GT isn't constexpr.
+#endif                         // !defined(STARBOARD)
   return value > std::numeric_limits<int64_t>::max() / positive_value
              ? Max()
              : value < std::numeric_limits<int64_t>::min() / positive_value
@@ -987,6 +1037,9 @@ class BASE_EXPORT ThreadTicks : public time_internal::TimeBase<ThreadTicks> {
 
   // Returns true if ThreadTicks::Now() is supported on this system.
   static bool IsSupported() WARN_UNUSED_RESULT {
+#if defined(STARBOARD)
+    return SbTimeIsTimeThreadNowSupported();
+#else
 #if (defined(_POSIX_THREAD_CPUTIME) && (_POSIX_THREAD_CPUTIME >= 0)) || \
     (defined(OS_MACOSX) && !defined(OS_IOS)) || defined(OS_ANDROID) ||  \
     defined(OS_FUCHSIA)
@@ -995,6 +1048,7 @@ class BASE_EXPORT ThreadTicks : public time_internal::TimeBase<ThreadTicks> {
     return IsSupportedWin();
 #else
     return false;
+#endif
 #endif
   }
 

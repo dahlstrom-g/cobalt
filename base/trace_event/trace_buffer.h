@@ -5,12 +5,10 @@
 #ifndef BASE_TRACE_EVENT_TRACE_BUFFER_H_
 #define BASE_TRACE_EVENT_TRACE_BUFFER_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include "base/base_export.h"
 #include "base/trace_event/trace_event.h"
 #include "base/trace_event/trace_event_impl.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -39,7 +37,9 @@ class BASE_EXPORT TraceBufferChunk {
     return &chunk_[index];
   }
 
+#if !defined(STARBOARD)
   void EstimateTraceMemoryOverhead(TraceEventMemoryOverhead* overhead);
+#endif
 
   // These values must be kept consistent with the numbers of bits of
   // chunk_index and event_index fields in TraceEventHandle
@@ -49,7 +49,9 @@ class BASE_EXPORT TraceBufferChunk {
 
  private:
   size_t next_free_;
+#if !defined(STARBOARD)
   std::unique_ptr<TraceEventMemoryOverhead> cached_overhead_estimate_;
+#endif
   TraceEvent chunk_[kTraceBufferChunkSize];
   uint32_t seq_;
 };
@@ -72,10 +74,12 @@ class BASE_EXPORT TraceBuffer {
   virtual const TraceBufferChunk* NextChunk() = 0;
 
 
+#if !defined(STARBOARD)
   // Computes an estimate of the size of the buffer, including all the retained
   // objects.
   virtual void EstimateTraceMemoryOverhead(
       TraceEventMemoryOverhead* overhead) = 0;
+#endif
 
   static TraceBuffer* CreateTraceBufferRingBuffer(size_t max_chunks);
   static TraceBuffer* CreateTraceBufferVectorOfSize(size_t max_chunks);

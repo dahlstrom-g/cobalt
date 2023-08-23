@@ -5,8 +5,6 @@
 #ifndef BASE_FILES_FILE_PROXY_H_
 #define BASE_FILES_FILE_PROXY_H_
 
-#include <stdint.h>
-
 #include "base/base_export.h"
 #include "base/callback_forward.h"
 #include "base/files/file.h"
@@ -14,6 +12,7 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -87,9 +86,11 @@ class BASE_EXPORT FileProxy : public SupportsWeakPtr<FileProxy> {
 
   File TakeFile();
 
+#if !defined(STARBOARD)
   // Returns a new File object that is a duplicate of the underlying |file_|.
   // See the comment at File::Duplicate for caveats.
   File DuplicateFile();
+#endif
 
   PlatformFile GetPlatformFile() const;
 

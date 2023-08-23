@@ -77,6 +77,11 @@
 
 #if defined(OS_WIN)
 #include "base/win/windows_types.h"
+#include "starboard/types.h"
+#endif
+
+#if defined(STARBOARD)
+#include "starboard/condition_variable.h"
 #endif
 
 namespace base {
@@ -103,13 +108,17 @@ class BASE_EXPORT ConditionVariable {
   void Signal();
 
  private:
-
+#if defined(STARBOARD)
+  SbConditionVariable condition_;
+  SbMutex* user_mutex_;
+#else
 #if defined(OS_WIN)
   CHROME_CONDITION_VARIABLE cv_;
   CHROME_SRWLOCK* const srwlock_;
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   pthread_cond_t condition_;
   pthread_mutex_t* user_mutex_;
+#endif
 #endif
 
 #if DCHECK_IS_ON()

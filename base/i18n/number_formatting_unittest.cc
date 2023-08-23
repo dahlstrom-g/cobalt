@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <limits>
 
 #include "base/i18n/number_formatting.h"
@@ -13,6 +10,7 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/test/icu_test_util.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "third_party/icu/source/i18n/unicode/usearch.h"
 
@@ -54,7 +52,8 @@ TEST(NumberFormattingTest, FormatDouble) {
     int frac_digits;
     const char* expected_english;
     const char* expected_german;
-  } cases[] = {
+  }
+  cases[] = {
     {0.0, 0, "0", "0"},
 #if !defined(OS_ANDROID)
     // Bionic can't printf negative zero correctly.
@@ -94,6 +93,7 @@ TEST(NumberFormattingTest, FormatDouble) {
   }
 }
 
+#if !defined(STARBOARD)
 TEST(NumberFormattingTest, FormatPercent) {
   static const struct {
     int64_t number;
@@ -137,6 +137,7 @@ TEST(NumberFormattingTest, FormatPercent) {
               FormatPercent(cases[i].number));
   }
 }
+#endif  // !defined(STARBOARD)
 
 }  // namespace
 }  // namespace base

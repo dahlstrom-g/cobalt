@@ -13,6 +13,10 @@
 
 #include <vector>
 
+#include "starboard/types.h"
+
+#include "starboard/memory.h"
+
 #include "base/files/scoped_file.h"
 #include "base/logging.h"
 #include "base/pickle.h"

@@ -4,8 +4,6 @@
 
 #include "base/task/task_scheduler/scheduler_worker_pool_impl.h"
 
-#include <stddef.h>
-
 #include <algorithm>
 #include <utility>
 
@@ -27,12 +25,14 @@
 #include "base/threading/scoped_blocking_call.h"
 #include "base/threading/thread_checker.h"
 #include "base/threading/thread_restrictions.h"
+#include "starboard/configuration_constants.h"
 
 #if defined(OS_WIN)
 #include "base/win/scoped_com_initializer.h"
 #include "base/win/scoped_windows_thread_environment.h"
 #include "base/win/scoped_winrt_initializer.h"
 #include "base/win/windows_version.h"
+#include "starboard/types.h"
 #endif  // defined(OS_WIN)
 
 namespace base {
@@ -50,7 +50,11 @@ constexpr char kNumTasksBeforeDetachHistogramPrefix[] =
 constexpr char kNumTasksBetweenWaitsHistogramPrefix[] =
     "TaskScheduler.NumTasksBetweenWaits.";
 constexpr char kNumThreadsHistogramPrefix[] = "TaskScheduler.NumWorkers.";
+#ifdef STARBOARD
+const size_t kMaxNumberOfWorkers = kSbMaxThreads;
+#else
 constexpr size_t kMaxNumberOfWorkers = 256;
+#endif
 
 // Only used in DCHECKs.
 bool ContainsWorker(const std::vector<scoped_refptr<SchedulerWorker>>& workers,
@@ -165,15 +169,12 @@ SchedulerWorkerPoolImpl::SchedulerWorkerPoolImpl(
       priority_hint_(priority_hint),
       lock_(shared_priority_queue_.container_lock()),
       idle_workers_stack_cv_for_testing_(lock_.CreateConditionVariable()),
+#if !defined(STARBOARD)
       // Mimics the UMA_HISTOGRAM_LONG_TIMES macro.
       detach_duration_histogram_(Histogram::FactoryTimeGet(
           JoinString({kDetachDurationHistogramPrefix, histogram_label,
                       kPoolNameSuffix},
                      ""),
-          TimeDelta::FromMilliseconds(1),
-          TimeDelta::FromHours(1),
-          50,
-          HistogramBase::kUmaTargetedHistogramFlag)),
       // Mimics the UMA_HISTOGRAM_COUNTS_1000 macro. When a worker runs more
       // than 1000 tasks before detaching, there is no need to know the exact
       // number of tasks that ran.
@@ -197,6 +198,7 @@ SchedulerWorkerPoolImpl::SchedulerWorkerPoolImpl(
           100,
           50,
           HistogramBase::kUmaTargetedHistogramFlag)),
+#endif  // !defined(STARBOARD)
       // Mimics the UMA_HISTOGRAM_COUNTS_100 macro. A SchedulerWorkerPool is
       // expected to run between zero and a few tens of workers.
       // When it runs more than 100 worker, there is no need to know the exact
@@ -279,12 +281,14 @@ void SchedulerWorkerPoolImpl::OnCanScheduleSequence(
   WakeUpOneWorker();
 }
 
+#if !defined(STARBOARD)
 void SchedulerWorkerPoolImpl::GetHistograms(
     std::vector<const HistogramBase*>* histograms) const {
   histograms->push_back(detach_duration_histogram_);
   histograms->push_back(num_tasks_between_waits_histogram_);
   histograms->push_back(num_workers_histogram_);
 }
+#endif  // !defined(STARBOARD)
 
 int SchedulerWorkerPoolImpl::GetMaxConcurrentNonBlockedTasksDeprecated() const {
 #if DCHECK_IS_ON()
@@ -459,6 +463,10 @@ SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::GetWork(
     if (is_on_idle_workers_stack) {
       if (CanCleanupLockRequired(worker))
         CleanupLockRequired(worker);
+#if !defined(STARBOARD)
+      outer_->num_tasks_between_waits_histogram_->Add(
+          num_tasks_since_last_wait_);
+#endif  // !defined(STARBOARD)
       return nullptr;
     }
 
@@ -601,14 +609,16 @@ void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::CleanupLockRequired(
   DCHECK_CALLED_ON_VALID_THREAD(worker_thread_checker_);
 
   outer_->lock_.AssertAcquired();
+#if !defined(STARBOARD)
   outer_->num_tasks_before_detach_histogram_->Add(num_tasks_since_last_detach_);
+#endif  // !defined(STARBOARD)
   outer_->cleanup_timestamps_.push(TimeTicks::Now());
   worker->Cleanup();
   outer_->RemoveFromIdleWorkersStackLockRequired(worker);
 
   // Remove the worker from |workers_|.
-  auto worker_iter =
-      std::find(outer_->workers_.begin(), outer_->workers_.end(), worker);
+  auto worker_iter = std::find(outer_->workers_.begin(), outer_->workers_.end(),
+                               base::WrapRefCounted(worker));
   DCHECK(worker_iter != outer_->workers_.end());
   outer_->workers_.erase(worker_iter);
 
@@ -625,11 +635,13 @@ void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::
   DCHECK_CALLED_ON_VALID_THREAD(worker_thread_checker_);
 
   outer_->lock_.AssertAcquired();
-  // Record the TaskScheduler.NumTasksBetweenWaits histogram. After GetWork()
-  // returns nullptr, the SchedulerWorker will perform a wait on its
-  // WaitableEvent, so we record how many tasks were ran since the last wait
-  // here.
+// Record the TaskScheduler.NumTasksBetweenWaits histogram. After GetWork()
+// returns nullptr, the SchedulerWorker will perform a wait on its
+// WaitableEvent, so we record how many tasks were ran since the last wait
+// here.
+#if !defined(STARBOARD)
   outer_->num_tasks_between_waits_histogram_->Add(num_tasks_since_last_wait_);
+#endif  // !defined(STARBOARD)
   num_tasks_since_last_wait_ = 0;
   outer_->AddToIdleWorkersStackLockRequired(worker);
 }
@@ -902,8 +914,10 @@ SchedulerWorkerPoolImpl::CreateRegisterAndStartSchedulerWorkerLockRequired() {
   DCHECK_LE(workers_.size(), max_tasks_);
 
   if (!cleanup_timestamps_.empty()) {
+#if !defined(STARBOARD)
     detach_duration_histogram_->AddTime(TimeTicks::Now() -
                                         cleanup_timestamps_.top());
+#endif  // !defined(STARBOARD)
     cleanup_timestamps_.pop();
   }
   return worker.get();

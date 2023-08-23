@@ -4,8 +4,6 @@
 
 #include "base/trace_event/process_memory_dump.h"
 
-#include <stddef.h>
-
 #include "base/memory/aligned_memory.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/shared_memory_tracker.h"
@@ -26,6 +24,8 @@
 
 #if defined(OS_IOS)
 #include "base/ios/ios_util.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #endif
 
 namespace base {

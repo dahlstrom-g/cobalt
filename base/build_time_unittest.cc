@@ -6,6 +6,7 @@
 #include "base/generated_build_date.h"
 #include "base/time/time.h"
 
+#include "starboard/common/string.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 TEST(BuildTime, DateLooksValid) {
@@ -25,7 +26,10 @@ TEST(BuildTime, DateLooksValid) {
   EXPECT_EQ('0', build_date[19]);
 }
 
+// Starboard does not support build time.
+#ifndef STARBOARD
 TEST(BuildTime, InThePast) {
   EXPECT_LT(base::GetBuildTime(), base::Time::Now());
   EXPECT_LT(base::GetBuildTime(), base::Time::NowFromSystemTime());
 }
+#endif

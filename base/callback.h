@@ -8,10 +8,9 @@
 #ifndef BASE_CALLBACK_H_
 #define BASE_CALLBACK_H_
 
-#include <stddef.h>
-
 #include "base/callback_forward.h"
 #include "base/callback_internal.h"
+#include "starboard/types.h"
 
 // -----------------------------------------------------------------------------
 // Usage documentation
@@ -81,7 +80,7 @@ class OnceCallback<R(Args...)> : public internal::CallbackBase {
 
   bool Equals(const OnceCallback& other) const { return EqualsInternal(other); }
 
-  R Run(Args... args) const & {
+  R Run(Args...) const & {
     static_assert(!sizeof(*this),
                   "OnceCallback::Run() may only be invoked on a non-const "
                   "rvalue, i.e. std::move(callback).Run().");

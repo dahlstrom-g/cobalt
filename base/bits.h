@@ -7,10 +7,9 @@
 #ifndef BASE_BITS_H_
 #define BASE_BITS_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <type_traits>
+
+#include "starboard/types.h"
 
 #include "base/compiler_specific.h"
 #include "base/logging.h"
@@ -38,6 +37,12 @@ constexpr inline bool IsPowerOfTwo(T value) {
 
 // Round up |size| to a multiple of alignment, which must be a power of two.
 inline size_t Align(size_t size, size_t alignment) {
+  DCHECK(IsPowerOfTwo(alignment));
+  return (size + alignment - 1) & ~(alignment - 1);
+}
+
+// Round up |size| to a multiple of alignment, which must be a power of two.
+inline constexpr size_t AlignUp(size_t size, size_t alignment) {
   DCHECK(IsPowerOfTwo(alignment));
   return (size + alignment - 1) & ~(alignment - 1);
 }

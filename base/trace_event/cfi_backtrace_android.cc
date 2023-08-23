@@ -8,6 +8,8 @@
 #include <sys/types.h>
 
 #include "base/android/apk_assets.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 #if !defined(ARCH_CPU_ARMEL)
 #error This file should not be built for this architecture.
@@ -222,7 +224,7 @@ size_t CFIBacktraceAndroid::Unwind(uintptr_t pc,
     // PC_prev = * (SP_prev - ra_offset).
     sp = sp + cfi.cfa_offset;
     memcpy(&pc, reinterpret_cast<uintptr_t*>(sp - cfi.ra_offset),
-           sizeof(uintptr_t));
+                 sizeof(uintptr_t));
   }
   return depth;
 }

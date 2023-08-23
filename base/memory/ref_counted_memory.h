@@ -5,8 +5,6 @@
 #ifndef BASE_MEMORY_REF_COUNTED_MEMORY_H_
 #define BASE_MEMORY_REF_COUNTED_MEMORY_H_
 
-#include <stddef.h>
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -16,10 +14,14 @@
 #include "base/memory/ref_counted.h"
 #include "base/memory/shared_memory.h"
 #include "base/memory/shared_memory_mapping.h"
+#include "starboard/types.h"
 
 namespace base {
 
+// Cobalt does not support multiple process and shared memory.
+#if !defined(STARBOARD)
 class ReadOnlySharedMemoryRegion;
+#endif
 
 // A generic interface to memory. This object is reference counted because most
 // of its subclasses own the data they carry, and this interface needs to
@@ -141,6 +143,8 @@ class BASE_EXPORT RefCountedString : public RefCountedMemory {
   DISALLOW_COPY_AND_ASSIGN(RefCountedString);
 };
 
+// Starboard doesn't curretly support multiple processes or shared memory.
+#if !defined(STARBOARD)
 // An implementation of RefCountedMemory, where the bytes are stored in
 // SharedMemory.
 class BASE_EXPORT RefCountedSharedMemory : public RefCountedMemory {
@@ -162,6 +166,8 @@ class BASE_EXPORT RefCountedSharedMemory : public RefCountedMemory {
   DISALLOW_COPY_AND_ASSIGN(RefCountedSharedMemory);
 };
 
+// Cobalt does not support multiple process and shared memory.
+#if !defined(STARBOARD)
 // An implementation of RefCountedMemory, where the bytes are stored in
 // ReadOnlySharedMemoryMapping.
 class BASE_EXPORT RefCountedSharedMemoryMapping : public RefCountedMemory {
@@ -187,6 +193,8 @@ class BASE_EXPORT RefCountedSharedMemoryMapping : public RefCountedMemory {
 
   DISALLOW_COPY_AND_ASSIGN(RefCountedSharedMemoryMapping);
 };
+#endif  // !defined(STARBOARD)
+#endif
 
 }  // namespace base
 

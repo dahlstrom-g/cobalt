@@ -6,8 +6,6 @@
 
 #include "base/i18n/file_util_icu.h"
 
-#include <stdint.h>
-
 #include <memory>
 
 #include "base/files/file_path.h"
@@ -20,6 +18,7 @@
 #include "base/strings/sys_string_conversions.h"
 #include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 #include "third_party/icu/source/common/unicode/uniset.h"
 #include "third_party/icu/source/i18n/unicode/coll.h"
 
@@ -119,7 +118,7 @@ void ReplaceIllegalCharactersInPath(FilePath::StringType* file_name,
     // Windows uses UTF-16 encoding for filenames.
     U16_NEXT(file_name->data(), cursor, static_cast<int>(file_name->length()),
              code_point);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
     // Mac and Chrome OS use UTF-8 encoding for filenames.
     // Linux doesn't actually define file system encoding. Try to parse as
     // UTF-8.
@@ -141,6 +140,7 @@ void ReplaceIllegalCharactersInPath(FilePath::StringType* file_name,
   }
 }
 
+#if !defined(UCONFIG_NO_COLLATION)
 bool LocaleAwareCompareFilenames(const FilePath& a, const FilePath& b) {
   UErrorCode error_code = U_ZERO_ERROR;
   // Use the default collator. The default locale should have been properly
@@ -163,6 +163,7 @@ bool LocaleAwareCompareFilenames(const FilePath& a, const FilePath& b) {
              WideToUTF16(SysNativeMBToWide(b.value()))) == UCOL_LESS;
 #endif
 }
+#endif
 
 void NormalizeFileNameEncoding(FilePath* file_name) {
 #if defined(OS_CHROMEOS)

@@ -4,14 +4,13 @@
 
 #include "base/containers/span.h"
 
-#include <stdint.h>
-
 #include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -900,10 +899,38 @@ TEST(SpanTest, ReverseIterator) {
   static constexpr int kArray[] = {1, 6, 1, 8, 0};
   constexpr span<const int> span(kArray);
 
+#if __cplusplus < 201402L
+  // With GNU at least, there exists an implementation of std::equal that is
+  // replaced in C++14.
+  {
+    auto a = std::rbegin(kArray);
+    auto b = span.rbegin();
+    while (a != std::rend(kArray) && b != span.rend()) {
+      EXPECT_EQ(*a, *b);
+      ++a;
+      ++b;
+    }
+    EXPECT_EQ(std::rend(kArray), a);
+    EXPECT_EQ(span.rend(), b);
+  }
+
+  {
+    auto a = std::crbegin(kArray);
+    auto b = span.crbegin();
+    while (a != std::crend(kArray) && b != span.crend()) {
+      EXPECT_EQ(*a, *b);
+      ++a;
+      ++b;
+    }
+    EXPECT_EQ(std::crend(kArray), a);
+    EXPECT_EQ(span.crend(), b);
+  }
+#else
   EXPECT_TRUE(std::equal(std::rbegin(kArray), std::rend(kArray), span.rbegin(),
                          span.rend()));
   EXPECT_TRUE(std::equal(std::crbegin(kArray), std::crend(kArray),
                          span.crbegin(), span.crend()));
+#endif
 }
 
 TEST(SpanTest, Equality) {
@@ -1103,12 +1130,15 @@ TEST(SpanTest, MakeSpanFromConstContainer) {
   static_assert(decltype(make_span(vector))::extent == dynamic_extent, "");
 }
 
+#ifndef STARBOARD
+// Unable to do these conversions.
 TEST(SpanTest, MakeStaticSpanFromConstContainer) {
   const std::vector<int> vector = {-1, -2, -3, -4, -5};
   span<const int, 5> span(vector);
   EXPECT_EQ(span, make_span<5>(vector));
   static_assert(decltype(make_span<5>(vector))::extent == 5, "");
 }
+#endif
 
 TEST(SpanTest, MakeSpanFromContainer) {
   std::vector<int> vector = {-1, -2, -3, -4, -5};
@@ -1117,12 +1147,15 @@ TEST(SpanTest, MakeSpanFromContainer) {
   static_assert(decltype(make_span(vector))::extent == dynamic_extent, "");
 }
 
+#ifndef STARBOARD
+// Unable to do these conversions.
 TEST(SpanTest, MakeStaticSpanFromContainer) {
   std::vector<int> vector = {-1, -2, -3, -4, -5};
   span<int, 5> span(vector);
   EXPECT_EQ(span, make_span<5>(vector));
   static_assert(decltype(make_span<5>(vector))::extent == 5, "");
 }
+#endif
 
 TEST(SpanTest, MakeSpanFromDynamicSpan) {
   static constexpr int kArray[] = {1, 2, 3, 4, 5};

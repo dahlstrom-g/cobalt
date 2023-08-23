@@ -10,6 +10,7 @@
 #include "base/posix/eintr_wrapper.h"
 #include "base/test/gtest_util.h"
 #include "base/threading/thread.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -68,9 +69,9 @@ class BaseWatcher : public MessagePumpIOSForIO::FdWatcher {
   ~BaseWatcher() override {}
 
   // MessagePumpIOSForIO::FdWatcher interface
-  void OnFileCanReadWithoutBlocking(int /* fd */) override { NOTREACHED(); }
+  void OnFileCanReadWithoutBlocking(int fd) override { NOTREACHED(); }
 
-  void OnFileCanWriteWithoutBlocking(int /* fd */) override { NOTREACHED(); }
+  void OnFileCanWriteWithoutBlocking(int fd) override { NOTREACHED(); }
 
  protected:
   MessagePumpIOSForIO::FdWatchController* controller_;
@@ -83,7 +84,7 @@ class DeleteWatcher : public BaseWatcher {
 
   ~DeleteWatcher() override { DCHECK(!controller_); }
 
-  void OnFileCanWriteWithoutBlocking(int /* fd */) override {
+  void OnFileCanWriteWithoutBlocking(int fd) override {
     DCHECK(controller_);
     delete controller_;
     controller_ = NULL;
@@ -113,7 +114,7 @@ class StopWatcher : public BaseWatcher {
 
   ~StopWatcher() override {}
 
-  void OnFileCanWriteWithoutBlocking(int /* fd */) override {
+  void OnFileCanWriteWithoutBlocking(int fd) override {
     controller_->StopWatchingFileDescriptor();
     if (fd_to_start_watching_ >= 0) {
       pump_->WatchFileDescriptor(fd_to_start_watching_,

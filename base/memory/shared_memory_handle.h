@@ -5,7 +5,6 @@
 #ifndef BASE_MEMORY_SHARED_MEMORY_HANDLE_H_
 #define BASE_MEMORY_SHARED_MEMORY_HANDLE_H_
 
-#include <stddef.h>
 
 #include "base/unguessable_token.h"
 #include "build/build_config.h"
@@ -24,6 +23,8 @@
 #include "base/file_descriptor_posix.h"
 #elif defined(OS_FUCHSIA)
 #include <zircon/types.h>
+
+#include "starboard/types.h"
 #endif
 
 namespace base {

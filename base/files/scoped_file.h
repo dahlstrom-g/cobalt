@@ -14,6 +14,11 @@
 #include "base/scoped_generic.h"
 #include "build/build_config.h"
 
+#if defined(STARBOARD)
+#include "starboard/file.h"
+#include "starboard/types.h"
+#endif
+
 namespace base {
 
 namespace internal {
@@ -27,6 +32,7 @@ struct BASE_EXPORT ScopedFDCloseTraits {
 };
 #endif
 
+#if !defined(STARBOARD)
 // Functor for |ScopedFILE| (below).
 struct ScopedFILECloser {
   inline void operator()(FILE* x) const {
@@ -34,10 +40,21 @@ struct ScopedFILECloser {
       fclose(x);
   }
 };
+#endif
 
+#if defined(STARBOARD)
+struct BASE_EXPORT ScopedSbFileCloseTraits {
+  static SbFile InvalidValue() { return kSbFileInvalid; }
+  static void Free(SbFile file) { SbFileClose(file); }
+};
+#endif
 }  // namespace internal
 
 // -----------------------------------------------------------------------------
+
+#if defined(STARBOARD)
+using ScopedFD = ScopedGeneric<SbFile, internal::ScopedSbFileCloseTraits>;
+#endif
 
 #if defined(OS_POSIX) || defined(OS_FUCHSIA)
 // A low-level Posix file descriptor closer class. Use this when writing
@@ -54,8 +71,10 @@ struct ScopedFILECloser {
 typedef ScopedGeneric<int, internal::ScopedFDCloseTraits> ScopedFD;
 #endif
 
+#if !defined(STARBOARD)
 // Automatically closes |FILE*|s.
 typedef std::unique_ptr<FILE, internal::ScopedFILECloser> ScopedFILE;
+#endif
 
 }  // namespace base
 

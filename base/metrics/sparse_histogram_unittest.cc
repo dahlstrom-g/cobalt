@@ -29,15 +29,13 @@ class SparseHistogramTest : public testing::TestWithParam<bool> {
  protected:
   const int32_t kAllocatorMemorySize = 8 << 20;  // 8 MiB
 
-  SparseHistogramTest() : use_persistent_histogram_allocator_(GetParam()) {}
+  SparseHistogramTest()
+      : statistics_recorder_(StatisticsRecorder::CreateTemporaryForTesting()),
+        use_persistent_histogram_allocator_(GetParam()) {}
 
   void SetUp() override {
     if (use_persistent_histogram_allocator_)
       CreatePersistentMemoryAllocator();
-
-    // Each test will have a clean state (no Histogram / BucketRanges
-    // registered).
-    InitializeStatisticsRecorder();
   }
 
   void TearDown() override {
@@ -45,17 +43,7 @@ class SparseHistogramTest : public testing::TestWithParam<bool> {
       ASSERT_FALSE(allocator_->IsFull());
       ASSERT_FALSE(allocator_->IsCorrupt());
     }
-    UninitializeStatisticsRecorder();
     DestroyPersistentMemoryAllocator();
-  }
-
-  void InitializeStatisticsRecorder() {
-    DCHECK(!statistics_recorder_);
-    statistics_recorder_ = StatisticsRecorder::CreateTemporaryForTesting();
-  }
-
-  void UninitializeStatisticsRecorder() {
-    statistics_recorder_.reset();
   }
 
   void CreatePersistentMemoryAllocator() {
@@ -167,6 +155,7 @@ TEST_P(SparseHistogramTest, AddCount_LargeCountsDontOverflow) {
   }
 }
 
+#if !defined(STARBOARD)
 TEST_P(SparseHistogramTest, MacroBasicTest) {
   UmaHistogramSparse("Sparse", 100);
   UmaHistogramSparse("Sparse", 200);
@@ -206,6 +195,8 @@ TEST_P(SparseHistogramTest, MacroInLoopTest) {
   EXPECT_STREQ(histograms[0]->histogram_name(), "Sparse0");
   EXPECT_STREQ(histograms[1]->histogram_name(), "Sparse1");
 }
+
+#endif  // !defined(STARBOARD)
 
 TEST_P(SparseHistogramTest, Serialize) {
   std::unique_ptr<SparseHistogram> histogram(NewSparseHistogram("Sparse"));

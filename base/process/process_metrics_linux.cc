@@ -6,8 +6,6 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -27,6 +25,8 @@
 #include "base/strings/string_util.h"
 #include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
+#include "starboard/common/string.h"
+#include "starboard/types.h"
 
 namespace base {
 

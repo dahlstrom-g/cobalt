@@ -14,6 +14,7 @@
 #include "base/macros.h"
 #include "base/task_runner.h"
 #include "base/task_runner_util.h"
+#include "starboard/memory.h"
 
 namespace {
 
@@ -276,9 +277,11 @@ File FileProxy::TakeFile() {
   return std::move(file_);
 }
 
+#if !defined(STARBOARD)
 File FileProxy::DuplicateFile() {
   return file_.Duplicate();
 }
+#endif
 
 PlatformFile FileProxy::GetPlatformFile() const {
   return file_.GetPlatformFile();

@@ -11,6 +11,12 @@
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
+#include "starboard/types.h"
+
+#if defined(STARBOARD)
+#include "starboard/system.h"
+#define abort SbSystemBreakIntoDebugger
+#endif
 
 namespace base {
 
@@ -185,5 +191,9 @@ bool operator!=(const T& value, const ScopedGeneric<T, Traits>& scoped) {
 }
 
 }  // namespace base
+
+#if defined(STARBOARD)
+#undef abort
+#endif
 
 #endif  // BASE_SCOPED_GENERIC_H_

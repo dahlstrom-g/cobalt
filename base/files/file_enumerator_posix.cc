@@ -7,12 +7,13 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fnmatch.h>
-#include <stdint.h>
 #include <string.h>
 
 #include "base/logging.h"
 #include "base/threading/scoped_blocking_call.h"
 #include "build/build_config.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace base {
 namespace {

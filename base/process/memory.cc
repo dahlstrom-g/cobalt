@@ -7,6 +7,10 @@
 #include "base/process/memory.h"
 #include "build/build_config.h"
 
+#if defined(STARBOARD)
+#include "starboard/memory.h"
+#endif
+
 namespace base {
 
 // Defined in memory_win.cc for Windows.

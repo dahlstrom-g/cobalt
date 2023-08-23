@@ -4,12 +4,13 @@
 
 #include "base/files/file_enumerator.h"
 
-#include <stdint.h>
 #include <string.h>
 
 #include "base/logging.h"
 #include "base/threading/scoped_blocking_call.h"
 #include "base/win/shlwapi.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace base {
 

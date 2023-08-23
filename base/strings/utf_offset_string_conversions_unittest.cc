@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-
 #include <algorithm>
 
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/utf_offset_string_conversions.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -77,7 +76,7 @@ TEST(UTFOffsetStringConversionsTest, AdjustOffset) {
 }
 
 TEST(UTFOffsetStringConversionsTest, LimitOffsets) {
-  const OffsetAdjuster::Adjustments kNoAdjustments;
+  const OffsetAdjuster::Adjustments kNoAdjustments{};
   const size_t kLimit = 10;
   const size_t kItems = 20;
   std::vector<size_t> size_ts;

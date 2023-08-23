@@ -4,7 +4,9 @@
 
 #include "base/test/test_suite.h"
 
+#ifndef STARBOARD
 #include <signal.h>
+#endif
 
 #include <memory>
 
@@ -65,6 +67,7 @@
 
 #if defined(OS_LINUX)
 #include "base/test/fontconfig_util_linux.h"
+#include "starboard/types.h"
 #endif
 
 namespace base {
@@ -115,7 +118,8 @@ class CheckForLeakedGlobals : public testing::EmptyTestEventListener {
     scheduler_set_before_test_ = TaskScheduler::GetInstance();
   }
   void OnTestEnd(const testing::TestInfo& test) override {
-    DCHECK_EQ(scheduler_set_before_test_, TaskScheduler::GetInstance())
+    auto* task_scheduler = TaskScheduler::GetInstance();
+    DCHECK_EQ(scheduler_set_before_test_, task_scheduler)
         << " in test " << test.test_case_name() << "." << test.name();
   }
 
@@ -169,11 +173,13 @@ void InitializeLogging() {
 
 }  // namespace
 
+#if !defined(STARBOARD)
 int RunUnitTestsUsingBaseTestSuite(int argc, char **argv) {
   TestSuite test_suite(argc, argv);
   return LaunchUnitTests(argc, argv,
                          Bind(&TestSuite::Run, Unretained(&test_suite)));
 }
+#endif
 
 TestSuite::TestSuite(int argc, char** argv) {
   PreInitialize();
@@ -196,6 +202,7 @@ TestSuite::TestSuite(int argc, wchar_t** argv) {
 TestSuite::~TestSuite() {
   if (initialized_command_line_)
     CommandLine::Reset();
+  logging::CloseLogFile();
 }
 
 void TestSuite::InitializeFromCommandLine(int argc, char** argv) {
@@ -231,9 +238,11 @@ void TestSuite::PreInitialize() {
   setlocale(LC_ALL, "");
 #endif  // defined(OS_LINUX) && defined(USE_AURA)
 
-  // On Android, AtExitManager is created in
-  // testing/android/native_test_wrapper.cc before main() is called.
-#if !defined(OS_ANDROID)
+// On Android, AtExitManager is created in
+// testing/android/native_test_wrapper.cc before main() is called.
+// For Cobalt, at_exit_manager some times need to be created earlier than the
+// start of test case.
+#if !defined(OS_ANDROID) && !defined(STARBOARD)
   at_exit_manager_.reset(new AtExitManager);
 #endif
 
@@ -260,6 +269,7 @@ void TestSuite::AddTestLauncherResultPrinter() {
     return;
   }
 
+#if !defined(STARBOARD)
   printer_ = new XmlUnitTestResultPrinter;
   CHECK(printer_->Initialize(output_path))
       << "Output path is " << output_path.AsUTF8Unsafe()
@@ -267,6 +277,7 @@ void TestSuite::AddTestLauncherResultPrinter() {
   testing::TestEventListeners& listeners =
       testing::UnitTest::GetInstance()->listeners();
   listeners.Append(printer_);
+#endif
 }
 
 // Don't add additional code to this method.  Instead add it to
@@ -329,6 +340,7 @@ void TestSuite::UnitTestAssertHandler(const char* file,
   }
 #endif  // defined(OS_ANDROID)
 
+#if !defined(STARBOARD)
   // XmlUnitTestResultPrinter inherits gtest format, where assert has summary
   // and message. In GTest, summary is just a logged text, and message is a
   // logged text, concatenated with stack trace of assert.
@@ -338,10 +350,15 @@ void TestSuite::UnitTestAssertHandler(const char* file,
     const std::string stack_trace_str = summary_str + stack_trace.as_string();
     printer_->OnAssert(file, line, summary_str, stack_trace_str);
   }
+#endif
 
+#if defined(STARBOARD)
+  SbSystemRequestStop(1);
+#else
   // The logging system actually prints the message before calling the assert
   // handler. Just exit now to avoid printing too many stack traces.
   _exit(1);
+#endif
 }
 
 #if defined(OS_WIN)
@@ -426,7 +443,9 @@ void TestSuite::Initialize() {
       command_line->GetSwitchValueASCII(switches::kDisableFeatures);
   enabled += ",TestFeatureForBrowserTest1";
   disabled += ",TestFeatureForBrowserTest2";
+#if !defined(STARBOARD)
   scoped_feature_list_.InitFromCommandLine(enabled, disabled);
+#endif
 
   // The enable-features and disable-features flags were just slurped into a
   // FeatureList, so remove them from the command line. Tests should enable and

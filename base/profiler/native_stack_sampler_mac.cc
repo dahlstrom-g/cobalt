@@ -27,6 +27,8 @@
 #include "base/memory/ptr_util.h"
 #include "base/sampling_heap_profiler/module_cache.h"
 #include "base/strings/string_number_conversions.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 extern "C" {
 void _sigtramp(int, int, struct sigset*);

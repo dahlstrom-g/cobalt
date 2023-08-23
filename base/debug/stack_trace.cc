@@ -9,6 +9,10 @@
 #include <algorithm>
 #include <sstream>
 
+#include "starboard/types.h"
+
+#include "starboard/memory.h"
+
 #include "base/logging.h"
 #include "base/macros.h"
 

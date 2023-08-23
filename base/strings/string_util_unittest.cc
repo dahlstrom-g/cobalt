@@ -6,14 +6,16 @@
 
 #include <math.h>
 #include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
 
 #include <algorithm>
 
 #include "base/macros.h"
 #include "base/strings/string16.h"
 #include "base/strings/utf_string_conversions.h"
+#include "starboard/client_porting/poem/string_poem.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -1346,7 +1348,7 @@ class WriteIntoTest : public testing::Test {
   static void WritesCorrectly(size_t num_chars) {
     std::string buffer;
     char kOriginal[] = "supercali";
-    strncpy(WriteInto(&buffer, num_chars + 1), kOriginal, num_chars);
+    starboard::strlcpy(WriteInto(&buffer, num_chars + 1), kOriginal, num_chars + 1);
     // Using std::string(buffer.c_str()) instead of |buffer| truncates the
     // string at the first \0.
     EXPECT_EQ(std::string(kOriginal,
@@ -1369,7 +1371,7 @@ TEST_F(WriteIntoTest, WriteInto) {
   const char kDead[] = "dead";
   const std::string live = kLive;
   std::string dead = live;
-  strncpy(WriteInto(&dead, 5), kDead, 4);
+  starboard::strlcpy(WriteInto(&dead, 5), kDead, 5);
   EXPECT_EQ(kDead, dead);
   EXPECT_EQ(4u, dead.size());
   EXPECT_EQ(kLive, live);

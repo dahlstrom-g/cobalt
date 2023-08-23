@@ -25,11 +25,11 @@
 #ifndef BASE_TUPLE_H_
 #define BASE_TUPLE_H_
 
-#include <stddef.h>
 #include <tuple>
 #include <utility>
 
 #include "build/build_config.h"
+#include "starboard/types.h"
 
 namespace base {
 

@@ -4,8 +4,6 @@
 
 #include "base/files/important_file_writer.h"
 
-#include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <string>
 #include <utility>
@@ -29,6 +27,8 @@
 #include "base/threading/thread.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
+#include "starboard/file.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -131,6 +131,14 @@ void DeleteTmpFile(const FilePath& tmp_file_path,
 
 }  // namespace
 
+#if defined(STARBOARD)
+// static
+bool ImportantFileWriter::WriteFileAtomically(const FilePath& path,
+                                              StringPiece data,
+                                              StringPiece histogram_suffix) {
+  return SbFileAtomicReplace(path.value().c_str(), data.data(), data.size());
+}
+#else
 // static
 bool ImportantFileWriter::WriteFileAtomically(const FilePath& path,
                                               StringPiece data,
@@ -211,6 +219,7 @@ bool ImportantFileWriter::WriteFileAtomically(const FilePath& path,
 
   return true;
 }
+#endif
 
 ImportantFileWriter::ImportantFileWriter(
     const FilePath& path,

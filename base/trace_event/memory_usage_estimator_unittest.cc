@@ -9,6 +9,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/strings/string16.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 #if defined(ARCH_CPU_64_BITS)
@@ -257,7 +258,10 @@ TEST(EstimateMemoryUsageTest, IsStandardContainerComplexIteratorTest) {
   static_assert(internal::IsStandardContainerComplexIterator<
                     std::list<int>::const_reverse_iterator>(),
                 "");
+#ifndef STARBOARD
+  // TODO: Non-conforming compilers do not compile with int as iterator.
   static_assert(!internal::IsStandardContainerComplexIterator<int>(), "");
+#endif
   static_assert(!internal::IsStandardContainerComplexIterator<abstract*>(), "");
 }
 

@@ -5,6 +5,8 @@
 #ifndef BASE_MEMORY_PLATFORM_SHARED_MEMORY_REGION_H_
 #define BASE_MEMORY_PLATFORM_SHARED_MEMORY_REGION_H_
 
+#if !defined(STARBOARD)
+
 #include <utility>
 
 #include "base/compiler_specific.h"
@@ -26,6 +28,7 @@
 #include <sys/types.h>
 #include "base/file_descriptor_posix.h"
 #include "base/files/scoped_file.h"
+#include "starboard/types.h"
 #endif
 
 namespace base {
@@ -257,4 +260,5 @@ class BASE_EXPORT PlatformSharedMemoryRegion {
 }  // namespace subtle
 }  // namespace base
 
+#endif  // !defined(STARBOARD)
 #endif  // BASE_MEMORY_PLATFORM_SHARED_MEMORY_REGION_H_

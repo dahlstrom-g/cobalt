@@ -462,6 +462,10 @@ class BASE_EXPORT ThreadRestrictions {
   //
   // DEPRECATED. Use DisallowBaseSyncPrimitives.
   static void DisallowWaiting();
+#if defined(STARBOARD)
+  // Get whether the current thread can use singletons.
+  static bool GetSingletonAllowed();
+#endif  // defined(STARBOARD)
 #else
   // Inline the empty definitions of these functions so that they can be
   // compiled out.
@@ -469,6 +473,10 @@ class BASE_EXPORT ThreadRestrictions {
   static bool SetSingletonAllowed(bool allowed) { return true; }
   static void AssertSingletonAllowed() {}
   static void DisallowWaiting() {}
+#if defined(STARBOARD)
+  // Get whether the current thread can use singletons.
+  static bool GetSingletonAllowed() {return true;}
+#endif  // defined(STARBOARD)
 #endif
 
  private:

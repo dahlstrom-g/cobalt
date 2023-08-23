@@ -13,6 +13,7 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/persistent_memory_allocator.h"
 #include "base/metrics/statistics_recorder.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -128,6 +129,7 @@ TEST_F(PersistentHistogramAllocatorTest, CreateAndIterate) {
   EXPECT_FALSE(recovered);
 }
 
+#if !defined(STARBOARD)
 TEST_F(PersistentHistogramAllocatorTest, ConstructPaths) {
   const FilePath dir_path(FILE_PATH_LITERAL("foo/"));
   const std::string dir_string =
@@ -206,6 +208,7 @@ TEST_F(PersistentHistogramAllocatorTest, CreateSpareFile) {
       EXPECT_EQ(0, buffer[i]);
   }
 }
+#endif  // !defined(STARBOARD)
 
 TEST_F(PersistentHistogramAllocatorTest, StatisticsRecorderMerge) {
   const char LinearHistogramName[] = "SRTLinearHistogram";

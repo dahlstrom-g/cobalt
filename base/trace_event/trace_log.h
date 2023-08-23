@@ -5,9 +5,6 @@
 #ifndef BASE_TRACE_EVENT_TRACE_LOG_H_
 #define BASE_TRACE_EVENT_TRACE_LOG_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -22,6 +19,7 @@
 #include "base/trace_event/trace_config.h"
 #include "base/trace_event/trace_event_impl.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -305,7 +303,7 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
 
   // Testing factory for TraceEventFilter.
   typedef std::unique_ptr<TraceEventFilter> (*FilterFactoryForTesting)(
-      const std::string& /* predicate_name */);
+      const std::string& predicate_name);
   void SetFilterFactoryForTesting(FilterFactoryForTesting factory) {
     filter_factory_for_testing_ = factory;
   }

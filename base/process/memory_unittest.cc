@@ -6,8 +6,6 @@
 
 #include "base/process/memory.h"
 
-#include <stddef.h>
-
 #include <limits>
 
 #include "base/allocator/allocator_check.h"
@@ -34,6 +32,8 @@
 #if defined(OS_LINUX)
 #include <malloc.h>
 #include "base/test/malloc_wrapper.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #endif
 
 #if defined(OS_WIN)
@@ -70,12 +70,13 @@ TEST(ProcessMemoryTest, MacTerminateOnHeapCorruption) {
 #if ARCH_CPU_64_BITS
   // On 64 bit Macs, the malloc system automatically abort()s on heap corruption
   // but does not output anything.
-  ASSERT_DEATH(free(buf), "");
+  ASSERT_DEATH(SbMemoryDeallocate(buf), "");
 #elif defined(ADDRESS_SANITIZER)
   // AddressSanitizer replaces malloc() and prints a different error message on
   // heap corruption.
-  ASSERT_DEATH(free(buf), "attempting free on address which "
-      "was not malloc\\(\\)-ed");
+  ASSERT_DEATH(SbMemoryDeallocate(buf),
+               "attempting SbMemoryDeallocate on address which "
+               "was not malloc\\(\\)-ed");
 #else
   ADD_FAILURE() << "This test is not supported in this build configuration.";
 #endif
@@ -160,6 +161,7 @@ class OutOfMemoryDeathTest : public OutOfMemoryTest {
 #endif
 };
 
+#if !defined(STARBOARD)
 TEST_F(OutOfMemoryDeathTest, New) {
   ASSERT_EXIT({
       SetUpInDeathAssert();
@@ -177,14 +179,14 @@ TEST_F(OutOfMemoryDeathTest, NewArray) {
 TEST_F(OutOfMemoryDeathTest, Malloc) {
   ASSERT_EXIT({
       SetUpInDeathAssert();
-      value_ = malloc(test_size_);
+      value_ = SbMemoryAllocate(test_size_);
     }, testing::ExitedWithCode(kExitCode), kOomRegex);
 }
 
 TEST_F(OutOfMemoryDeathTest, Realloc) {
   ASSERT_EXIT({
       SetUpInDeathAssert();
-      value_ = realloc(nullptr, test_size_);
+      value_ = SbMemoryReallocate(nullptr, test_size_);
     }, testing::ExitedWithCode(kExitCode), kOomRegex);
 }
 
@@ -201,6 +203,7 @@ TEST_F(OutOfMemoryDeathTest, AlignedAlloc) {
       value_ = base::AlignedAlloc(test_size_, 8);
     }, testing::ExitedWithCode(kExitCode), kOomRegex);
 }
+#endif  // !defined(STARBOARD)
 
 // POSIX does not define an aligned realloc function.
 #if defined(OS_WIN)
@@ -237,7 +240,7 @@ TEST_F(OutOfMemoryDeathTest, NewHandlerGeneratesUnhandledException) {
 
 // OS X and Android have no 2Gb allocation limit.
 // See https://crbug.com/169327.
-#if !defined(OS_MACOSX) && !defined(OS_ANDROID)
+#if !defined(OS_MACOSX) && !defined(OS_ANDROID) && !defined(STARBOARD)
 TEST_F(OutOfMemoryDeathTest, SecurityNew) {
   ASSERT_EXIT({
       SetUpInDeathAssert();
@@ -255,14 +258,14 @@ TEST_F(OutOfMemoryDeathTest, SecurityNewArray) {
 TEST_F(OutOfMemoryDeathTest, SecurityMalloc) {
   ASSERT_EXIT({
       SetUpInDeathAssert();
-      value_ = malloc(insecure_test_size_);
+      value_ = SbMemoryAllocate(insecure_test_size_);
     }, testing::ExitedWithCode(kExitCode), kOomRegex);
 }
 
 TEST_F(OutOfMemoryDeathTest, SecurityRealloc) {
   ASSERT_EXIT({
       SetUpInDeathAssert();
-      value_ = realloc(nullptr, insecure_test_size_);
+      value_ = SbMemoryReallocate(nullptr, insecure_test_size_);
     }, testing::ExitedWithCode(kExitCode), kOomRegex);
 }
 
@@ -289,7 +292,7 @@ TEST_F(OutOfMemoryDeathTest, SecurityAlignedRealloc) {
     }, testing::ExitedWithCode(kExitCode), kOomRegex);
 }
 #endif  // defined(OS_WIN)
-#endif  // !defined(OS_MACOSX) && !defined(OS_ANDROID)
+#endif  // !defined(OS_MACOSX) && !defined(OS_ANDROID) && !defined(STARBOARD)
 
 #if defined(OS_LINUX)
 
@@ -504,7 +507,7 @@ TEST_F(OutOfMemoryTest, TerminateBecauseOutOfMemoryReportsAllocSize) {
 TEST_F(OutOfMemoryHandledTest, UncheckedMalloc) {
   EXPECT_TRUE(base::UncheckedMalloc(kSafeMallocSize, &value_));
   EXPECT_TRUE(value_ != nullptr);
-  free(value_);
+  SbMemoryDeallocate(value_);
 
   EXPECT_FALSE(base::UncheckedMalloc(test_size_, &value_));
   EXPECT_TRUE(value_ == nullptr);
@@ -516,7 +519,7 @@ TEST_F(OutOfMemoryHandledTest, UncheckedCalloc) {
   const char* bytes = static_cast<const char*>(value_);
   for (size_t i = 0; i < kSafeMallocSize; ++i)
     EXPECT_EQ(0, bytes[i]);
-  free(value_);
+  SbMemoryDeallocate(value_);
 
   EXPECT_TRUE(
       base::UncheckedCalloc(kSafeCallocItems, kSafeCallocSize, &value_));
@@ -524,7 +527,7 @@ TEST_F(OutOfMemoryHandledTest, UncheckedCalloc) {
   bytes = static_cast<const char*>(value_);
   for (size_t i = 0; i < (kSafeCallocItems * kSafeCallocSize); ++i)
     EXPECT_EQ(0, bytes[i]);
-  free(value_);
+  SbMemoryDeallocate(value_);
 
   EXPECT_FALSE(base::UncheckedCalloc(1, test_size_, &value_));
   EXPECT_TRUE(value_ == nullptr);

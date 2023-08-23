@@ -1,3 +1,6 @@
+#if defined(STARBOARD)
+#include "starboard/types.h"
+#endif  // defined(STARBOARD)
 // © 2016 and later: Unicode, Inc. and others.
 // License & terms of use: http://www.unicode.org/copyright.html
 /*
@@ -11,8 +14,6 @@
 
 #ifndef BASE_THIRD_PARTY_ICU_ICU_UTF_H_
 #define BASE_THIRD_PARTY_ICU_ICU_UTF_H_
-
-#include <stdint.h>
 
 namespace base_icu {
 

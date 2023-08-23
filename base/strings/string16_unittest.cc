@@ -12,6 +12,9 @@
 
 namespace base {
 
+// Some WCHAR_T_IS_UTF16 platforms do not allow writing wstring to output
+// stream.
+#if SB_IS(WCHAR_T_IS_UTF32)
 // We define a custom operator<< for string16 so we can use it with logging.
 // This tests that conversion.
 TEST(String16Test, OutputStream) {
@@ -51,6 +54,7 @@ TEST(String16Test, OutputStream) {
                  stream.str().c_str());
   }
 }
+#endif
 
 TEST(String16Test, Hash) {
   string16 str1 = ASCIIToUTF16("hello");

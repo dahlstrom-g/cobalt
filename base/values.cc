@@ -19,6 +19,7 @@
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/trace_event/memory_usage_estimator.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -161,6 +162,11 @@ Value::Value(const std::vector<char>& in_blob)
 Value::Value(base::span<const uint8_t> in_blob)
     : type_(Type::BINARY), binary_value_(in_blob.begin(), in_blob.end()) {}
 
+#if defined(STARBOARD) && SB_IS(COMPILER_MSVC)
+Value::Value(const BlobStorage& in_blob)
+    : type_(Type::BINARY), binary_value_(in_blob.begin(), in_blob.end()) {}
+#endif
+
 Value::Value(BlobStorage&& in_blob) noexcept
     : type_(Type::BINARY), binary_value_(std::move(in_blob)) {}
 
@@ -264,6 +270,11 @@ Value::ListStorage& Value::GetList() {
 const Value::ListStorage& Value::GetList() const {
   CHECK(is_list());
   return list_;
+}
+
+Value::ListStorage Value::TakeList() {
+  CHECK(is_list());
+  return std::exchange(list_, {});
 }
 
 Value* Value::FindKey(StringPiece key) {
@@ -404,7 +415,6 @@ Value* Value::SetPath(span<const StringPiece> path, Value value) {
 }
 
 bool Value::RemovePath(std::initializer_list<StringPiece> path) {
-  DCHECK_GE(path.size(), 2u) << "Use RemoveKey() for a path of length 1.";
   return RemovePath(make_span(path.begin(), path.size()));
 }
 
@@ -591,7 +601,7 @@ bool operator==(const Value& lhs, const Value& rhs) {
         return false;
       return std::equal(std::begin(lhs.dict_), std::end(lhs.dict_),
                         std::begin(rhs.dict_),
-                        [](const auto& u, const auto& v) {
+                        [](const std::pair<std::string, std::unique_ptr<Value>>& u, const std::pair<std::string, std::unique_ptr<Value>>& v) {
                           return std::tie(u.first, *u.second) ==
                                  std::tie(v.first, *v.second);
                         });
@@ -750,7 +760,7 @@ DictionaryValue::DictionaryValue(DictStorage&& in_dict) noexcept
 
 bool DictionaryValue::HasKey(StringPiece key) const {
   DCHECK(IsStringUTF8(key));
-  auto current_entry = dict_.find(key);
+  auto current_entry = dict_.find(std::string(key));
   DCHECK((current_entry == dict_.end()) || current_entry->second);
   return current_entry != dict_.end();
 }

@@ -4,12 +4,13 @@
 
 #include "base/strings/sys_string_conversions.h"
 
-#include <stddef.h>
 #include <wchar.h>
 
 #include "base/strings/string_piece.h"
 #include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -26,7 +27,7 @@ std::wstring SysUTF8ToWide(StringPiece utf8) {
   return out;
 }
 
-#if defined(SYSTEM_NATIVE_UTF8) || defined(OS_ANDROID)
+#if defined(SYSTEM_NATIVE_UTF8) || defined(OS_ANDROID) || defined(STARBOARD)
 // TODO(port): Consider reverting the OS_ANDROID when we have wcrtomb()
 // support and a better understanding of what calls these routines.
 

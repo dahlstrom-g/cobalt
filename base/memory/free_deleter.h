@@ -7,6 +7,9 @@
 
 #include <stdlib.h>
 
+#include "starboard/memory.h"
+#include "starboard/types.h"
+
 namespace base {
 
 // Function object which invokes 'free' on its parameter, which must be
@@ -15,9 +18,7 @@ namespace base {
 // std::unique_ptr<int, base::FreeDeleter> foo_ptr(
 //     static_cast<int*>(malloc(sizeof(int))));
 struct FreeDeleter {
-  inline void operator()(void* ptr) const {
-    free(ptr);
-  }
+  inline void operator()(void* ptr) const { SbMemoryDeallocate(ptr); }
 };
 
 }  // namespace base

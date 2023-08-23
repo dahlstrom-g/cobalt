@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "base/process/process_iterator.h"
+#include "starboard/memory.h"
 
 namespace base {
 

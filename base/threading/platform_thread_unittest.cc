@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/synchronization/waitable_event.h"
@@ -17,6 +15,7 @@
 #elif defined(OS_WIN)
 #include <windows.h>
 #include "base/threading/platform_thread_win.h"
+#include "starboard/types.h"
 #endif
 
 namespace base {
@@ -218,6 +217,7 @@ TEST(PlatformThreadTest, FunctionTimesTen) {
   EXPECT_EQ(main_thread_id, PlatformThread::CurrentId());
 }
 
+#if !defined(STARBOARD)
 namespace {
 
 class ThreadPriorityTestThread : public FunctionTestThread {
@@ -296,6 +296,7 @@ TEST(PlatformThreadTest, SetCurrentThreadPriorityWithThreadModeBackground) {
   TestSetCurrentThreadPriority();
 }
 #endif  // defined(OS_WIN)
+#endif  // !defined(STARBOARD)
 
 // This tests internal PlatformThread APIs used under some POSIX platforms,
 // with the exception of Mac OS X, iOS and Fuchsia.

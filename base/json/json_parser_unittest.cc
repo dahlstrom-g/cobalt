@@ -4,8 +4,6 @@
 
 #include "base/json/json_parser.h"
 
-#include <stddef.h>
-
 #include <memory>
 
 #include "base/json/json_reader.h"
@@ -13,6 +11,9 @@
 #include "base/optional.h"
 #include "base/strings/stringprintf.h"
 #include "base/values.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {

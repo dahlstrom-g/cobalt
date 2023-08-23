@@ -5,10 +5,7 @@
 #ifndef BASE_LOGGING_H_
 #define BASE_LOGGING_H_
 
-#include <stddef.h>
-
 #include <cassert>
-#include <cstring>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -23,6 +20,12 @@
 #include "base/strings/string_piece_forward.h"
 #include "base/template_util.h"
 #include "build/build_config.h"
+
+#if defined(STARBOARD)
+#include "starboard/common/log.h"
+#include "starboard/system.h"
+#include "starboard/types.h"
+#endif
 
 //
 // Optional message capabilities
@@ -149,7 +152,7 @@ namespace logging {
 // TODO(avi): do we want to do a unification of character types here?
 #if defined(OS_WIN)
 typedef wchar_t PathChar;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
 typedef char PathChar;
 #endif
 
@@ -165,10 +168,14 @@ enum LoggingDestination {
   // On Windows, use a file next to the exe; on POSIX platforms, where
   // it may not even be possible to locate the executable on disk, use
   // stderr.
+#if defined(STARBOARD)
+  LOG_DEFAULT = LOG_TO_SYSTEM_DEBUG_LOG,
+#else
 #if defined(OS_WIN)
   LOG_DEFAULT = LOG_TO_FILE,
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   LOG_DEFAULT = LOG_TO_SYSTEM_DEBUG_LOG,
+#endif
 #endif
 };
 
@@ -328,7 +335,7 @@ inline constexpr bool AnalyzerAssumeTrue(bool arg) {
   return arg || AnalyzerNoReturn();
 }
 
-#define ANALYZER_ASSUME_TRUE(arg) logging::AnalyzerAssumeTrue(!!(arg))
+#define ANALYZER_ASSUME_TRUE(arg) ::logging::AnalyzerAssumeTrue(!!(arg))
 #define ANALYZER_SKIP_THIS_PATH() \
   static_cast<void>(::logging::AnalyzerNoReturn())
 #define ANALYZER_ALLOW_UNUSED(var) static_cast<void>(var);
@@ -341,6 +348,11 @@ inline constexpr bool AnalyzerAssumeTrue(bool arg) {
 
 #endif  // defined(__clang_analyzer__)
 
+#ifdef STARBOARD
+// Some platforms define macros that have the same names.
+#undef LOG_INFO
+#undef LOG_WARNING
+#endif
 typedef int LogSeverity;
 const LogSeverity LOG_VERBOSE = -1;  // This is level 1 verbosity
 // Note: the log severities are used to index into the array of names,
@@ -399,8 +411,13 @@ const LogSeverity LOG_0 = LOG_ERROR;
 // As special cases, we can assume that LOG_IS_ON(FATAL) always holds. Also,
 // LOG_IS_ON(DFATAL) always holds in debug mode. In particular, CHECK()s will
 // always fire if they fail.
+
+#if defined(OFFICIAL_BUILD) && !SB_IS(MODULAR)
+#define LOG_IS_ON(severity) false
+#else  // defined(OFFICIAL_BUILD) && !SB_IS(MODULAR)
 #define LOG_IS_ON(severity) \
   (::logging::ShouldCreateLogMessage(::logging::LOG_##severity))
+#endif  // defined(OFFICIAL_BUILD) && !SB_IS(MODULAR)
 
 // We can't do any caching tricks with VLOG_IS_ON() like the
 // google-glog version since it requires GCC extensions.  This means
@@ -428,6 +445,44 @@ const LogSeverity LOG_0 = LOG_ERROR;
 #define LOG_IF(severity, condition) \
   LAZY_STREAM(LOG_STREAM(severity), LOG_IS_ON(severity) && (condition))
 
+#if defined(OFFICIAL_BUILD) && !SB_IS(MODULAR)
+#define LOG_ONCE(severity) EAT_STREAM_PARAMETERS
+#else  // defined(OFFICIAL_BUILD) && !SB_IS(MODULAR)
+#define LOG_ONCE_MSG "[once] "
+
+constexpr uint32_t kFnvOffsetBasis32 = 0x811c9dc5U;
+constexpr uint32_t kFnvPrime32 = 0x01000193U;
+
+inline constexpr uint32_t hash_32_fnv1a_const(
+    const char* const str,
+    const uint32_t value = ::logging::kFnvOffsetBasis32) noexcept {
+  return (str[0] == '\0')
+             ? value
+             : ::logging::hash_32_fnv1a_const(
+                   &str[1], static_cast<uint32_t>(1ULL * (value ^ str[0]) *
+                                                  kFnvPrime32));
+}
+
+template <uint32_t FILE_HASH, int LINE>
+struct LogOnceHelper {
+  static bool logged_;
+};
+
+template <uint32_t FILE_HASH, int LINE>
+bool LogOnceHelper<FILE_HASH, LINE>::logged_ = false;
+
+// LOG_ONCE() logs the streamed message only the first time when the
+// statement is executed. Note: When this is inline functions in included files,
+// the statement can be logged for each compilation unit.
+#define LOG_ONCE(severity)                                                     \
+  LOG_IF(severity,                                                             \
+         (!::logging::LogOnceHelper<::logging::hash_32_fnv1a_const(__FILE__),  \
+                                    __LINE__>::logged_ &&                      \
+          ((::logging::LogOnceHelper<::logging::hash_32_fnv1a_const(__FILE__), \
+                                    __LINE__>::logged_ = true) == true)))      \
+      << LOG_ONCE_MSG
+#endif  // defined(OFFICIAL_BUILD) && !SB_IS(MODULAR)
+
 // The VLOG macros log with negative verbosities.
 #define VLOG_STREAM(verbose_level) \
   ::logging::LogMessage(__FILE__, __LINE__, -verbose_level).stream()
@@ -439,6 +494,11 @@ const LogSeverity LOG_0 = LOG_ERROR;
   LAZY_STREAM(VLOG_STREAM(verbose_level), \
       VLOG_IS_ON(verbose_level) && (condition))
 
+#if defined (STARBOARD)
+#define VPLOG_STREAM(verbose_level) \
+  ::logging::StarboardErrorLogMessage(__FILE__, __LINE__, -verbose_level, \
+    ::logging::GetLastSystemErrorCode()).stream()
+#else
 #if defined (OS_WIN)
 #define VPLOG_STREAM(verbose_level) \
   ::logging::Win32ErrorLogMessage(__FILE__, __LINE__, -verbose_level, \
@@ -447,6 +507,7 @@ const LogSeverity LOG_0 = LOG_ERROR;
 #define VPLOG_STREAM(verbose_level) \
   ::logging::ErrnoLogMessage(__FILE__, __LINE__, -verbose_level, \
     ::logging::GetLastSystemErrorCode()).stream()
+#endif
 #endif
 
 #define VPLOG(verbose_level) \
@@ -462,6 +523,10 @@ const LogSeverity LOG_0 = LOG_ERROR;
   LOG_IF(FATAL, !(ANALYZER_ASSUME_TRUE(condition))) \
       << "Assert failed: " #condition ". "
 
+#if defined(STARBOARD)
+#define PLOG_STREAM(severity) \
+  COMPACT_GOOGLE_LOG_EX_ ## severity(StarboardErrorLogMessage, \
+      ::logging::GetLastSystemErrorCode()).stream()
 #if defined(OS_WIN)
 #define PLOG_STREAM(severity) \
   COMPACT_GOOGLE_LOG_EX_ ## severity(Win32ErrorLogMessage, \
@@ -470,6 +535,7 @@ const LogSeverity LOG_0 = LOG_ERROR;
 #define PLOG_STREAM(severity) \
   COMPACT_GOOGLE_LOG_EX_ ## severity(ErrnoLogMessage, \
       ::logging::GetLastSystemErrorCode()).stream()
+#endif
 #endif
 
 #define PLOG(severity)                                          \
@@ -532,6 +598,9 @@ class CheckOpResult {
 //   CHECK. This is achieved by putting opcodes that will cause a non
 //   continuable exception after the actual trap instruction.
 // - Don't cause too much binary bloat.
+#if defined(STARBOARD)
+#define IMMEDIATE_CRASH() SB_CHECK(false)
+#else
 #if defined(COMPILER_GCC)
 
 #if defined(ARCH_CPU_X86_FAMILY) && !defined(OS_NACL)
@@ -609,6 +678,7 @@ class CheckOpResult {
 #else
 #error Port
 #endif
+#endif
 
 // CHECK dies with a fatal error if condition is not true.  It is *not*
 // controlled by NDEBUG, so the check will be executed regardless of
@@ -661,9 +731,18 @@ class CheckOpResult {
 #else  // _PREFAST_
 
 // Do as much work as possible out of line to reduce inline code size.
+#if defined(STARBOARD)
+// Chromium default CHECKs can not crash Cobalt.
+#define CHECK(condition)                                                  \
+  UNLIKELY(!(condition))                                                  \
+      ? ::logging::LogMessage(__FILE__, __LINE__, #condition).stream() && \
+            IMMEDIATE_CRASH()                                             \
+      : EAT_STREAM_PARAMETERS
+#else
 #define CHECK(condition)                                                      \
   LAZY_STREAM(::logging::LogMessage(__FILE__, __LINE__, #condition).stream(), \
-              !ANALYZER_ASSUME_TRUE(condition))
+              !ANALYZER_ASSUME_TRUE(condition));
+#endif
 
 #define PCHECK(condition)                                           \
   LAZY_STREAM(PLOG_STREAM(FATAL), !ANALYZER_ASSUME_TRUE(condition)) \
@@ -810,6 +889,7 @@ DEFINE_CHECK_OP_IMPL(GT, > )
 #define DLOG_IS_ON(severity) LOG_IS_ON(severity)
 #define DLOG_IF(severity, condition) LOG_IF(severity, condition)
 #define DLOG_ASSERT(condition) LOG_ASSERT(condition)
+#define DLOG_ONCE(severity) LOG_ONCE(severity)
 #define DPLOG_IF(severity, condition) PLOG_IF(severity, condition)
 #define DVLOG_IF(verboselevel, condition) VLOG_IF(verboselevel, condition)
 #define DVPLOG_IF(verboselevel, condition) VPLOG_IF(verboselevel, condition)
@@ -823,6 +903,7 @@ DEFINE_CHECK_OP_IMPL(GT, > )
 #define DLOG_IS_ON(severity) false
 #define DLOG_IF(severity, condition) EAT_STREAM_PARAMETERS
 #define DLOG_ASSERT(condition) EAT_STREAM_PARAMETERS
+#define DLOG_ONCE(severity) EAT_STREAM_PARAMETERS
 #define DPLOG_IF(severity, condition) EAT_STREAM_PARAMETERS
 #define DVLOG_IF(verboselevel, condition) EAT_STREAM_PARAMETERS
 #define DVPLOG_IF(verboselevel, condition) EAT_STREAM_PARAMETERS
@@ -866,7 +947,7 @@ const LogSeverity LOG_DCHECK = LOG_FATAL;
 // DCHECK_IS_ON() is true. When DCHECK_IS_ON() is false, the macros use
 // EAT_STREAM_PARAMETERS to avoid expressions that would create temporaries.
 
-#if defined(_PREFAST_) && defined(OS_WIN)
+#if defined(_PREFAST_) && (defined(OS_WIN) || defined(STARBOARD))
 // See comments on the previous use of __analysis_assume.
 
 #define DCHECK(condition)                    \
@@ -908,14 +989,18 @@ const LogSeverity LOG_DCHECK = LOG_FATAL;
 #if DCHECK_IS_ON()
 
 #define DCHECK_OP(name, op, val1, val2)                                \
-  switch (0) case 0: default:                                          \
-  if (::logging::CheckOpResult true_if_passed =                        \
-      ::logging::Check##name##Impl((val1), (val2),                     \
-                                   #val1 " " #op " " #val2))           \
-   ;                                                                   \
-  else                                                                 \
-    ::logging::LogMessage(__FILE__, __LINE__, ::logging::LOG_DCHECK,   \
-                          true_if_passed.message()).stream()
+  switch (0)                                                           \
+  case 0:                                                              \
+  default:                                                             \
+    if (::logging::CheckOpResult true_if_passed =                      \
+            ::logging::Check##name##Impl((val1), (val2),               \
+                                         #val1 " " #op " " #val2))     \
+      ;                                                                \
+    else                                                               \
+      ::logging::LogMessage(__FILE__, __LINE__, ::logging::LOG_DCHECK, \
+                            true_if_passed.message())                  \
+              .stream() &&                                             \
+          IMMEDIATE_CRASH()
 
 #else  // DCHECK_IS_ON()
 
@@ -1039,10 +1124,14 @@ class LogMessageVoidify {
   void operator&(std::ostream&) { }
 };
 
+#if defined(STARBOARD)
+typedef SbSystemError SystemErrorCode;
+#else
 #if defined(OS_WIN)
 typedef unsigned long SystemErrorCode;
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
 typedef int SystemErrorCode;
+#endif
 #endif
 
 // Alias for ::GetLastError() on Windows and errno on POSIX. Avoids having to
@@ -1050,6 +1139,27 @@ typedef int SystemErrorCode;
 BASE_EXPORT SystemErrorCode GetLastSystemErrorCode();
 BASE_EXPORT std::string SystemErrorCodeToString(SystemErrorCode error_code);
 
+#if defined(STARBOARD)
+// Appends a formatted system message of the GetLastError() type.
+class BASE_EXPORT StarboardErrorLogMessage {
+ public:
+  StarboardErrorLogMessage(const char* file,
+                           int line,
+                           LogSeverity severity,
+                           SystemErrorCode err);
+
+  // Appends the error message before destructing the encapsulated class.
+  ~StarboardErrorLogMessage();
+
+  std::ostream& stream() { return log_message_.stream(); }
+
+ private:
+  SystemErrorCode err_;
+  LogMessage log_message_;
+
+  DISALLOW_COPY_AND_ASSIGN(StarboardErrorLogMessage);
+};
+#else
 #if defined(OS_WIN)
 // Appends a formatted system message of the GetLastError() type.
 class BASE_EXPORT Win32ErrorLogMessage {
@@ -1091,6 +1201,7 @@ class BASE_EXPORT ErrnoLogMessage {
   DISALLOW_COPY_AND_ASSIGN(ErrnoLogMessage);
 };
 #endif  // OS_WIN
+#endif  // STARBOARD
 
 // Closes the log file explicitly if open.
 // NOTE: Since the log file is opened as necessary by the action of logging
@@ -1121,6 +1232,7 @@ BASE_EXPORT std::wstring GetLogFileFullPath();
 
 }  // namespace logging
 
+#if !defined(STARBOARD)  // This is implemented already in Starboard.
 // Note that "The behavior of a C++ program is undefined if it adds declarations
 // or definitions to namespace std or to a namespace within namespace std unless
 // otherwise specified." --C++11[namespace.std]
@@ -1141,11 +1253,15 @@ inline std::ostream& operator<<(std::ostream& out, const std::wstring& wstr) {
   return out << wstr.c_str();
 }
 }  // namespace std
+#endif  // !defined(STARBOARD)
 
 // The NOTIMPLEMENTED() macro annotates codepaths which have not been
 // implemented yet. If output spam is a serious concern,
 // NOTIMPLEMENTED_LOG_ONCE can be used.
-
+#if defined(OFFICIAL_BUILD)
+#define NOTIMPLEMENTED() EAT_STREAM_PARAMETERS
+#define NOTIMPLEMENTED_LOG_ONCE() EAT_STREAM_PARAMETERS
+#else
 #if defined(COMPILER_GCC)
 // On Linux, with GCC, we can use __PRETTY_FUNCTION__ to get the demangled name
 // of the current function in the NOTIMPLEMENTED message.
@@ -1154,18 +1270,14 @@ inline std::ostream& operator<<(std::ostream& out, const std::wstring& wstr) {
 #define NOTIMPLEMENTED_MSG "NOT IMPLEMENTED"
 #endif
 
-#if defined(OS_ANDROID) && defined(OFFICIAL_BUILD)
-#define NOTIMPLEMENTED() EAT_STREAM_PARAMETERS
-#define NOTIMPLEMENTED_LOG_ONCE() EAT_STREAM_PARAMETERS
-#else
 #define NOTIMPLEMENTED() LOG(ERROR) << NOTIMPLEMENTED_MSG
-#define NOTIMPLEMENTED_LOG_ONCE()                      \
-  do {                                                 \
-    static bool logged_once = false;                   \
-    LOG_IF(ERROR, !logged_once) << NOTIMPLEMENTED_MSG; \
-    logged_once = true;                                \
-  } while (0);                                         \
-  EAT_STREAM_PARAMETERS
+#define NOTIMPLEMENTED_LOG_ONCE()                                             \
+  LOG_IF(ERROR,                                                               \
+         (!::logging::LogOnceHelper<::logging::hash_32_fnv1a_const(__FILE__), \
+                                    __LINE__>::logged_ &&                     \
+          (::logging::LogOnceHelper<::logging::hash_32_fnv1a_const(__FILE__), \
+                                    __LINE__>::logged_ = true)))              \
+      << NOTIMPLEMENTED_MSG
 #endif
 
 #endif  // BASE_LOGGING_H_

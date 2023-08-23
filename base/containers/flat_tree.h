@@ -247,8 +247,13 @@ class flat_tree {
   // idiom when deleting multiple non-consecutive elements.
 
   iterator erase(iterator position);
+#if !defined(STARBOARD)
+  // Raspbian gcc 4.8 does not provide std::vector::erase(const_iterator).
   iterator erase(const_iterator position);
   iterator erase(const_iterator first, const_iterator last);
+#else
+  iterator erase(iterator first, iterator last);
+#endif
   template <typename K>
   size_type erase(const K& key);
 
@@ -271,6 +276,9 @@ class flat_tree {
 
   template <typename K>
   const_iterator find(const K& key) const;
+
+  template <typename K>
+  bool contains(const K& key) const;
 
   template <typename K>
   std::pair<iterator, iterator> equal_range(const K& key);
@@ -798,11 +806,13 @@ auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::erase(
   return impl_.body_.erase(position);
 }
 
+#if !defined(STARBOARD)
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::erase(
     const_iterator position) -> iterator {
   return impl_.body_.erase(position);
 }
+#endif
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
 template <typename K>
@@ -816,8 +826,13 @@ auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::erase(const K& val)
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::erase(
+#if defined(STARBOARD)
+    iterator first,
+    iterator last) -> iterator {
+#else
     const_iterator first,
     const_iterator last) -> iterator {
+#endif
   return impl_.body_.erase(first, last);
 }
 
@@ -860,6 +875,13 @@ auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::find(
     const K& key) const -> const_iterator {
   auto eq_range = equal_range(key);
   return (eq_range.first == eq_range.second) ? end() : eq_range.first;
+}
+
+template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
+template <typename K>
+bool flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::contains(const K& key) const {
+  auto lower = lower_bound(key);
+  return lower != end() && !key_comp()(key, GetKeyFromValue()(*lower));
 }
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>
@@ -939,7 +961,16 @@ template <class... Args>
 auto flat_tree<Key, Value, GetKeyFromValue, KeyCompare>::unsafe_emplace(
     const_iterator position,
     Args&&... args) -> iterator {
+#if defined(STARBOARD)
+  // On some compilers, such as gcc 4.8, std::vector::emplace()'s first
+  // argument is an "iterator", not a "const_iterator" as the specification
+  // dictates it should be.
+  iterator non_const_position =
+      begin() + std::distance<const_iterator>(begin(), position);
+  return impl_.body_.emplace(non_const_position, std::forward<Args>(args)...);
+#else
   return impl_.body_.emplace(position, std::forward<Args>(args)...);
+#endif  // defined(STARBOARD)
 }
 
 template <class Key, class Value, class GetKeyFromValue, class KeyCompare>

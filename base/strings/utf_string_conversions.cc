@@ -4,13 +4,12 @@
 
 #include "base/strings/utf_string_conversions.h"
 
-#include <stdint.h>
-
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversion_utils.h"
 #include "base/third_party/icu/icu_utf.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -51,9 +50,11 @@ struct SizeCoefficient<wchar_t, char16> {
 };
 #endif  // defined(WCHAR_T_IS_UTF32)
 
+#if __cplusplus >= 201402L
 template <typename SrcChar, typename DestChar>
 constexpr int size_coefficient_v =
     SizeCoefficient<std::decay_t<SrcChar>, std::decay_t<DestChar>>::value;
+#endif
 
 // UnicodeAppendUnsafe --------------------------------------------------------
 // Function overloads that write code_point to the output string. Output string
@@ -179,9 +180,15 @@ bool UTFConversion(const InputString& src_str, DestString* dest_str) {
     return true;
   }
 
-  dest_str->resize(src_str.length() *
-                   size_coefficient_v<typename InputString::value_type,
-                                      typename DestString::value_type>);
+  dest_str->resize(
+      src_str.length() *
+#if __cplusplus < 201402L
+      SizeCoefficient<std::decay_t<typename InputString::value_type>,
+                      std::decay_t<typename DestString::value_type>>::value);
+#else
+      size_coefficient_v<typename InputString::value_type,
+                         typename DestString::value_type>);
+#endif
 
   // Empty string is ASCII => it OK to call operator[].
   auto* dest = &(*dest_str)[0];
@@ -193,7 +200,10 @@ bool UTFConversion(const InputString& src_str, DestString* dest_str) {
   bool res = DoUTFConversion(src_str.data(), src_len32, dest, &dest_len32);
 
   dest_str->resize(dest_len32);
-  dest_str->shrink_to_fit();
+  // dest_str->shrink_to_fit();
+  // Workaround for missing symbols linking issue for Xcode 13.2.1
+  // Mac builds.
+  dest_str->reserve(0);
 
   return res;
 }

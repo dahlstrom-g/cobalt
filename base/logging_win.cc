@@ -6,6 +6,9 @@
 #include "base/memory/singleton.h"
 #include <initguid.h>  // NOLINT
 
+#include "starboard/common/string.h"
+#include "starboard/types.h"
+
 namespace logging {
 
 using base::win::EtwEventLevel;

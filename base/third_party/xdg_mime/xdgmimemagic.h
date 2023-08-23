@@ -29,6 +29,7 @@
 #define __XDG_MIME_MAGIC_H__
 
 #include <unistd.h>
+#include "starboard/types.h"
 #include "xdgmime.h"
 typedef struct XdgMimeMagic XdgMimeMagic;
 

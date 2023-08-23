@@ -6,9 +6,6 @@
 // The fuzzer input is passed through parsing twice,
 // so that presumably valid json is parsed/written again.
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <string>
 
 #include "base/json/json_reader.h"
@@ -16,6 +13,8 @@
 #include "base/json/string_escape.h"
 #include "base/logging.h"
 #include "base/values.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 // Entry point for libFuzzer.
 // We will use the last byte of data as parsing options.

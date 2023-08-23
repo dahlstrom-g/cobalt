@@ -26,7 +26,10 @@
 
 #if !defined(OS_WIN)
 #include "base/callback.h"
+#include "starboard/types.h"
 #endif
+
+#if !defined(STARBOARD)
 
 namespace base {
 
@@ -156,5 +159,7 @@ class BASE_EXPORT WaitableEventWatcher
 };
 
 }  // namespace base
+
+#endif  // !defined(STARBOARD)
 
 #endif  // BASE_SYNCHRONIZATION_WAITABLE_EVENT_WATCHER_H_

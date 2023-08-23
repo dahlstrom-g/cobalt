@@ -10,8 +10,6 @@
 #include <sched.h>
 #include <setjmp.h>
 #include <signal.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
@@ -64,6 +62,8 @@
 #include <sys/event.h>
 
 #include "base/feature_list.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #else
 extern char** environ;
 #endif

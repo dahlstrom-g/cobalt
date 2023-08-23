@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-
 #include <string>
 
 #include "base/i18n/rtl.h"
 #include "base/i18n/string_search.h"
 #include "base/strings/string16.h"
 #include "base/strings/utf_string_conversions.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "third_party/icu/source/i18n/unicode/usearch.h"
 
 namespace base {
 namespace i18n {
+
+#if !defined(UCONFIG_NO_COLLATION)
 
 // Note on setting default locale for testing: The current default locale on
 // the Mac trybot is en_US_POSIX, with which primary-level collation strength
@@ -223,6 +224,8 @@ TEST(StringSearchTest, FixedPatternMultipleSearch) {
   if (locale_is_posix)
     SetICUDefaultLocale(default_locale.data());
 }
+
+#endif  // !defined(UCONFIG_NO_COLLATION)
 
 }  // namespace i18n
 }  // namespace base

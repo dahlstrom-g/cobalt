@@ -4,16 +4,23 @@
 
 #include "base/time/time.h"
 
-#include <stdint.h>
+#if !defined(STARBOARD)
 #include <time.h>
+#endif
+
 #include <limits>
 #include <string>
+
+#include "starboard/types.h"
 
 #include "base/build_time.h"
 #include "base/compiler_specific.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/strings/stringprintf.h"
+#if defined(STARBOARD)
+#include "base/test/time_helpers.h"
+#endif  // defined(STARBOARD)
 #include "base/threading/platform_thread.h"
 #include "base/time/time_override.h"
 #include "build/build_config.h"
@@ -93,6 +100,14 @@ TEST(TimeTestOutOfBounds, FromExplodedOutOfBoundsTime) {
 class TimeTest : public testing::Test {
  protected:
   void SetUp() override {
+#if defined(STARBOARD)
+    // Since we don't have access to mktime, let's use time_helpers to do the
+    // same thing in a portable way.
+    comparison_time_local_ = base::test::time_helpers::TestDateToTime(
+        base::test::time_helpers::kTimeZoneLocal);
+    comparison_time_pdt_ = base::test::time_helpers::TestDateToTime(
+        base::test::time_helpers::kTimeZonePacific);
+#else   // defined(STARBOARD)
     // Use mktime to get a time_t, and turn it into a PRTime by converting
     // seconds to microseconds.  Use 15th Oct 2007 12:45:00 local.  This
     // must be a time guaranteed to be outside of a DST fallback hour in
@@ -115,6 +130,7 @@ class TimeTest : public testing::Test {
 
     // time_t representation of 15th Oct 2007 12:45:00 PDT
     comparison_time_pdt_ = Time::FromTimeT(1192477500);
+#endif
   }
 
   Time comparison_time_local_;
@@ -150,6 +166,8 @@ TEST_F(TimeTest, TimeT) {
   EXPECT_EQ(0, Time().ToTimeT());
   EXPECT_EQ(0, Time::FromTimeT(0).ToInternalValue());
 }
+
+#if !defined(STARBOARD)
 
 // Test conversions to/from time_t and exploding/unexploding (utc time).
 TEST_F(TimeTest, UTCTimeT) {
@@ -229,6 +247,8 @@ TEST_F(TimeTest, LocalTimeT) {
   time_t now_t_2 = our_time_2.ToTimeT();
   EXPECT_EQ(now_t_1, now_t_2);
 }
+
+#endif  // !defined(STARBOARD)
 
 // Test conversions to/from javascript time.
 TEST_F(TimeTest, JsTime) {
@@ -311,6 +331,22 @@ TEST_F(TimeTest, LocalMidnight) {
   EXPECT_EQ(0, exploded.millisecond);
 }
 
+#if defined(STARBOARD)
+TEST_F(TimeTest, ParseTimeTest1) {
+  Time now = Time::Now();
+
+  Time parsed_time;
+  std::string formatted = base::test::time_helpers::TimeFormatUTC(now);
+  EXPECT_TRUE(Time::FromUTCString(formatted.c_str(), &parsed_time));
+  EXPECT_GE(1, (now - parsed_time).InSecondsF());
+  EXPECT_GE(1, (parsed_time - now).InSecondsF());
+
+  formatted = base::test::time_helpers::TimeFormatLocal(now);
+  EXPECT_TRUE(Time::FromString(formatted.c_str(), &parsed_time));
+  EXPECT_GE(1, (now - parsed_time).InSecondsF());
+  EXPECT_GE(1, (parsed_time - now).InSecondsF());
+}
+#else  // !defined(STARBOARD)
 TEST_F(TimeTest, ParseTimeTest1) {
   time_t current_time = 0;
   time(&current_time);
@@ -329,6 +365,7 @@ TEST_F(TimeTest, ParseTimeTest1) {
   EXPECT_TRUE(Time::FromString(time_buf, &parsed_time));
   EXPECT_EQ(current_time, parsed_time.ToTimeT());
 }
+#endif  // !defined(STARBOARD)
 
 TEST_F(TimeTest, DayOfWeekSunday) {
   Time time;
@@ -733,7 +770,7 @@ TEST_F(TimeTest, FromExploded_MinMax) {
     EXPECT_FALSE(parsed_time.is_null());
 #endif
 
-#if !defined(OS_ANDROID) && !defined(OS_MACOSX)
+#if !defined(OS_ANDROID) && !defined(OS_MACOSX) && !defined(STARBOARD)
     // The dates earlier than |kExplodedMinYear| that don't work are OS version
     // dependent on Android and Mac (for example, macOS 10.13 seems to support
     // dates before 1902).
@@ -755,8 +792,12 @@ TEST_F(TimeTest, FromExploded_MinMax) {
     EXPECT_FALSE(parsed_time.is_null());
 
     exploded.year++;
+#ifndef STARBOARD
+    // Cobalt's Raspi platform can have time older than 1901-01-01 or later
+    // than 2038-12-31.
     EXPECT_FALSE(Time::FromUTCExploded(exploded, &parsed_time));
     EXPECT_TRUE(parsed_time.is_null());
+#endif
   }
 }
 
@@ -773,6 +814,8 @@ class TimeOverride {
 // static
 Time TimeOverride::now_time_;
 
+// GetBuildTime is not supported by Starboard.
+#ifndef STARBOARD
 TEST_F(TimeTest, NowOverride) {
   TimeOverride::now_time_ = Time::UnixEpoch();
 
@@ -826,6 +869,7 @@ TEST_F(TimeTest, NowOverride) {
   EXPECT_LT(build_time, subtle::TimeNowFromSystemTimeIgnoringOverride());
   EXPECT_GT(Time::Max(), subtle::TimeNowFromSystemTimeIgnoringOverride());
 }
+#endif
 
 TEST(TimeTicks, Deltas) {
   for (int index = 0; index < 50; index++) {
@@ -962,6 +1006,11 @@ ThreadTicks ThreadTicksOverride::now_ticks_;
 #define MAYBE_NowOverride NowOverride
 #endif
 TEST(ThreadTicks, MAYBE_NowOverride) {
+  if (!SbTimeIsTimeThreadNowSupported()) {
+    SB_LOG(INFO) << "Time thread now not supported. Test skipped.";
+    return;
+  }
+
   ThreadTicksOverride::now_ticks_ = ThreadTicks::Min();
 
   // Override is not active. All Now() methods should return a sensible value.
@@ -1551,7 +1600,11 @@ constexpr TimeTicks TestTimeTicksConstexprCopyAssignment() {
 
 TEST(TimeTicks, ConstexprAndTriviallyCopiable) {
   // "Trivially copyable" is necessary for use in std::atomic<TimeTicks>.
+#ifdef STARBOARD
+  static_assert(std::is_trivially_destructible<TimeTicks>(), "");
+#else
   static_assert(std::is_trivially_copyable<TimeTicks>(), "");
+#endif
 
   // Copy ctor.
   constexpr TimeTicks a = TimeTicks::FromInternalValue(12345);
@@ -1573,7 +1626,11 @@ constexpr ThreadTicks TestThreadTicksConstexprCopyAssignment() {
 
 TEST(ThreadTicks, ConstexprAndTriviallyCopiable) {
   // "Trivially copyable" is necessary for use in std::atomic<ThreadTicks>.
+#ifdef STARBOARD
+  static_assert(std::is_trivially_destructible<ThreadTicks>(), "");
+#else
   static_assert(std::is_trivially_copyable<ThreadTicks>(), "");
+#endif
 
   // Copy ctor.
   constexpr ThreadTicks a = ThreadTicks::FromInternalValue(12345);
@@ -1595,7 +1652,11 @@ constexpr TimeDelta TestTimeDeltaConstexprCopyAssignment() {
 
 TEST(TimeDelta, ConstexprAndTriviallyCopiable) {
   // "Trivially copyable" is necessary for use in std::atomic<TimeDelta>.
+#ifdef STARBOARD
+  static_assert(std::is_trivially_destructible<TimeDelta>(), "");
+#else
   static_assert(std::is_trivially_copyable<TimeDelta>(), "");
+#endif
 
   // Copy ctor.
   constexpr TimeDelta a = TimeDelta::FromSeconds(1);

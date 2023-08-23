@@ -7,6 +7,9 @@
 
 #include <type_traits>
 #include <utility>
+#if defined(STARBOARD)
+#include <new>
+#endif
 
 #include "base/logging.h"
 #include "base/template_util.h"
@@ -43,6 +46,9 @@ struct OptionalStorageBase {
   // Initializing |empty_| here instead of using default member initializing
   // to avoid errors in g++ 4.8.
   constexpr OptionalStorageBase() : empty_('\0') {}
+
+  OptionalStorageBase(const OptionalStorageBase&) = default;
+  OptionalStorageBase(OptionalStorageBase&& other) = default;
 
   template <class... Args>
   constexpr explicit OptionalStorageBase(in_place_t, Args&&... args)
@@ -120,6 +126,9 @@ struct OptionalStorageBase<T, true /* trivially destructible */> {
     char empty_;
     T value_;
   };
+
+  OptionalStorageBase(const OptionalStorageBase&) = default;
+  OptionalStorageBase(OptionalStorageBase&& other) = default;
 };
 
 // Implement conditional constexpr copy and move constructors. These are
@@ -131,7 +140,11 @@ struct OptionalStorageBase<T, true /* trivially destructible */> {
 // placement-new is prohibited in constexpr.
 template <typename T,
           bool = is_trivially_copy_constructible<T>::value,
+#ifdef STARBOARD
+          bool = std::is_trivially_destructible<T>::value>
+#else
           bool = std::is_trivially_move_constructible<T>::value>
+#endif
 struct OptionalStorage : OptionalStorageBase<T> {
   // This is no trivially {copy,move} constructible case. Other cases are
   // defined below as specializations.
@@ -149,7 +162,13 @@ struct OptionalStorage : OptionalStorageBase<T> {
   // Define it explicitly.
   OptionalStorage() = default;
 
+#if defined(STARBOARD)
+  // Raspbian gcc 4.8 does not provide parent class initialization in implicit
+  // copy constructor.
+  OptionalStorage(const OptionalStorage& other) : OptionalStorageBase<T>() {
+#else
   OptionalStorage(const OptionalStorage& other) {
+#endif
     if (other.is_populated_)
       Init(other.value_);
   }
@@ -172,7 +191,14 @@ struct OptionalStorage<T,
   using OptionalStorageBase<T>::OptionalStorageBase;
 
   OptionalStorage() = default;
+#if defined(STARBOARD)
+  OptionalStorage(const OptionalStorage& other) : OptionalStorageBase<T>() {
+    if (other.is_populated_)
+      Init(other.value_);
+  }
+#else
   OptionalStorage(const OptionalStorage& other) = default;
+#endif
 
   OptionalStorage(OptionalStorage&& other) noexcept(
       std::is_nothrow_move_constructible<T>::value) {
@@ -194,9 +220,13 @@ struct OptionalStorage<T,
   OptionalStorage() = default;
   OptionalStorage(OptionalStorage&& other) = default;
 
+#if defined(STARBOARD)
+  OptionalStorage(const OptionalStorage& other)
+      : OptionalStorageBase<T>(){
+#else
   OptionalStorage(const OptionalStorage& other) {
-    if (other.is_populated_)
-      Init(other.value_);
+#endif
+            if (other.is_populated_) Init(other.value_);
   }
 };
 
@@ -220,7 +250,14 @@ class OptionalBase {
   // because of C++ language restriction.
  protected:
   constexpr OptionalBase() = default;
+#if defined(STARBOARD)
+  constexpr OptionalBase(const OptionalBase& other) {
+    if (other.storage_.is_populated_)
+      storage_.Init(other.storage_.value_);
+  }
+#else
   constexpr OptionalBase(const OptionalBase& other) = default;
+#endif
   constexpr OptionalBase(OptionalBase&& other) = default;
 
   template <class... Args>
@@ -442,10 +479,18 @@ class OPTIONAL_DECLSPEC_EMPTY_BASES Optional
   using value_type = T;
 
   // Defer default/copy/move constructor implementation to OptionalBase.
+#if defined(STARBOARD)
+  // Raspi specialization.
+  constexpr Optional() : internal::OptionalBase<T>() {}
+  constexpr Optional(const Optional& other) noexcept
+      : internal::OptionalBase<T>(other) {}
+  constexpr Optional(Optional&& other) = default;
+#else
   constexpr Optional() = default;
   constexpr Optional(const Optional& other) = default;
   constexpr Optional(Optional&& other) noexcept(
       std::is_nothrow_move_constructible<T>::value) = default;
+#endif
 
   constexpr Optional(nullopt_t) {}  // NOLINT(runtime/explicit)
 
@@ -532,9 +577,12 @@ class OPTIONAL_DECLSPEC_EMPTY_BASES Optional
 
   // Defer copy-/move- assign operator implementation to OptionalBase.
   Optional& operator=(const Optional& other) = default;
+#if !defined(STARBOARD) && __cplusplus < 201402L
+  // Raspbian compiler does not like the noexcept specifier.
   Optional& operator=(Optional&& other) noexcept(
       std::is_nothrow_move_assignable<T>::value&&
           std::is_nothrow_move_constructible<T>::value) = default;
+#endif
 
   Optional& operator=(nullopt_t) {
     FreeIfNeeded();
@@ -783,7 +831,7 @@ constexpr bool operator!=(nullopt_t, const Optional<T>& opt) {
 }
 
 template <class T>
-constexpr bool operator<(const Optional<T>& opt, nullopt_t) {
+constexpr bool operator<(const Optional<T>&, nullopt_t) {
   return false;
 }
 
@@ -798,7 +846,7 @@ constexpr bool operator<=(const Optional<T>& opt, nullopt_t) {
 }
 
 template <class T>
-constexpr bool operator<=(nullopt_t, const Optional<T>& opt) {
+constexpr bool operator<=(nullopt_t, const Optional<T>&) {
   return true;
 }
 
@@ -808,12 +856,12 @@ constexpr bool operator>(const Optional<T>& opt, nullopt_t) {
 }
 
 template <class T>
-constexpr bool operator>(nullopt_t, const Optional<T>& opt) {
+constexpr bool operator>(nullopt_t, const Optional<T>&) {
   return false;
 }
 
 template <class T>
-constexpr bool operator>=(const Optional<T>& opt, nullopt_t) {
+constexpr bool operator>=(const Optional<T>&, nullopt_t) {
   return true;
 }
 

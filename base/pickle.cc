@@ -14,6 +14,8 @@
 #include "base/numerics/safe_conversions.h"
 #include "base/numerics/safe_math.h"
 #include "build/build_config.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -260,12 +262,13 @@ Pickle::Pickle(const Pickle& other)
       capacity_after_header_(0),
       write_offset_(other.write_offset_) {
   Resize(other.header_->payload_size);
-  memcpy(header_, other.header_, header_size_ + other.header_->payload_size);
+  memcpy(header_, other.header_,
+               header_size_ + other.header_->payload_size);
 }
 
 Pickle::~Pickle() {
   if (capacity_after_header_ != kCapacityReadOnly)
-    free(header_);
+    SbMemoryDeallocate(header_);
 }
 
 Pickle& Pickle::operator=(const Pickle& other) {
@@ -277,13 +280,13 @@ Pickle& Pickle::operator=(const Pickle& other) {
     capacity_after_header_ = 0;
   }
   if (header_size_ != other.header_size_) {
-    free(header_);
+    SbMemoryDeallocate(header_);
     header_ = nullptr;
     header_size_ = other.header_size_;
   }
   Resize(other.header_->payload_size);
   memcpy(header_, other.header_,
-         other.header_size_ + other.header_->payload_size);
+               other.header_size_ + other.header_->payload_size);
   write_offset_ = other.write_offset_;
   return *this;
 }
@@ -336,7 +339,7 @@ bool Pickle::HasAttachments() const {
 void Pickle::Resize(size_t new_capacity) {
   CHECK_NE(capacity_after_header_, kCapacityReadOnly);
   capacity_after_header_ = bits::Align(new_capacity, kPayloadUnit);
-  void* p = realloc(header_, GetTotalAllocatedSize());
+  void* p = SbMemoryReallocate(header_, GetTotalAllocatedSize());
   CHECK(p);
   header_ = reinterpret_cast<Header*>(p);
 }
@@ -418,7 +421,8 @@ inline void* Pickle::ClaimUninitializedBytesInternal(size_t length) {
   }
 
   char* write = mutable_payload() + write_offset_;
-  memset(write + length, 0, data_len - length);  // Always initialize padding
+  memset(write + length, 0,
+              data_len - length);  // Always initialize padding
   header_->payload_size = static_cast<uint32_t>(new_size);
   write_offset_ = new_size;
   return write;

@@ -5,6 +5,7 @@
 #include "base/metrics/histogram_functions.h"
 
 #include "base/metrics/histogram_macros.h"
+#include "base/metrics/statistics_recorder.h"
 #include "base/test/metrics/histogram_tester.h"
 #include "base/time/time.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -19,6 +20,8 @@ enum UmaHistogramTestingEnum {
 };
 
 TEST(HistogramFunctionsTest, ExactLinear) {
+  std::unique_ptr<StatisticsRecorder> recorder =
+      StatisticsRecorder::CreateTemporaryForTesting();
   std::string histogram("Testing.UMA.HistogramExactLinear");
   HistogramTester tester;
   UmaHistogramExactLinear(histogram, 10, 100);
@@ -38,6 +41,7 @@ TEST(HistogramFunctionsTest, ExactLinear) {
   tester.ExpectTotalCount(histogram, 5);
 }
 
+#if !defined(STARBOARD)
 TEST(HistogramFunctionsTest, Enumeration) {
   std::string histogram("Testing.UMA.HistogramEnumeration");
   HistogramTester tester;
@@ -53,8 +57,11 @@ TEST(HistogramFunctionsTest, Enumeration) {
       histogram, static_cast<int>(UMA_HISTOGRAM_TESTING_ENUM_THIRD) + 1, 1);
   tester.ExpectTotalCount(histogram, 2);
 }
+#endif
 
 TEST(HistogramFunctionsTest, Boolean) {
+  std::unique_ptr<StatisticsRecorder> recorder =
+      StatisticsRecorder::CreateTemporaryForTesting();
   std::string histogram("Testing.UMA.HistogramBoolean");
   HistogramTester tester;
   UmaHistogramBoolean(histogram, true);
@@ -65,6 +72,8 @@ TEST(HistogramFunctionsTest, Boolean) {
 }
 
 TEST(HistogramFunctionsTest, Percentage) {
+  std::unique_ptr<StatisticsRecorder> recorder =
+      StatisticsRecorder::CreateTemporaryForTesting();
   std::string histogram("Testing.UMA.HistogramPercentage");
   HistogramTester tester;
   UmaHistogramPercentage(histogram, 50);
@@ -76,6 +85,8 @@ TEST(HistogramFunctionsTest, Percentage) {
 }
 
 TEST(HistogramFunctionsTest, Counts) {
+  std::unique_ptr<StatisticsRecorder> recorder =
+      StatisticsRecorder::CreateTemporaryForTesting();
   std::string histogram("Testing.UMA.HistogramCount.Custom");
   HistogramTester tester;
   UmaHistogramCustomCounts(histogram, 10, 1, 100, 10);
@@ -91,6 +102,8 @@ TEST(HistogramFunctionsTest, Counts) {
 }
 
 TEST(HistogramFunctionsTest, Times) {
+  std::unique_ptr<StatisticsRecorder> recorder =
+      StatisticsRecorder::CreateTemporaryForTesting();
   std::string histogram("Testing.UMA.HistogramTimes");
   HistogramTester tester;
   UmaHistogramTimes(histogram, TimeDelta::FromSeconds(1));
@@ -108,6 +121,8 @@ TEST(HistogramFunctionsTest, Times) {
 }
 
 TEST(HistogramFunctionsTest, Sparse_SupportsLargeRange) {
+  std::unique_ptr<StatisticsRecorder> recorder =
+      StatisticsRecorder::CreateTemporaryForTesting();
   std::string histogram("Testing.UMA.HistogramSparse");
   HistogramTester tester;
   UmaHistogramSparse(histogram, 0);
@@ -118,6 +133,8 @@ TEST(HistogramFunctionsTest, Sparse_SupportsLargeRange) {
 }
 
 TEST(HistogramFunctionsTest, Sparse_SupportsNegativeValues) {
+  std::unique_ptr<StatisticsRecorder> recorder =
+      StatisticsRecorder::CreateTemporaryForTesting();
   std::string histogram("Testing.UMA.HistogramSparse");
   HistogramTester tester;
   UmaHistogramSparse(histogram, -1);

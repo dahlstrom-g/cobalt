@@ -14,6 +14,8 @@
 #include "base/path_service.h"
 #include "base/strings/strcat.h"
 #include "base/test/fontconfig_util_linux.h"
+#include "starboard/common/string.h"
+#include "starboard/types.h"
 
 // GIANT WARNING: The point of this file is to front-load construction of the
 // font cache [which takes 600ms] from test run time to compile time. This saves

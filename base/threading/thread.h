@@ -5,8 +5,6 @@
 #ifndef BASE_THREADING_THREAD_H_
 #define BASE_THREADING_THREAD_H_
 
-#include <stddef.h>
-
 #include <memory>
 #include <string>
 
@@ -22,11 +20,16 @@
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/platform_thread.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 
 namespace base {
 
 class MessagePump;
 class RunLoop;
+
+#if defined(STARBOARD)
+const size_t kUnitTestStackSize = 1024 * 1024;
+#endif
 
 namespace sequence_manager {
 class SequenceManager;
@@ -111,6 +114,15 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
   // Constructor.
   // name is a display string to identify the thread.
   explicit Thread(const std::string& name);
+
+#if !defined(BASE_DONT_ENFORCE_THREAD_NAME_LENGTH)
+  // Constructor, checks length of name literal at compile-time
+  template <size_t N>
+  explicit Thread(char const (&name)[N]) : Thread(std::string(name)) {
+    // 16 is common to Linux and other Starboard platforms
+    static_assert(N <= 16, "Thread name too long, max 16");
+  }
+#endif
 
   // Destroys the thread, stopping it if necessary.
   //
@@ -279,8 +291,8 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
   // Called just after the message loop ends
   virtual void CleanUp() {}
 
-  static void SetThreadWasQuitProperly(bool flag);
-  static bool GetThreadWasQuitProperly();
+  void SetThreadWasQuitProperly(bool flag);
+  bool GetThreadWasQuitProperly();
 
   // Bind this Thread to an existing MessageLoop instead of starting a new one.
   // TODO(gab): Remove this after ios/ has undergone the same surgery as
@@ -355,6 +367,14 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
 
   // The name of the thread.  Used for debugging purposes.
   const std::string name_;
+
+#ifndef NDEBUG
+  // We use this member variable to record whether or not a thread exited
+  // because its Stop method was called.  This allows us to catch cases where
+  // MessageLoop::QuitWhenIdle() is called directly, which is unexpected when
+  // using a Thread to setup and run a MessageLoop.
+  bool was_quit_properly_;
+#endif
 
   // Signaled when the created thread gets ready to use the message loop.
   mutable WaitableEvent start_event_;

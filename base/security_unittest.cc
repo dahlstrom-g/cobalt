@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +12,10 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+
+#include "starboard/types.h"
+
+#include "starboard/memory.h"
 
 #include "base/allocator/buildflags.h"
 #include "base/files/file_util.h"
@@ -72,6 +75,9 @@ void OverflowTestsSoftExpectTrue(bool overflow_detected) {
   }
 }
 
+// This test expects to not throw when allocating exessive amount of memory.
+// But Starboard aborts program if allocation request is too big to fullfill.
+#if !defined(STARBOARD)
 #if defined(OS_IOS) || defined(OS_FUCHSIA) || defined(ADDRESS_SANITIZER) || \
     defined(THREAD_SANITIZER) || defined(MEMORY_SANITIZER)
 #define MAYBE_NewOverflow DISABLED_NewOverflow
@@ -113,6 +119,7 @@ TEST(SecurityTest, MAYBE_NewOverflow) {
   }
 #endif  // !defined(OS_WIN) || !defined(ARCH_CPU_64_BITS)
 }
+#endif  // STARBOARD
 
 #if defined(OS_LINUX) && defined(__x86_64__)
 // Check if ptr1 and ptr2 are separated by less than size chars.
@@ -143,7 +150,7 @@ TEST(SecurityTest, MALLOC_OVERFLOW_TEST(RandomMemoryAllocations)) {
   // the sophisticated allocators.
   size_t kAllocSize = 1<<20;
   std::unique_ptr<char, base::FreeDeleter> ptr(
-      static_cast<char*>(malloc(kAllocSize)));
+      static_cast<char*>(SbMemoryAllocate(kAllocSize)));
   ASSERT_TRUE(ptr != nullptr);
   // If two pointers are separated by less than 512MB, they are considered
   // to be in the same area.

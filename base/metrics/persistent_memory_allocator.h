@@ -5,8 +5,6 @@
 #ifndef BASE_METRICS_PERSISTENT_MEMORY_ALLOCATOR_H_
 #define BASE_METRICS_PERSISTENT_MEMORY_ALLOCATOR_H_
 
-#include <stdint.h>
-
 #include <atomic>
 #include <memory>
 #include <type_traits>
@@ -17,12 +15,15 @@
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
+#include "starboard/types.h"
 
 namespace base {
 
 class HistogramBase;
 class MemoryMappedFile;
+#if !defined(STARBOARD)
 class SharedMemory;
+#endif
 
 // Simple allocator for pieces of a memory block that may be persistent
 // to some storage or shared across multiple processes. This class resides
@@ -709,7 +710,7 @@ class BASE_EXPORT LocalPersistentMemoryAllocator
   DISALLOW_COPY_AND_ASSIGN(LocalPersistentMemoryAllocator);
 };
 
-
+#if !defined(STARBOARD)
 // This allocator takes a shared-memory object and performs allocation from
 // it. The memory must be previously mapped via Map() or MapAt(). The allocator
 // takes ownership of the memory object.
@@ -735,9 +736,10 @@ class BASE_EXPORT SharedPersistentMemoryAllocator
 
   DISALLOW_COPY_AND_ASSIGN(SharedPersistentMemoryAllocator);
 };
+#endif  // !defined(STARBOARD)
 
-
-#if !defined(OS_NACL)  // NACL doesn't support any kind of file access in build.
+// NACL doesn't support any kind of file access in build.
+#if !defined(OS_NACL) || !defined(STARBOARD)
 // This allocator takes a memory-mapped file object and performs allocation
 // from it. The allocator takes ownership of the file object.
 class BASE_EXPORT FilePersistentMemoryAllocator

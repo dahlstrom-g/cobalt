@@ -9,9 +9,6 @@
 // trace_event_common.h collect and store trace events. Anything not
 // implementation-specific should go in trace_event_common.h instead of here.
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <string>
 
 #include "base/atomicops.h"
@@ -25,6 +22,7 @@
 #include "base/trace_event/trace_event_system_stats_monitor.h"
 #include "base/trace_event/trace_log.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 
 // By default, const char* argument values are assumed to have long-lived scope
 // and will not be copied. Use this macro to force a const char* to be copied.
@@ -261,6 +259,21 @@
 // override base:TimeTicks::Now().
 #define INTERNAL_TRACE_TIME_NOW() base::subtle::TimeNowIgnoringOverride()
 
+#if defined(TRACING_DISABLED)
+
+#define INTERNAL_TRACE_EVENT_ADD(...) (void)0
+#define INTERNAL_TRACE_EVENT_ADD_SCOPED(...) (void)0
+#define INTERNAL_TRACE_EVENT_ADD_SCOPED_WITH_FLOW(...) (void)0
+#define INTERNAL_TRACE_EVENT_ADD_WITH_ID(...) (void)0
+#define INTERNAL_TRACE_EVENT_ADD_WITH_TIMESTAMP(...) (void)0
+#define INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMP(...) (void)0
+#define INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMPS(...) (void)0
+#define INTERNAL_TRACE_EVENT_ADD_LINK_IDS(...) (void)0
+#define INTERNAL_TRACE_EVENT_METADATA_ADD(...) (void)0
+#define INTERNAL_TRACE_EVENT_SCOPED_CONTEXT(...) (void)0
+#define INTERNAL_TRACE_TASK_EXECUTION(...) (void)0
+
+#else
 // Implementation detail: internal macro to create static category and add
 // event if the category is enabled.
 #define INTERNAL_TRACE_EVENT_ADD(phase, category_group, name, flags, ...)  \
@@ -468,6 +481,8 @@
   INTERNAL_TRACE_EVENT_UID(task_pc_event)((task).posted_from.program_counter());
 
 #endif
+
+#endif  // defined(TRACING_DISABLED)
 
 namespace trace_event_internal {
 

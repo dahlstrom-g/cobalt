@@ -29,8 +29,8 @@ class BASE_EXPORT ServiceThread : public Thread {
   // in addition to latency metrics through |task_tracker| if non-null. In that
   // case, this ServiceThread will assume a registered TaskScheduler instance
   // and that |task_tracker| will outlive this ServiceThread.
-  explicit ServiceThread(const TaskTracker* task_tracker,
-                         RepeatingClosure report_heartbeat_metrics_callback);
+  explicit ServiceThread(const TaskTracker* task_tracker
+                         ,RepeatingClosure report_heartbeat_metrics_callback);
 
   ~ServiceThread() override;
 

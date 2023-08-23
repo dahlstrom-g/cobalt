@@ -5,9 +5,10 @@
 #ifndef BASE_TEST_MOCK_ENTROPY_PROVIDER_H_
 #define BASE_TEST_MOCK_ENTROPY_PROVIDER_H_
 
-#include <stdint.h>
-
+#if !defined(STARBOARD)
+// Starboard does not support FieldTrial.
 #include "base/metrics/field_trial.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -28,5 +29,6 @@ class MockEntropyProvider : public base::FieldTrial::EntropyProvider {
 };
 
 }  // namespace base
+#endif  // defined(STARBOARD)
 
 #endif  // BASE_TEST_MOCK_ENTROPY_PROVIDER_H_

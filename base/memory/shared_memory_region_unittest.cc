@@ -12,6 +12,7 @@
 #include "base/sys_info.h"
 #include "base/test/test_shared_memory_util.h"
 #include "build/build_config.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -69,12 +70,14 @@ TYPED_TEST(SharedMemoryRegionTest, MoveRegion) {
   typename TypeParam::MappingType mapping = moved_region.Map();
   ASSERT_TRUE(mapping.IsValid());
   EXPECT_NE(this->rw_mapping_.memory(), mapping.memory());
-  EXPECT_EQ(memcmp(this->rw_mapping_.memory(), mapping.memory(), kRegionSize),
+  EXPECT_EQ(memcmp(this->rw_mapping_.memory(), mapping.memory(),
+                   kRegionSize),
             0);
 
   // Verify that the second mapping reflects changes in the first.
   memset(this->rw_mapping_.memory(), '#', kRegionSize);
-  EXPECT_EQ(memcmp(this->rw_mapping_.memory(), mapping.memory(), kRegionSize),
+  EXPECT_EQ(memcmp(this->rw_mapping_.memory(), mapping.memory(),
+                   kRegionSize),
             0);
 }
 
@@ -92,12 +95,14 @@ TYPED_TEST(SharedMemoryRegionTest, MapTwice) {
   typename TypeParam::MappingType mapping = this->region_.Map();
   ASSERT_TRUE(mapping.IsValid());
   EXPECT_NE(this->rw_mapping_.memory(), mapping.memory());
-  EXPECT_EQ(memcmp(this->rw_mapping_.memory(), mapping.memory(), kRegionSize),
+  EXPECT_EQ(memcmp(this->rw_mapping_.memory(), mapping.memory(),
+                   kRegionSize),
             0);
 
   // Verify that the second mapping reflects changes in the first.
   memset(this->rw_mapping_.memory(), '#', kRegionSize);
-  EXPECT_EQ(memcmp(this->rw_mapping_.memory(), mapping.memory(), kRegionSize),
+  EXPECT_EQ(memcmp(this->rw_mapping_.memory(), mapping.memory(),
+                   kRegionSize),
             0);
 
   // Close the region and unmap the first memory segment, verify the second
@@ -128,7 +133,8 @@ TYPED_TEST(SharedMemoryRegionTest, SerializeAndDeserialize) {
 
   // Verify that the second mapping reflects changes in the first.
   memset(this->rw_mapping_.memory(), '#', kRegionSize);
-  EXPECT_EQ(memcmp(this->rw_mapping_.memory(), mapping.memory(), kRegionSize),
+  EXPECT_EQ(SbMemoryCompare(this->rw_mapping_.memory(), mapping.memory(),
+                            kRegionSize),
             0);
 }
 

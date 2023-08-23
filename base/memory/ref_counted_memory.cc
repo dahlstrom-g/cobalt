@@ -8,13 +8,13 @@
 
 #include "base/logging.h"
 #include "base/memory/read_only_shared_memory_region.h"
+#include "starboard/memory.h"
 
 namespace base {
 
 bool RefCountedMemory::Equals(
     const scoped_refptr<RefCountedMemory>& other) const {
-  return other.get() &&
-         size() == other->size() &&
+  return other.get() && size() == other->size() &&
          (memcmp(front(), other->front(), size()) == 0);
 }
 
@@ -83,6 +83,8 @@ size_t RefCountedString::size() const {
   return data_.size();
 }
 
+// Cobalt does not support multiple process and shared memory.
+#if !defined(STARBOARD)
 RefCountedSharedMemory::RefCountedSharedMemory(
     std::unique_ptr<SharedMemory> shm,
     size_t size)
@@ -128,5 +130,6 @@ RefCountedSharedMemoryMapping::CreateFromWholeRegion(
     return nullptr;
   return MakeRefCounted<RefCountedSharedMemoryMapping>(std::move(mapping));
 }
+#endif  // !defined(STARBOARD)
 
 }  //  namespace base

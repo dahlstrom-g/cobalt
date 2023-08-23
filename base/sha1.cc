@@ -4,11 +4,11 @@
 
 #include "base/sha1.h"
 
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 
 #include "base/sys_byteorder.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace base {
 

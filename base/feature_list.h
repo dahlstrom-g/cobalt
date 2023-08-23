@@ -37,10 +37,19 @@ struct BASE_EXPORT Feature {
   // for enabling/disabling features via command line flags and experiments.
   // It is strongly recommended to use CamelCase style for feature names, e.g.
   // "MyGreatFeature".
+#ifdef STARBOARD
+  // Non-conforming compilers do not allow copy assignment operator on Feature
+  // because of const variables.
+  const char* name;
+
+  // The default state (i.e. enabled or disabled) for this feature.
+  FeatureState default_state;
+#else
   const char* const name;
 
   // The default state (i.e. enabled or disabled) for this feature.
   const FeatureState default_state;
+#endif
 };
 
 #if DCHECK_IS_CONFIGURABLE
@@ -144,8 +153,10 @@ class BASE_EXPORT FeatureList {
                                   OverrideState override_state,
                                   FieldTrial* field_trial);
 
+#if !defined(STARBBOARD)
   // Loops through feature overrides and serializes them all into |allocator|.
   void AddFeaturesToAllocator(PersistentMemoryAllocator* allocator);
+#endif
 
   // Returns comma-separated lists of feature names (in the same format that is
   // accepted by InitializeFromCommandLine()) corresponding to features that
@@ -230,7 +241,6 @@ class BASE_EXPORT FeatureList {
     const bool overridden_by_field_trial;
 
     // TODO(asvitkine): Expand this as more support is added.
-
     // Constructs an OverrideEntry for the given |overridden_state|. If
     // |field_trial| is not null, it implies that |overridden_state| comes from
     // the trial, so |overridden_by_field_trial| will be set to true.
@@ -260,6 +270,7 @@ class BASE_EXPORT FeatureList {
   void RegisterOverridesFromCommandLine(const std::string& feature_list,
                                         OverrideState overridden_state);
 
+#if !defined(STARBOARD)
   // Registers an override for feature |feature_name|. The override specifies
   // whether the feature should be on or off (via |overridden_state|), which
   // will take precedence over the feature's default state. If |field_trial| is
@@ -270,6 +281,10 @@ class BASE_EXPORT FeatureList {
   void RegisterOverride(StringPiece feature_name,
                         OverrideState overridden_state,
                         FieldTrial* field_trial);
+#else   // !defined(STARBOARD)
+  void RegisterOverride(StringPiece feature_name,
+                        OverrideState overridden_state);
+#endif  // !defined(STARBOARD)
 
   // Implementation of GetFeatureOverrides() with a parameter that specifies
   // whether only command-line enabled overrides should be emitted. See that

@@ -5,7 +5,6 @@
 #ifndef BASE_PROCESS_PROCESS_HANDLE_H_
 #define BASE_PROCESS_PROCESS_HANDLE_H_
 
-#include <stdint.h>
 #include <sys/types.h>
 
 #include "base/base_export.h"
@@ -18,6 +17,8 @@
 
 #if defined(OS_FUCHSIA)
 #include <zircon/types.h>
+
+#include "starboard/types.h"
 #endif
 
 namespace base {
@@ -25,6 +26,13 @@ namespace base {
 // ProcessHandle is a platform specific type which represents the underlying OS
 // handle to a process.
 // ProcessId is a number which identifies the process in the OS.
+#if defined(STARBOARD)
+typedef uint32_t ProcessHandle;
+typedef uint32_t ProcessId;
+const ProcessHandle kNullProcessHandle = 0;
+const ProcessId kNullProcessId = 0;
+#define CrPRIdPid "d"
+#else
 #if defined(OS_WIN)
 typedef HANDLE ProcessHandle;
 typedef DWORD ProcessId;
@@ -52,6 +60,7 @@ const ProcessId kNullProcessId = 0;
 #else
 #define CrPRIdPid "d"
 #endif
+#endif  // defined(STARBOARD)
 
 // Returns the id of the current process.
 // Note that on some platforms, this is not guaranteed to be unique across

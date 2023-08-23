@@ -14,6 +14,7 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
+#include "base/metrics/statistics_recorder.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/test/metrics/histogram_tester.h"
@@ -115,7 +116,8 @@ WriteCallbacksObserver::GetAndResetObservationState() {
 
 class ImportantFileWriterTest : public testing::Test {
  public:
-  ImportantFileWriterTest() = default;
+  ImportantFileWriterTest() :
+    recorder_for_testing_(StatisticsRecorder::CreateTemporaryForTesting()) {}
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
     file_ = temp_dir_.GetPath().AppendASCII("test-file");
@@ -128,6 +130,8 @@ class ImportantFileWriterTest : public testing::Test {
 
  private:
   ScopedTempDir temp_dir_;
+
+  std::unique_ptr<StatisticsRecorder> recorder_for_testing_;
 };
 
 TEST_F(ImportantFileWriterTest, Basic) {
@@ -179,6 +183,9 @@ TEST_F(ImportantFileWriterTest, WriteWithObserver) {
   EXPECT_EQ("baz", GetFileContent(writer.path()));
 }
 
+// Disable the test as win32 SbFileOpen doesn't fail on relative path
+// like bad/../path.tmp
+#if !defined(STARBOARD)
 TEST_F(ImportantFileWriterTest, FailedWriteWithObserver) {
   // Use an invalid file path (relative paths are invalid) to get a
   // FILE_ERROR_ACCESS_DENIED error when trying to write the file.
@@ -196,6 +203,7 @@ TEST_F(ImportantFileWriterTest, FailedWriteWithObserver) {
             write_callback_observer_.GetAndResetObservationState());
   EXPECT_FALSE(PathExists(writer.path()));
 }
+#endif
 
 TEST_F(ImportantFileWriterTest, CallbackRunsOnWriterThread) {
   base::Thread file_writer_thread("ImportantFileWriter test thread");
@@ -327,6 +335,7 @@ TEST_F(ImportantFileWriterTest, DoScheduledWrite_FailToSerialize) {
   EXPECT_FALSE(PathExists(writer.path()));
 }
 
+#if !defined(STARBOARD)
 TEST_F(ImportantFileWriterTest, WriteFileAtomicallyHistogramSuffixTest) {
   base::HistogramTester histogram_tester;
   EXPECT_FALSE(PathExists(file_));
@@ -347,5 +356,7 @@ TEST_F(ImportantFileWriterTest, WriteFileAtomicallyHistogramSuffixTest) {
   histogram_tester.ExpectTotalCount("ImportantFile.FileCreateError", 1);
   histogram_tester.ExpectTotalCount("ImportantFile.FileCreateError.test", 1);
 }
+#endif
 
 }  // namespace base
+

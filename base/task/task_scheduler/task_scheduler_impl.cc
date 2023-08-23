@@ -92,12 +92,14 @@ TaskSchedulerImpl::~TaskSchedulerImpl() {
 void TaskSchedulerImpl::Start(
     const TaskScheduler::InitParams& init_params,
     SchedulerWorkerObserver* scheduler_worker_observer) {
+#if !defined(STARBOARD)
   // This is set in Start() and not in the constructor because variation params
   // are usually not ready when TaskSchedulerImpl is instantiated in a process.
   if (base::GetFieldTrialParamValue("BrowserScheduler",
                                     "AllTasksUserBlocking") == "true") {
     all_tasks_user_blocking_.Set();
   }
+#endif
 
   // Start the service thread. On platforms that support it (POSIX except NaCL
   // SFI), the service thread runs a MessageLoopForIO which is used to support
@@ -222,6 +224,7 @@ TaskSchedulerImpl::CreateCOMSTATaskRunnerWithTraits(
 }
 #endif  // defined(OS_WIN)
 
+#if !defined(STARBOARD)
 std::vector<const HistogramBase*> TaskSchedulerImpl::GetHistograms() const {
   std::vector<const HistogramBase*> histograms;
   for (const auto& worker_pool : worker_pools_)
@@ -229,6 +232,7 @@ std::vector<const HistogramBase*> TaskSchedulerImpl::GetHistograms() const {
 
   return histograms;
 }
+#endif  // !defined(STARBOARD)
 
 int TaskSchedulerImpl::GetMaxConcurrentNonBlockedTasksWithTraitsDeprecated(
     const TaskTraits& traits) const {

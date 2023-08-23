@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-
 #include <string>
 
 #include "base/strings/string16.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/utf_string_conversions.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -706,7 +705,7 @@ TYPED_TEST(CommonStringPieceTest, CheckConstructors) {
   ASSERT_EQ(empty, BasicStringPiece<TypeParam>(empty.begin(), empty.end()));
 }
 
-TEST(StringPieceTest, ConstexprCtor) {
+TEST(StringPieceTest, CONSTEXPRCtor) {
   {
     constexpr StringPiece piece;
     std::ignore = piece;
@@ -723,7 +722,7 @@ TEST(StringPieceTest, ConstexprCtor) {
   }
 }
 
-TEST(StringPieceTest, ConstexprData) {
+TEST(StringPieceTest, CONSTEXPRData) {
   {
     constexpr StringPiece piece;
     static_assert(piece.data() == nullptr, "");
@@ -743,7 +742,7 @@ TEST(StringPieceTest, ConstexprData) {
   }
 }
 
-TEST(StringPieceTest, ConstexprSize) {
+TEST(StringPieceTest, CONSTEXPRSize) {
   {
     constexpr StringPiece piece;
     static_assert(piece.size() == 0, "");

@@ -4,9 +4,10 @@
 
 #include "base/atomicops.h"
 
-#include <stdint.h>
 #include <string.h>
 
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 template <class AtomicType>

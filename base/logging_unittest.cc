@@ -40,6 +40,7 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 #include "base/fuchsia/fuchsia_logging.h"
+#include "starboard/types.h"
 #endif
 
 namespace logging {
@@ -555,7 +556,7 @@ class ScopedDcheckSeverity {
 #endif  // DCHECK_IS_CONFIGURABLE
 
 // https://crbug.com/709067 tracks test flakiness on iOS.
-#if defined(OS_IOS)
+#if defined(OS_IOS) || defined(STARBOARD)
 #define MAYBE_Dcheck DISABLED_Dcheck
 #else
 #define MAYBE_Dcheck Dcheck
@@ -719,12 +720,14 @@ namespace nested_test {
                                              const Streamable&) {
     return out << "Streamable";
   }
+#if !defined(STARBOARD)
   TEST_F(LoggingTest, StreamingWstringFindsCorrectOperator) {
     std::wstring wstr = L"Hello World";
     std::ostringstream ostr;
     ostr << wstr;
     EXPECT_EQ("Hello World", ostr.str());
   }
+#endif  // !defined(STARBOARD)
 }  // namespace nested_test
 
 #if DCHECK_IS_CONFIGURABLE

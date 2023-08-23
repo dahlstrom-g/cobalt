@@ -4,7 +4,6 @@
 
 #include "base/android/jni_android.h"
 
-#include <stddef.h>
 #include <sys/prctl.h>
 
 #include <map>
@@ -15,6 +14,9 @@
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/threading/thread_local.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace {
 using base::android::GetClass;

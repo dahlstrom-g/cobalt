@@ -5,7 +5,6 @@
 #include "base/metrics/sample_vector.h"
 
 #include <limits.h>
-#include <stddef.h>
 
 #include <atomic>
 #include <memory>
@@ -15,6 +14,8 @@
 #include "base/metrics/histogram.h"
 #include "base/metrics/persistent_memory_allocator.h"
 #include "base/test/gtest_util.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {

@@ -4,8 +4,6 @@
 
 #include "base/task/task_scheduler/task_scheduler_impl.h"
 
-#include <stddef.h>
-
 #include <string>
 #include <utility>
 #include <vector>
@@ -19,6 +17,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/metrics/field_trial_params.h"
+#include "base/metrics/statistics_recorder.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/task/task_scheduler/environment_config.h"
 #include "base/task/task_scheduler/scheduler_worker_observer.h"
@@ -48,6 +47,7 @@
 
 #if defined(OS_WIN)
 #include "base/win/com_init_util.h"
+#include "starboard/types.h"
 #endif  // defined(OS_WIN)
 
 namespace base {
@@ -77,6 +77,7 @@ bool GetIOAllowed() {
 // to run a Task with |traits|.
 // Note: ExecutionMode is verified inside TestTaskFactory.
 void VerifyTaskEnvironment(const TaskTraits& traits) {
+#if !defined(STARBOARD)
   EXPECT_EQ(CanUseBackgroundPriorityForSchedulerWorker() &&
                     traits.priority() == TaskPriority::BEST_EFFORT
                 ? ThreadPriority::BACKGROUND
@@ -112,6 +113,7 @@ void VerifyTaskEnvironment(const TaskTraits& traits) {
   }
   EXPECT_EQ(traits.may_block(),
             current_thread_name.find("Blocking") != std::string::npos);
+#endif  // !defined(STARBOARD)
 }
 
 void VerifyTaskEnvironmentAndSignalEvent(const TaskTraits& traits,
@@ -208,17 +210,27 @@ std::vector<TraitsExecutionModePair> GetTraitsExecutionModePairs() {
 class TaskSchedulerImplTest
     : public testing::TestWithParam<TraitsExecutionModePair> {
  protected:
-  TaskSchedulerImplTest() : scheduler_("Test"), field_trial_list_(nullptr) {}
+  TaskSchedulerImplTest()
+      : recorder_for_testing_(StatisticsRecorder::CreateTemporaryForTesting()),
+        scheduler_("Test")
+#if !defined(STARBOARD)
+        ,
+        field_trial_list_(nullptr)
+#endif
+  {
+  }
 
   void EnableAllTasksUserBlocking() {
     constexpr char kFieldTrialName[] = "BrowserScheduler";
     constexpr char kFieldTrialTestGroup[] = "DummyGroup";
     std::map<std::string, std::string> variation_params;
     variation_params["AllTasksUserBlocking"] = "true";
+#if !defined(STARBOARD)
     base::AssociateFieldTrialParams(kFieldTrialName, kFieldTrialTestGroup,
                                     variation_params);
     base::FieldTrialList::CreateFieldTrial(kFieldTrialName,
                                            kFieldTrialTestGroup);
+#endif
   }
 
   void set_scheduler_worker_observer(
@@ -226,19 +238,17 @@ class TaskSchedulerImplTest
     scheduler_worker_observer_ = scheduler_worker_observer;
   }
 
-  void StartTaskScheduler() {
-    constexpr TimeDelta kSuggestedReclaimTime = TimeDelta::FromSeconds(30);
+  void StartTaskScheduler(TimeDelta reclaim_time = TimeDelta::FromSeconds(30)) {
     constexpr int kMaxNumBackgroundThreads = 1;
     constexpr int kMaxNumBackgroundBlockingThreads = 3;
     constexpr int kMaxNumForegroundThreads = 4;
     constexpr int kMaxNumForegroundBlockingThreads = 12;
 
-    scheduler_.Start(
-        {{kMaxNumBackgroundThreads, kSuggestedReclaimTime},
-         {kMaxNumBackgroundBlockingThreads, kSuggestedReclaimTime},
-         {kMaxNumForegroundThreads, kSuggestedReclaimTime},
-         {kMaxNumForegroundBlockingThreads, kSuggestedReclaimTime}},
-        scheduler_worker_observer_);
+    scheduler_.Start({{kMaxNumBackgroundThreads, reclaim_time},
+                      {kMaxNumBackgroundBlockingThreads, reclaim_time},
+                      {kMaxNumForegroundThreads, reclaim_time},
+                      {kMaxNumForegroundBlockingThreads, reclaim_time}},
+                     scheduler_worker_observer_);
   }
 
   void TearDown() override {
@@ -250,10 +260,14 @@ class TaskSchedulerImplTest
     did_tear_down_ = true;
   }
 
+  std::unique_ptr<StatisticsRecorder> recorder_for_testing_;
+
   TaskSchedulerImpl scheduler_;
 
  private:
+#if !defined(STARBOARD)
   base::FieldTrialList field_trial_list_;
+#endif
   SchedulerWorkerObserver* scheduler_worker_observer_ = nullptr;
   bool did_tear_down_ = false;
 
@@ -679,6 +693,12 @@ void VerifyHasStringOnStack(const std::string& query) {
 
 }  // namespace
 
+// Starboard does not support switching thread priority and therefore background
+// scheduler worker that has TaskPriority::BEST_EFFORT can not be used.
+// See CanUseBackgroundPriorityForSchedulerWorker() for more details.
+// And Starboard can also reproduce the StackTrace().ToString() crash described
+// down below on Linux.
+#ifndef STARBOARD
 #if defined(OS_POSIX)
 // Many POSIX bots flakily crash on |debug::StackTrace().ToString()|,
 // https://crbug.com/840429.
@@ -754,27 +774,31 @@ TEST_F(TaskSchedulerImplTest, MAYBE_IdentifiableStacks) {
 
   scheduler_.FlushForTesting();
 }
+#endif  // STARBOARD
 
 TEST_F(TaskSchedulerImplTest, SchedulerWorkerObserver) {
   testing::StrictMock<test::MockSchedulerWorkerObserver> observer;
   set_scheduler_worker_observer(&observer);
 
-  // A worker should be created for each pool. After that, 8 threads should be
-  // created for single-threaded work (16 on Windows).
+  // A worker should be created for each pool. After that, 4 threads should be
+  // created for each SingleThreadTaskRunnerThreadMode (8 on Windows).
   const int kExpectedNumPoolWorkers =
       CanUseBackgroundPriorityForSchedulerWorker() ? 4 : 2;
 #if defined(OS_WIN)
-  const int kExpectedNumSingleThreadedWorkers = 16;
+  const int kExpectedNumSingleThreadedWorkersPerMode = 8;
 #else
-  const int kExpectedNumSingleThreadedWorkers = 8;
+  const int kExpectedNumSingleThreadedWorkersPerMode = 4;
 #endif
-  const int kExpectedNumWorkers =
-      kExpectedNumPoolWorkers + kExpectedNumSingleThreadedWorkers;
+  constexpr int kNumSingleThreadTaskRunnerThreadModes = 2;
 
   EXPECT_CALL(observer, OnSchedulerWorkerMainEntry())
-      .Times(kExpectedNumWorkers);
+      .Times(kExpectedNumPoolWorkers +
+             kNumSingleThreadTaskRunnerThreadModes *
+                 kExpectedNumSingleThreadedWorkersPerMode);
 
-  StartTaskScheduler();
+  // Infinite detach time to prevent workers from invoking
+  // OnSchedulerWorkerMainExit() earlier than expected.
+  StartTaskScheduler(TimeDelta::Max());
 
   std::vector<scoped_refptr<SingleThreadTaskRunner>> task_runners;
 
@@ -831,12 +855,18 @@ TEST_F(TaskSchedulerImplTest, SchedulerWorkerObserver) {
   for (auto& task_runner : task_runners)
     task_runner->PostTask(FROM_HERE, DoNothing());
 
-  EXPECT_CALL(observer, OnSchedulerWorkerMainExit()).Times(kExpectedNumWorkers);
-
-  // Allow single-threaded workers to be released.
+  // Release single-threaded workers. This should cause dedicated workers to
+  // invoke OnSchedulerWorkerMainExit().
+  observer.AllowCallsOnMainExit(kExpectedNumSingleThreadedWorkersPerMode);
   task_runners.clear();
+  observer.WaitCallsOnMainExit();
 
+  // Join all remaining workers. This should cause shared single-threaded
+  // workers and pool workers to invoke OnSchedulerWorkerMainExit().
+  observer.AllowCallsOnMainExit(kExpectedNumPoolWorkers +
+                                kExpectedNumSingleThreadedWorkersPerMode);
   TearDown();
+  observer.WaitCallsOnMainExit();
 }
 
 }  // namespace internal

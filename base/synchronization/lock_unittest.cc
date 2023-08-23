@@ -10,6 +10,7 @@
 #include "base/debug/activity_tracker.h"
 #include "base/macros.h"
 #include "base/threading/platform_thread.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -147,6 +148,7 @@ TEST(LockTest, TryLock) {
   lock.Release();
 }
 
+#if !defined(STARBOARD)
 TEST(LockTest, TryTrackedLock) {
   // Enable the activity tracker.
   debug::GlobalActivityTracker::CreateWithLocalMemory(64 << 10, 0, "", 3, 0);
@@ -187,6 +189,7 @@ TEST(LockTest, TryTrackedLock) {
   lock.Release();
   debug::GlobalActivityTracker::ReleaseForTesting();
 }
+#endif  // !defined(STARBOARD)
 
 // Tests that locks actually exclude -------------------------------------------
 

@@ -9,13 +9,14 @@
 #ifndef BASE_THREADING_PLATFORM_THREAD_H_
 #define BASE_THREADING_PLATFORM_THREAD_H_
 
-#include <stddef.h>
-
 #include "base/base_export.h"
 #include "base/macros.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
 
+#if defined(STARBOARD)
+#include "starboard/thread.h"
+#else
 #if defined(OS_WIN)
 #include "base/win/windows_types.h"
 #elif defined(OS_FUCHSIA)
@@ -25,11 +26,17 @@
 #elif defined(OS_POSIX)
 #include <pthread.h>
 #include <unistd.h>
+
+#include "starboard/types.h"
+#endif
 #endif
 
 namespace base {
 
 // Used for logging. Always an integer value.
+#if defined(STARBOARD)
+typedef SbThreadId PlatformThreadId;
+#else
 #if defined(OS_WIN)
 typedef DWORD PlatformThreadId;
 #elif defined(OS_FUCHSIA)
@@ -38,6 +45,7 @@ typedef zx_handle_t PlatformThreadId;
 typedef mach_port_t PlatformThreadId;
 #elif defined(OS_POSIX)
 typedef pid_t PlatformThreadId;
+#endif
 #endif
 
 // Used for thread checking and debugging.
@@ -50,10 +58,14 @@ typedef pid_t PlatformThreadId;
 // to distinguish a new thread from an old, dead thread.
 class PlatformThreadRef {
  public:
+#if defined(STARBOARD)
+  typedef SbThread RefType;
+#else
 #if defined(OS_WIN)
   typedef DWORD RefType;
 #else  //  OS_POSIX
   typedef pthread_t RefType;
+#endif
 #endif
   constexpr PlatformThreadRef() : id_(0) {}
 
@@ -75,10 +87,14 @@ class PlatformThreadRef {
 // Used to operate on threads.
 class PlatformThreadHandle {
  public:
+#if defined(STARBOARD)
+  typedef SbThread Handle;
+#else
 #if defined(OS_WIN)
   typedef void* Handle;
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   typedef pthread_t Handle;
+#endif
 #endif
 
   constexpr PlatformThreadHandle() : handle_(0) {}
@@ -106,6 +122,15 @@ const PlatformThreadId kInvalidThreadId(0);
 // Valid values for priority of Thread::Options and SimpleThread::Options, and
 // SetCurrentThreadPriority(), listed in increasing order of importance.
 enum class ThreadPriority : int {
+#if defined(STARBOARD)
+  DEFAULT = kSbThreadNoPriority,
+  LOWEST = kSbThreadPriorityLowest,
+  BACKGROUND = kSbThreadPriorityLow,
+  NORMAL = kSbThreadPriorityNormal,
+  DISPLAY = kSbThreadPriorityHigh,
+  HIGHEST = kSbThreadPriorityHighest,
+  REALTIME_AUDIO = kSbThreadPriorityRealTime,  // Could be equal to HIGHEST.
+#else
   // Suitable for threads that shouldn't disrupt high priority work.
   BACKGROUND,
   // Default priority level.
@@ -114,6 +139,7 @@ enum class ThreadPriority : int {
   DISPLAY,
   // Suitable for low-latency, glitch-resistant audio.
   REALTIME_AUDIO,
+#endif
 };
 
 // A namespace for low-level thread functions.

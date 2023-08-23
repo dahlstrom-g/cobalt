@@ -5,8 +5,7 @@
 #ifndef BASE_NUMERICS_SAFE_CONVERSIONS_H_
 #define BASE_NUMERICS_SAFE_CONVERSIONS_H_
 
-#include <stddef.h>
-
+#include <cmath>
 #include <limits>
 #include <ostream>
 #include <type_traits>
@@ -15,6 +14,7 @@
 
 #if !defined(__native_client__) && (defined(__ARMEL__) || defined(__arch64__))
 #include "base/numerics/safe_conversions_arm_impl.h"
+#include "starboard/types.h"
 #define BASE_HAS_OPTIMIZED_SAFE_CONVERSIONS (1)
 #else
 #define BASE_HAS_OPTIMIZED_SAFE_CONVERSIONS (0)
@@ -338,6 +338,33 @@ using internal::IsValueNegative;
 
 // Explicitly make a shorter size_t alias for convenience.
 using SizeT = StrictNumeric<size_t>;
+
+// floating -> integral conversions that saturate and thus can actually return
+// an integral type.  In most cases, these should be preferred over the std::
+// versions.
+template <typename Dst = int,
+          typename Src,
+          typename = std::enable_if_t<std::is_integral<Dst>::value &&
+                                      std::is_floating_point<Src>::value>>
+Dst ClampFloor(Src value) {
+  return saturated_cast<Dst>(std::floor(value));
+}
+template <typename Dst = int,
+          typename Src,
+          typename = std::enable_if_t<std::is_integral<Dst>::value &&
+                                      std::is_floating_point<Src>::value>>
+Dst ClampCeil(Src value) {
+  return saturated_cast<Dst>(std::ceil(value));
+}
+template <typename Dst = int,
+          typename Src,
+          typename = std::enable_if_t<std::is_integral<Dst>::value &&
+                                      std::is_floating_point<Src>::value>>
+Dst ClampRound(Src value) {
+  const Src rounded =
+      (value >= 0.0f) ? std::floor(value + 0.5f) : std::ceil(value - 0.5f);
+  return saturated_cast<Dst>(rounded);
+}
 
 }  // namespace base
 

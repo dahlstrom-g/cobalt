@@ -5,8 +5,6 @@
 #include <mach/mach.h>
 #include <mach/mach_vm.h>
 #include <servers/bootstrap.h>
-#include <stddef.h>
-#include <stdint.h>
 
 #include "base/command_line.h"
 #include "base/mac/mac_util.h"
@@ -21,6 +19,8 @@
 #include "base/test/multiprocess_test.h"
 #include "base/test/test_timeouts.h"
 #include "base/unguessable_token.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/multiprocess_func_list.h"
 
 namespace base {
@@ -387,8 +387,8 @@ TEST_F(SharedMemoryMacMultiProcessTest, MachDuplicate) {
     SharedMemory shared_memory2(shm2, true);
     shared_memory2.Map(s_memory_size);
 
-    ASSERT_EQ(0, memcmp(shared_memory->memory(), shared_memory2.memory(),
-                        s_memory_size));
+    ASSERT_EQ(0, memcmp(shared_memory->memory(),
+                        shared_memory2.memory(), s_memory_size));
   }
 
   EXPECT_EQ(active_name_count, GetActiveNameCount());

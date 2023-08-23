@@ -32,10 +32,17 @@ TimeTicksNowFunction g_time_ticks_now_function =
 
 ThreadTicksNowFunction g_thread_ticks_now_function =
     &subtle::ThreadTicksNowIgnoringOverride;
-
 }  // namespace internal
 
 // TimeDelta ------------------------------------------------------------------
+
+int64_t TimeDelta::InNanoseconds() const {
+  if (is_max()) {
+    // Preserve max to prevent overflow.
+    return std::numeric_limits<int64_t>::max();
+  }
+  return delta_ * Time::kNanosecondsPerMicrosecond;
+}
 
 int TimeDelta::InDaysFloored() const {
   if (is_max()) {
@@ -313,7 +320,9 @@ std::ostream& operator<<(std::ostream& os, TimeTicks time_ticks) {
 
 // static
 ThreadTicks ThreadTicks::Now() {
-  return internal::g_thread_ticks_now_function();
+  if (SbTimeIsTimeThreadNowSupported())
+    return internal::g_thread_ticks_now_function();
+  return ThreadTicks();
 }
 
 std::ostream& operator<<(std::ostream& os, ThreadTicks thread_ticks) {

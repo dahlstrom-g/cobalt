@@ -10,6 +10,7 @@
 #include "base/base_export.h"
 #include "base/macros.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 
 namespace base {
 namespace internal {
@@ -46,7 +47,7 @@ class BASE_EXPORT ScopedClearLastError : public ScopedClearLastErrorBase {
   DISALLOW_COPY_AND_ASSIGN(ScopedClearLastError);
 };
 
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
 
 using ScopedClearLastError = ScopedClearLastErrorBase;
 

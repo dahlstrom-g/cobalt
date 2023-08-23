@@ -12,6 +12,7 @@
 #include "base/numerics/safe_conversions.h"
 #include "base/numerics/safe_math.h"
 #include "base/pickle.h"
+#include "starboard/memory.h"
 
 namespace base {
 

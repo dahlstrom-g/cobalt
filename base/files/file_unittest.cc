@@ -4,8 +4,6 @@
 
 #include "base/files/file.h"
 
-#include <stdint.h>
-
 #include <utility>
 
 #include "base/files/file_util.h"
@@ -13,6 +11,7 @@
 #include "base/files/scoped_temp_dir.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::File;
@@ -34,6 +33,8 @@ TEST(FileTest, Create) {
     EXPECT_EQ(base::File::FILE_ERROR_TOO_MANY_OPENED, file2.error_details());
   }
 
+#if !defined(STARBOARD)
+  // Starboard doesn't support GetLastFileError().
   {
     // Open a file that doesn't exist.
     File file(file_path, base::File::FLAG_OPEN | base::File::FLAG_READ);
@@ -41,6 +42,7 @@ TEST(FileTest, Create) {
     EXPECT_EQ(base::File::FILE_ERROR_NOT_FOUND, file.error_details());
     EXPECT_EQ(base::File::FILE_ERROR_NOT_FOUND, base::File::GetLastFileError());
   }
+#endif
 
   {
     // Open or create a file.
@@ -75,6 +77,7 @@ TEST(FileTest, Create) {
     EXPECT_FALSE(file.IsValid());
   }
 
+#if !defined(STARBOARD)
   {
     // Create a file that exists.
     File file(file_path, base::File::FLAG_CREATE | base::File::FLAG_READ);
@@ -83,6 +86,7 @@ TEST(FileTest, Create) {
     EXPECT_EQ(base::File::FILE_ERROR_EXISTS, file.error_details());
     EXPECT_EQ(base::File::FILE_ERROR_EXISTS, base::File::GetLastFileError());
   }
+#endif
 
   {
     // Create or overwrite a file.
@@ -93,6 +97,7 @@ TEST(FileTest, Create) {
     EXPECT_EQ(base::File::FILE_OK, file.error_details());
   }
 
+#if !defined(STARBOARD)
   {
     // Create a delete-on-close file.
     file_path = temp_dir.GetPath().AppendASCII("create_file_2");
@@ -105,8 +110,10 @@ TEST(FileTest, Create) {
   }
 
   EXPECT_FALSE(base::PathExists(file_path));
+#endif  // !defined(STARBOARD)
 }
 
+#if !defined(STARBOARD)
 TEST(FileTest, SelfSwap) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
@@ -116,6 +123,7 @@ TEST(FileTest, SelfSwap) {
   std::swap(file, file);
   EXPECT_TRUE(file.IsValid());
 }
+#endif  // !defined(STARBOARD)
 
 TEST(FileTest, Async) {
   base::ScopedTempDir temp_dir;
@@ -123,18 +131,29 @@ TEST(FileTest, Async) {
   FilePath file_path = temp_dir.GetPath().AppendASCII("create_file");
 
   {
+#if defined(STARBOARD)
+    File file(file_path, base::File::FLAG_OPEN_ALWAYS | base::File::FLAG_ASYNC
+                         | base::File::FLAG_READ);
+#else
     File file(file_path, base::File::FLAG_OPEN_ALWAYS | base::File::FLAG_ASYNC);
+#endif
     EXPECT_TRUE(file.IsValid());
     EXPECT_TRUE(file.async());
   }
 
   {
+#if defined(STARBOARD)
+    File file(file_path, base::File::FLAG_OPEN_ALWAYS | base::File::FLAG_READ);
+#else
     File file(file_path, base::File::FLAG_OPEN_ALWAYS);
+#endif
     EXPECT_TRUE(file.IsValid());
     EXPECT_FALSE(file.async());
   }
 }
 
+#if !defined(STARBOARD)
+// Starboard does not support getting last file access error yet.
 TEST(FileTest, DeleteOpenFile) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
@@ -161,6 +180,7 @@ TEST(FileTest, DeleteOpenFile) {
   same_file.Close();
   EXPECT_FALSE(base::PathExists(file_path));
 }
+#endif  // !defined(STARBOARD)
 
 TEST(FileTest, ReadWrite) {
   base::ScopedTempDir temp_dir;
@@ -238,6 +258,7 @@ TEST(FileTest, ReadWrite) {
     EXPECT_EQ(data_to_write[i - kOffsetBeyondEndOfFile], data_read_2[i]);
 }
 
+#if !defined(STARBOARD)
 TEST(FileTest, GetLastFileError) {
 #if defined(OS_WIN)
   ::SetLastError(ERROR_ACCESS_DENIED);
@@ -256,6 +277,7 @@ TEST(FileTest, GetLastFileError) {
   EXPECT_EQ(File::FILE_ERROR_NOT_FOUND, file.error_details());
   EXPECT_EQ(File::FILE_ERROR_NOT_FOUND, last_error);
 }
+#endif
 
 TEST(FileTest, Append) {
   base::ScopedTempDir temp_dir;
@@ -497,6 +519,7 @@ TEST(FileTest, Seek) {
   EXPECT_EQ(kOffset, file.Seek(base::File::FROM_END, -kOffset));
 }
 
+#if !defined(STARBOARD)
 TEST(FileTest, Duplicate) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
@@ -539,6 +562,7 @@ TEST(FileTest, DuplicateDeleteOnClose) {
   file2.Close();
   ASSERT_FALSE(base::PathExists(file_path));
 }
+#endif  // !defined(STARBOARD)
 
 #if defined(OS_WIN)
 // Flakily times out on Windows, see http://crbug.com/846276.
@@ -550,14 +574,22 @@ TEST(FileTest, MAYBE_WriteDataToLargeOffset) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   FilePath file_path = temp_dir.GetPath().AppendASCII("file");
-  File file(file_path,
-            (base::File::FLAG_CREATE | base::File::FLAG_READ |
-             base::File::FLAG_WRITE | base::File::FLAG_DELETE_ON_CLOSE));
+  File file(file_path, (base::File::FLAG_CREATE | base::File::FLAG_READ |
+                        base::File::FLAG_WRITE));
   ASSERT_TRUE(file.IsValid());
 
   const char kData[] = "this file is sparse.";
   const int kDataLen = sizeof(kData) - 1;
+#if defined(STARBOARD)
+#if SB_IS(32_BIT)
+  // Maximum off_t for lseek() on 32-bit builds is just below 2^31.
+  const int64_t kLargeFileOffset = (1LL << 31) - 2;
+#else  // SB_IS(32_BIT)
   const int64_t kLargeFileOffset = (1LL << 31);
+#endif  // SB_IS(32_BIT)
+#else  // defined(STARBOARD)
+  const int64_t kLargeFileOffset = (1LL << 31);
+#endif  // defined(STARBOARD)
 
   // If the file fails to write, it is probably we are running out of disk space
   // and the file system doesn't support sparse file.
@@ -639,6 +671,7 @@ TEST(FileTest, DeleteThenRevoke) {
   ASSERT_TRUE(base::PathExists(file_path));
 }
 
+#if !defined(STARBOARD)
 TEST(FileTest, IrrevokableDeleteOnClose) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
@@ -686,6 +719,7 @@ TEST(FileTest, IrrevokableDeleteOnCloseOther) {
   file.Close();
   ASSERT_FALSE(base::PathExists(file_path));
 }
+#endif  // !defined(STARBOARD)
 
 TEST(FileTest, DeleteWithoutPermission) {
   base::ScopedTempDir temp_dir;
@@ -702,6 +736,7 @@ TEST(FileTest, DeleteWithoutPermission) {
   ASSERT_TRUE(base::PathExists(file_path));
 }
 
+#if !defined(STARBOARD)
 TEST(FileTest, UnsharedDeleteOnClose) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
@@ -721,6 +756,7 @@ TEST(FileTest, UnsharedDeleteOnClose) {
   file.Close();
   ASSERT_TRUE(base::PathExists(file_path));
 }
+#endif  // !defined(STARBOARD)
 
 TEST(FileTest, NoDeleteOnCloseWithMappedFile) {
   base::ScopedTempDir temp_dir;

@@ -4,9 +4,9 @@
 
 #include "base/big_endian.h"
 
-#include <stdint.h>
-
 #include "base/strings/string_piece.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {

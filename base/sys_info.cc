@@ -52,12 +52,17 @@ int64_t SysInfo::AmountOfAvailablePhysicalMemory() {
 }
 
 bool SysInfo::IsLowEndDevice() {
+#if defined(STARBOARD)
+  NOTREACHED();
+  return true;
+#else
   if (base::CommandLine::ForCurrentProcess()->HasSwitch(
           switches::kEnableLowEndDeviceMode)) {
     return true;
   }
 
   return IsLowEndDeviceImpl();
+#endif
 }
 
 #if !defined(OS_ANDROID)

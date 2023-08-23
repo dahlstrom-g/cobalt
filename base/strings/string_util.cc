@@ -8,7 +8,6 @@
 #include <errno.h>
 #include <math.h>
 #include <stdarg.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,6 +26,7 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/third_party/icu/icu_utf.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -541,6 +541,18 @@ static inline bool DoLowerCaseEqualsASCII(BasicStringPiece<Str> str,
   return true;
 }
 
+#if defined(STARBOARD)
+bool LowerCaseEqualsASCII(const char* a_begin,
+                          const char* a_end,
+                          const char* b) {
+  for (const char *it = a_begin; it != a_end; ++it, ++b) {
+    if (!*b || base::ToLowerASCII(*it) != *b)
+      return false;
+  }
+  return *b == 0;
+}
+#endif
+
 bool LowerCaseEqualsASCII(StringPiece str, StringPiece lowercase_ascii) {
   return DoLowerCaseEqualsASCII<std::string>(str, lowercase_ascii);
 }
@@ -701,7 +713,7 @@ struct CharacterMatcher {
     return input.find_first_of(find_any_of_these.data(), pos,
                                find_any_of_these.length());
   }
-  constexpr size_t MatchSize() { return 1; }
+  constexpr size_t MatchSize() const { return 1; }
 };
 
 enum class ReplaceType { REPLACE_ALL, REPLACE_FIRST };

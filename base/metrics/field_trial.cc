@@ -28,6 +28,7 @@
 // On POSIX, the fd is shared using the mapping in GlobalDescriptors.
 #if defined(OS_POSIX) && !defined(OS_NACL)
 #include "base/posix/global_descriptors.h"
+#include "starboard/memory.h"
 #endif
 
 namespace base {
@@ -51,7 +52,8 @@ const char kActivationMarker = '*';
 // This is safe from race conditions because MakeIterable is a release operation
 // and GetNextOfType is an acquire operation, so memory writes before
 // MakeIterable happen before memory reads after GetNextOfType.
-#if defined(OS_FUCHSIA)  // TODO(752368): Not yet supported on Fuchsia.
+// TODO(752368): Not yet supported on Fuchsia.
+#if defined(OS_FUCHSIA) || defined(STARBOARD)
 const bool kUseSharedMemoryForFieldTrials = false;
 #else
 const bool kUseSharedMemoryForFieldTrials = true;
@@ -215,7 +217,7 @@ void OnOutOfMemory(size_t size) {
 #endif
 }
 
-#if !defined(OS_NACL)
+#if !defined(OS_NACL) && !defined(STARBOARD)
 // Returns whether the operation succeeded.
 bool DeserializeGUIDFromStringPieces(base::StringPiece first,
                                      base::StringPiece second,
@@ -838,7 +840,7 @@ void FieldTrialList::CreateTrialsFromCommandLine(
                           result);
     DCHECK(result);
   }
-#elif defined(OS_POSIX) && !defined(OS_NACL)
+#elif defined(OS_POSIX) && !defined(OS_NACL) && !defined(STARBOARD)
   // On POSIX, we check if the handle is valid by seeing if the browser process
   // sent over the switch (we don't care about the value). Invalid handles
   // occur in some browser tests which don't initialize the allocator.
@@ -892,7 +894,7 @@ void FieldTrialList::AppendFieldTrialHandleIfNeeded(
       handles->push_back(global_->readonly_allocator_handle_.GetHandle());
   }
 }
-#elif defined(OS_FUCHSIA)
+#elif defined(OS_FUCHSIA) || defined(STARBOARD)
 // TODO(fuchsia): Implement shared-memory configuration (crbug.com/752368).
 #elif defined(OS_POSIX) && !defined(OS_NACL)
 // static
@@ -1215,6 +1217,9 @@ std::string FieldTrialList::SerializeSharedMemoryHandleMetadata(
   ss << uintptr_handle << ",";
 #elif defined(OS_FUCHSIA)
   ss << shm.GetHandle() << ",";
+#elif defined(STARBOARD)
+  ss << "unsupported"
+     << ",";
 #elif !defined(OS_POSIX)
 #error Unsupported OS
 #endif
@@ -1300,7 +1305,7 @@ bool FieldTrialList::CreateTrialsFromSwitchValue(
     return false;
   return FieldTrialList::CreateTrialsFromSharedMemoryHandle(shm);
 }
-#elif defined(OS_POSIX) && !defined(OS_NACL)
+#elif defined(OS_POSIX) && !defined(OS_NACL) && !defined(STARBOARD)
 // static
 bool FieldTrialList::CreateTrialsFromDescriptor(
     int fd_key,
@@ -1326,6 +1331,7 @@ bool FieldTrialList::CreateTrialsFromDescriptor(
 }
 #endif  // defined(OS_POSIX) && !defined(OS_NACL)
 
+#if !defined(STARBOARD)
 // static
 bool FieldTrialList::CreateTrialsFromSharedMemoryHandle(
     SharedMemoryHandle shm_handle) {
@@ -1369,9 +1375,13 @@ bool FieldTrialList::CreateTrialsFromSharedMemory(
   }
   return true;
 }
+#endif
 
 // static
 void FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded() {
+#if defined(STARBOARD)
+  return;
+#else
   if (!global_)
     return;
   AutoLock auto_lock(global_->lock_);
@@ -1410,6 +1420,7 @@ void FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded() {
 #if !defined(OS_NACL)
   global_->readonly_allocator_handle_ = GetSharedMemoryReadOnlyHandle(
       global_->field_trial_allocator_->shared_memory());
+#endif
 #endif
 }
 

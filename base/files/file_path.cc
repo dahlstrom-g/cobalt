@@ -7,6 +7,10 @@
 #include <string.h>
 #include <algorithm>
 
+#include "starboard/types.h"
+
+#include "starboard/common/string.h"
+
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/pickle.h"
@@ -421,10 +425,14 @@ FilePath FilePath::InsertBeforeExtension(StringPieceType suffix) const {
 FilePath FilePath::InsertBeforeExtensionASCII(StringPiece suffix)
     const {
   DCHECK(IsStringASCII(suffix));
+#if defined(STARBOARD)
+  return InsertBeforeExtension(suffix);
+#else
 #if defined(OS_WIN)
   return InsertBeforeExtension(ASCIIToUTF16(suffix));
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   return InsertBeforeExtension(suffix);
+#endif
 #endif
 }
 
@@ -524,10 +532,14 @@ FilePath FilePath::Append(const FilePath& component) const {
 
 FilePath FilePath::AppendASCII(StringPiece component) const {
   DCHECK(base::IsStringASCII(component));
+#if defined(STARBOARD)
+  return Append(component);
+#else
 #if defined(OS_WIN)
   return Append(ASCIIToUTF16(component));
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   return Append(component);
+#endif
 #endif
 }
 
@@ -616,8 +628,7 @@ FilePath FilePath::FromUTF16Unsafe(StringPiece16 utf16) {
   return FilePath(utf16);
 }
 
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
 // See file_path.h for a discussion of the encoding of paths on POSIX
 // platforms.  These encoding conversion functions are not quite correct.
 
@@ -670,7 +681,7 @@ FilePath FilePath::FromUTF16Unsafe(StringPiece16 utf16) {
 void FilePath::WriteToPickle(Pickle* pickle) const {
 #if defined(OS_WIN)
   pickle->WriteString16(path_);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
   pickle->WriteString(path_);
 #else
 #error Unsupported platform
@@ -681,7 +692,7 @@ bool FilePath::ReadFromPickle(PickleIterator* iter) {
 #if defined(OS_WIN)
   if (!iter->ReadString16(&path_))
     return false;
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
   if (!iter->ReadString(&path_))
     return false;
 #else
@@ -1275,7 +1286,7 @@ int FilePath::CompareIgnoreCase(StringPieceType string1,
   return HFSFastUnicodeCompare(hfs1, hfs2);
 }
 
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
 
 // Generic Posix system comparisons.
 int FilePath::CompareIgnoreCase(StringPieceType string1,

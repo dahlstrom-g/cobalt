@@ -14,6 +14,8 @@
 #include "base/allocator/partition_allocator/partition_page.h"
 #include "base/allocator/partition_allocator/spin_lock.h"
 #include "base/lazy_instance.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -260,7 +262,7 @@ void* PartitionReallocGenericFlags(PartitionRootGeneric* root,
                                    size_t new_size,
                                    const char* type_name) {
 #if defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
-  void* result = realloc(ptr, new_size);
+  void* result = SbMemoryReallocate(ptr, new_size);
   CHECK(result || flags & PartitionAllocReturnNull);
   return result;
 #else

@@ -5,8 +5,6 @@
 #ifndef BASE_BIND_INTERNAL_H_
 #define BASE_BIND_INTERNAL_H_
 
-#include <stddef.h>
-
 #include <type_traits>
 #include <utility>
 
@@ -19,6 +17,7 @@
 
 #if defined(OS_MACOSX) && !HAS_FEATURE(objc_arc)
 #include "base/mac/scoped_block.h"
+#include "starboard/types.h"
 #endif
 
 // See base/callback.h for user documentation.
@@ -177,10 +176,13 @@ template <typename T>
 using Unwrapper = BindUnwrapTraits<std::decay_t<T>>;
 
 template <typename T>
+#if __cplusplus < 201402L
+auto Unwrap(T&& o) -> decltype(Unwrapper<T>::Unwrap(std::forward<T>(o))) {
+#else
 decltype(auto) Unwrap(T&& o) {
+#endif
   return Unwrapper<T>::Unwrap(std::forward<T>(o));
 }
-
 // IsWeakMethod is a helper that determine if we are binding a WeakPtr<> to a
 // method.  It is used internally by Bind() to select the correct
 // InvokeHelper that will no-op itself in the event the WeakPtr<> for
@@ -749,6 +751,10 @@ bool QueryCancellationTraitsImpl(BindStateBase::CancellationQueryMode mode,
           functor, std::get<indices>(bound_args)...);
   }
   NOTREACHED();
+#if defined(STARBOARD)
+  // Some compiler, at least MSVC does not allow missing return type.
+  return false;
+#endif
 }
 
 // Relays |base| to corresponding CallbackCancellationTraits<>::Run(). Returns
@@ -770,7 +776,7 @@ std::enable_if_t<
     !(MakeFunctorTraits<Functor>::is_method &&
       std::is_pointer<std::decay_t<Receiver>>::value &&
       IsRefCountedType<std::remove_pointer_t<std::decay_t<Receiver>>>::value)>
-BanUnconstructedRefCountedReceiver(const Receiver& receiver, Unused&&...) {}
+BanUnconstructedRefCountedReceiver(const Receiver& /*receiver*/, Unused&&...) {}
 
 template <typename Functor>
 void BanUnconstructedRefCountedReceiver() {}

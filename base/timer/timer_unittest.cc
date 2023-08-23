@@ -4,8 +4,6 @@
 
 #include "base/timer/timer.h"
 
-#include <stddef.h>
-
 #include <memory>
 
 #include "base/bind.h"
@@ -15,6 +13,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/message_loop/message_loop.h"
+#include "base/metrics/statistics_recorder.h"
 #include "base/run_loop.h"
 #include "base/sequenced_task_runner.h"
 #include "base/synchronization/waitable_event.h"
@@ -27,6 +26,7 @@
 #include "base/time/tick_clock.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -200,6 +200,12 @@ class RepeatingTimerTester {
 // that |did_run_a| would be signaled in that test if it wasn't for the
 // deletion.
 void RunTest_OneShotTimers(MessageLoop::Type message_loop_type) {
+#if defined(STARBOARD)
+  if (message_loop_type == MessageLoop::TYPE_UI) {
+    return;
+  }
+#endif
+
   MessageLoop loop(message_loop_type);
 
   WaitableEvent did_run_a(WaitableEvent::ResetPolicy::MANUAL,
@@ -216,6 +222,12 @@ void RunTest_OneShotTimers(MessageLoop::Type message_loop_type) {
 }
 
 void RunTest_OneShotTimers_Cancel(MessageLoop::Type message_loop_type) {
+#if defined(STARBOARD)
+  if (message_loop_type == MessageLoop::TYPE_UI) {
+    return;
+  }
+#endif
+
   MessageLoop loop(message_loop_type);
 
   WaitableEvent did_run_a(WaitableEvent::ResetPolicy::MANUAL,
@@ -237,6 +249,12 @@ void RunTest_OneShotTimers_Cancel(MessageLoop::Type message_loop_type) {
 }
 
 void RunTest_OneShotSelfDeletingTimer(MessageLoop::Type message_loop_type) {
+#if defined(STARBOARD)
+  if (message_loop_type == MessageLoop::TYPE_UI) {
+    return;
+  }
+#endif
+
   MessageLoop loop(message_loop_type);
 
   OneShotSelfDeletingTimerTester f;
@@ -246,6 +264,12 @@ void RunTest_OneShotSelfDeletingTimer(MessageLoop::Type message_loop_type) {
 
 void RunTest_RepeatingTimer(MessageLoop::Type message_loop_type,
                             const TimeDelta& delay) {
+#if defined(STARBOARD)
+  if (message_loop_type == MessageLoop::TYPE_UI) {
+    return;
+  }
+#endif
+
   MessageLoop loop(message_loop_type);
 
   RepeatingTimerTester f(nullptr, delay);
@@ -255,6 +279,12 @@ void RunTest_RepeatingTimer(MessageLoop::Type message_loop_type,
 
 void RunTest_RepeatingTimer_Cancel(MessageLoop::Type message_loop_type,
                                    const TimeDelta& delay) {
+#if defined(STARBOARD)
+  if (message_loop_type == MessageLoop::TYPE_UI) {
+    return;
+  }
+#endif
+
   MessageLoop loop(message_loop_type);
 
   WaitableEvent did_run_a(WaitableEvent::ResetPolicy::MANUAL,
@@ -291,6 +321,12 @@ class DelayTimerTarget {
 };
 
 void RunTest_DelayTimer_NoCall(MessageLoop::Type message_loop_type) {
+#if defined(STARBOARD)
+  if (message_loop_type == MessageLoop::TYPE_UI) {
+    return;
+  }
+#endif
+
   MessageLoop loop(message_loop_type);
 
   // If Delay is never called, the timer shouldn't go off.
@@ -306,6 +342,12 @@ void RunTest_DelayTimer_NoCall(MessageLoop::Type message_loop_type) {
 }
 
 void RunTest_DelayTimer_OneCall(MessageLoop::Type message_loop_type) {
+#if defined(STARBOARD)
+  if (message_loop_type == MessageLoop::TYPE_UI) {
+    return;
+  }
+#endif
+
   MessageLoop loop(message_loop_type);
 
   DelayTimerTarget target;
@@ -335,6 +377,12 @@ struct ResetHelper {
 };
 
 void RunTest_DelayTimer_Reset(MessageLoop::Type message_loop_type) {
+#if defined(STARBOARD)
+  if (message_loop_type == MessageLoop::TYPE_UI) {
+    return;
+  }
+#endif
+
   MessageLoop loop(message_loop_type);
 
   // If Delay is never called, the timer shouldn't go off.
@@ -366,6 +414,12 @@ class DelayTimerFatalTarget {
 };
 
 void RunTest_DelayTimer_Deleted(MessageLoop::Type message_loop_type) {
+#if defined(STARBOARD)
+  if (message_loop_type == MessageLoop::TYPE_UI) {
+    return;
+  }
+#endif
+
   MessageLoop loop(message_loop_type);
 
   DelayTimerFatalTarget target;
@@ -728,7 +782,8 @@ namespace {
 class TimerSequenceTest : public testing::Test {
  public:
   TimerSequenceTest()
-      : event_(WaitableEvent::ResetPolicy::AUTOMATIC,
+      : recorder_for_testing_(StatisticsRecorder::CreateTemporaryForTesting()),
+        event_(WaitableEvent::ResetPolicy::AUTOMATIC,
                WaitableEvent::InitialState::NOT_SIGNALED) {}
 
   // Block until Signal() is called on another thread.
@@ -777,6 +832,7 @@ class TimerSequenceTest : public testing::Test {
     Signal();
   }
 
+  std::unique_ptr<StatisticsRecorder> recorder_for_testing_;
   base::test::ScopedTaskEnvironment scoped_task_environment_;
   WaitableEvent event_;
   std::unique_ptr<OneShotTimer> timer_;

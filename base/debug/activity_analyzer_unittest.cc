@@ -24,6 +24,8 @@
 #include "base/threading/platform_thread.h"
 #include "base/threading/simple_thread.h"
 #include "base/time/time.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -394,7 +396,8 @@ TEST_F(ActivityAnalyzerTest, GlobalUserDataTest) {
   EXPECT_EQ(sizeof(string1), snapshot.at("ref").GetReference().size());
   ASSERT_TRUE(ContainsKey(snapshot, "sref"));
   EXPECT_EQ(string2, snapshot.at("sref").GetStringReference().data());
-  EXPECT_EQ(strlen(string2), snapshot.at("sref").GetStringReference().size());
+  EXPECT_EQ(strlen(string2),
+            snapshot.at("sref").GetStringReference().size());
 }
 
 TEST_F(ActivityAnalyzerTest, GlobalModulesTest) {

@@ -8,6 +8,8 @@
 
 #include <vector>
 
+#include "starboard/types.h"
+
 #include "base/memory/ptr_util.h"
 #include "base/memory/shared_memory_tracker.h"
 #include "base/process/process_metrics.h"
@@ -62,6 +64,8 @@ bool ProcessMemoryDump::is_black_hole_non_fatal_for_testing_ = false;
 #if defined(COUNT_RESIDENT_BYTES_SUPPORTED)
 // static
 size_t ProcessMemoryDump::GetSystemPageSize() {
+// Cobalt does not support base::GetPageSize() yet.
+#if !defined(STARBOARD)
 #if defined(OS_IOS)
   // On iOS, getpagesize() returns the user page sizes, but for allocating
   // arrays for mincore(), kernel page sizes is needed. Use vm_kernel_page_size
@@ -71,6 +75,10 @@ size_t ProcessMemoryDump::GetSystemPageSize() {
 #else
   return base::GetPageSize();
 #endif  // defined(OS_IOS)
+#else
+  NOTIMPLEMENTED();
+  return 0;
+#endif  // !defined(STARBOARD)
 }
 
 // static
@@ -316,9 +324,13 @@ void ProcessMemoryDump::DumpHeapUsage(
         metrics_by_context,
     base::trace_event::TraceEventMemoryOverhead& overhead,
     const char* allocator_name) {
+#if defined(STARBOARD)
+  NOTIMPLEMENTED();
+#else
   std::string base_name = base::StringPrintf("tracing/heap_profiler_%s",
                                              allocator_name);
   overhead.DumpInto(base_name.c_str(), this);
+#endif  // defined(STARBOARD)
 }
 
 void ProcessMemoryDump::SetAllocatorDumpsForSerialization(
@@ -388,6 +400,9 @@ void ProcessMemoryDump::SerializeAllocatorDumpsInto(TracedValue* value) const {
 void ProcessMemoryDump::AddOwnershipEdge(const MemoryAllocatorDumpGuid& source,
                                          const MemoryAllocatorDumpGuid& target,
                                          int importance) {
+#if defined(STARBOARD)
+  NOTIMPLEMENTED();
+#else
   // This will either override an existing edge or create a new one.
   auto it = allocator_dumps_edges_.find(source);
   int max_importance = importance;
@@ -397,6 +412,7 @@ void ProcessMemoryDump::AddOwnershipEdge(const MemoryAllocatorDumpGuid& source,
   }
   allocator_dumps_edges_[source] = {source, target, max_importance,
                                     false /* overridable */};
+#endif  // defined(STARBOARD)
 }
 
 void ProcessMemoryDump::AddOwnershipEdge(
@@ -409,6 +425,9 @@ void ProcessMemoryDump::AddOverridableOwnershipEdge(
     const MemoryAllocatorDumpGuid& source,
     const MemoryAllocatorDumpGuid& target,
     int importance) {
+#if defined(STARBOARD)
+  NOTIMPLEMENTED();
+#else
   if (allocator_dumps_edges_.count(source) == 0) {
     allocator_dumps_edges_[source] = {source, target, importance,
                                       true /* overridable */};
@@ -418,6 +437,7 @@ void ProcessMemoryDump::AddOverridableOwnershipEdge(
     // which was created earlier.
     DCHECK(!allocator_dumps_edges_[source].overridable);
   }
+#endif
 }
 
 void ProcessMemoryDump::CreateSharedMemoryOwnershipEdge(
@@ -442,6 +462,9 @@ void ProcessMemoryDump::CreateSharedMemoryOwnershipEdgeInternal(
     const UnguessableToken& shared_memory_guid,
     int importance,
     bool is_weak) {
+#if defined(STARBOARD)
+  NOTIMPLEMENTED();
+#else
   DCHECK(!shared_memory_guid.is_empty());
   // New model where the global dumps created by SharedMemoryTracker are used
   // for the clients.
@@ -467,6 +490,7 @@ void ProcessMemoryDump::CreateSharedMemoryOwnershipEdgeInternal(
   // created global dump.
   // Create an edge that overrides the edge created by SharedMemoryTracker.
   AddOwnershipEdge(local_shm_guid, global_shm_guid, importance);
+#endif  // defined(STARBOARD)
 }
 
 void ProcessMemoryDump::AddSuballocation(const MemoryAllocatorDumpGuid& source,

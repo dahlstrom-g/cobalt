@@ -9,8 +9,6 @@
 
 #include <ctype.h>
 #include <stdarg.h>   // va_list
-#include <stddef.h>
-#include <stdint.h>
 
 #include <initializer_list>
 #include <string>
@@ -291,6 +289,12 @@ BASE_EXPORT bool IsStringASCII(WStringPiece str);
 
 // Compare the lower-case form of the given string against the given
 // previously-lower-cased ASCII string (typically a constant).
+#if defined(STARBOARD)
+// TODO[Cobalt]: deprecate this function and use the other two instead.
+BASE_EXPORT bool LowerCaseEqualsASCII(const char* a_begin,
+                                      const char* a_end,
+                                      const char* b);
+#endif
 BASE_EXPORT bool LowerCaseEqualsASCII(StringPiece str,
                                       StringPiece lowecase_ascii);
 BASE_EXPORT bool LowerCaseEqualsASCII(StringPiece16 str,
@@ -474,12 +478,17 @@ BASE_EXPORT string16 ReplaceStringPlaceholders(const string16& format_string,
 
 }  // namespace base
 
+#if defined(STARBOARD)
+#include "base/strings/string_util_starboard.h"
+#else
 #if defined(OS_WIN)
 #include "base/strings/string_util_win.h"
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
 #include "base/strings/string_util_posix.h"
+#include "starboard/types.h"
 #else
 #error Define string operations appropriately for your platform
+#endif
 #endif
 
 #endif  // BASE_STRINGS_STRING_UTIL_H_

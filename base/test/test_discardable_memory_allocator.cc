@@ -10,6 +10,7 @@
 #include "base/logging.h"
 #include "base/memory/discardable_memory.h"
 #include "base/memory/ptr_util.h"
+#include "starboard/memory.h"
 
 namespace base {
 namespace {

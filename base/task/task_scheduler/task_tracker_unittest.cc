@@ -4,8 +4,6 @@
 
 #include "base/task/task_scheduler/task_tracker.h"
 
-#include <stdint.h>
-
 #include <memory>
 #include <utility>
 #include <vector>
@@ -38,6 +36,7 @@
 #include "base/threading/simple_thread.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -171,7 +170,9 @@ class ScopedSetSingletonAllowed {
 class TaskSchedulerTaskTrackerTest
     : public testing::TestWithParam<TaskShutdownBehavior> {
  protected:
-  TaskSchedulerTaskTrackerTest() = default;
+  TaskSchedulerTaskTrackerTest()
+      : recorder_for_testing_(StatisticsRecorder::CreateTemporaryForTesting()) {
+  }
 
   // Creates a task.
   Task CreateTask() {
@@ -239,6 +240,7 @@ class TaskSchedulerTaskTrackerTest
     return num_tasks_executed_;
   }
 
+  std::unique_ptr<StatisticsRecorder> recorder_for_testing_;
   TaskTracker tracker_ = {"Test"};
   testing::StrictMock<MockCanScheduleSequenceObserver> never_notified_observer_;
 
@@ -1369,8 +1371,7 @@ TEST_F(TaskSchedulerTaskTrackerTest,
   // Simulate scheduling sequences. TaskTracker should prevent this.
   std::vector<scoped_refptr<Sequence>> preempted_sequences;
   for (int i = 0; i < 3; ++i) {
-    Task task(FROM_HERE, DoNothing(),
-              TimeDelta());
+    Task task(FROM_HERE, DoNothing(), TimeDelta());
     EXPECT_TRUE(
         tracker.WillPostTask(&task, TaskShutdownBehavior::BLOCK_SHUTDOWN));
     scoped_refptr<Sequence> sequence = test::CreateSequenceWithTask(
@@ -1406,6 +1407,8 @@ class WaitAllowedTestThread : public SimpleThread {
 
  private:
   void Run() override {
+    std::unique_ptr<StatisticsRecorder> recorder_for_testing =
+        StatisticsRecorder::CreateTemporaryForTesting();
     auto task_tracker = std::make_unique<TaskTracker>("Test");
 
     // Waiting is allowed by default. Expect TaskTracker to disallow it before

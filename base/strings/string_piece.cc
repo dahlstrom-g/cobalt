@@ -11,6 +11,8 @@
 #include <ostream>
 
 #include "base/logging.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace base {
 namespace {

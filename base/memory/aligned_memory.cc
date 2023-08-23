@@ -9,6 +9,8 @@
 
 #if defined(OS_ANDROID)
 #include <malloc.h>
+
+#include "starboard/types.h"
 #endif
 
 namespace base {
@@ -18,7 +20,9 @@ void* AlignedAlloc(size_t size, size_t alignment) {
   DCHECK_EQ(alignment & (alignment - 1), 0U);
   DCHECK_EQ(alignment % sizeof(void*), 0U);
   void* ptr = nullptr;
-#if defined(COMPILER_MSVC)
+#if defined(STARBOARD)
+  ptr = SbMemoryAllocateAligned(alignment, size);
+#elif defined(COMPILER_MSVC)
   ptr = _aligned_malloc(size, alignment);
 // Android technically supports posix_memalign(), but does not expose it in
 // the current version of the library headers used by Chrome.  Luckily,

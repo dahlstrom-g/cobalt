@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-
 #include <sstream>
 
 #include "base/files/file_path.h"
@@ -15,6 +13,7 @@
 
 #if defined(OS_POSIX) || defined(OS_FUCHSIA)
 #include "base/test/scoped_locale.h"
+#include "starboard/types.h"
 #endif
 
 // This macro helps avoid wrapped lines in the test structs.
@@ -321,7 +320,7 @@ TEST_F(FilePathTest, Append) {
     // handle the case when AppendASCII is passed UTF8
 #if defined(OS_WIN)
     std::string ascii = WideToUTF8(leaf);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
     std::string ascii = leaf;
 #endif
     observed_str = root.AppendASCII(ascii);
@@ -1039,10 +1038,17 @@ TEST_F(FilePathTest, CompareIgnoreCase) {
     // However, neither Windows nor Mac OSX converts these.
     // (or even have glyphs for <uppercase eszett>)
     { { FPL("\u00DF"),                       FPL("\u00DF") },               0},
-    { { FPL("\u1E9E"),                       FPL("\u1E9E") },               0},
-    { { FPL("\u00DF"),                       FPL("\u1E9E") },              -1},
-    { { FPL("SS"),                           FPL("\u00DF") },              -1},
-    { { FPL("SS"),                           FPL("\u1E9E") },              -1},
+#if SB_IS_COMPILER_MSVC
+    { {FPL(u8"\u1E9E"),                      FPL(u8"\u1E9E")},              0},
+    { {FPL("\u00DF"),                        FPL(u8"\u1E9E")},             -1},
+    { {FPL("SS"),                            FPL("\u00DF")},               -1},
+    { {FPL("SS"),                            FPL(u8"\u1E9E")},             -1},
+#else
+    { {FPL("\u1E9E"),                        FPL("\u1E9E")},                0},
+    { {FPL("\u00DF"),                        FPL("\u1E9E")},               -1},
+    { {FPL("SS"),                            FPL("\u00DF")},               -1},
+    { {FPL("SS"),                            FPL("\u1E9E")},               -1},
+#endif
 #if defined(OS_WIN) || defined(OS_MACOSX)
     // Umlauts A, O, U: direct comparison, and upper case vs. lower case
     { { FPL("\u00E4\u00F6\u00FC"),           FPL("\u00E4\u00F6\u00FC") },   0},
@@ -1128,12 +1134,13 @@ TEST_F(FilePathTest, ReferencesParent) {
 
 TEST_F(FilePathTest, FromUTF8Unsafe_And_AsUTF8Unsafe) {
   const struct UTF8TestData cases[] = {
-    { FPL("foo.txt"), "foo.txt" },
+    {FPL("foo.txt"), "foo.txt"},
+#if !defined(STARBOARD)
     // "aeo" with accents. Use http://0xcc.net/jsescape/ to decode them.
-    { FPL("\u00E0\u00E8\u00F2.txt"), "\xC3\xA0\xC3\xA8\xC3\xB2.txt" },
+    {FPL("\u00E0\u00E8\u00F2.txt"), "\xC3\xA0\xC3\xA8\xC3\xB2.txt"},
     // Full-width "ABC".
-    { FPL("\uFF21\uFF22\uFF23.txt"),
-      "\xEF\xBC\xA1\xEF\xBC\xA2\xEF\xBC\xA3.txt" },
+    {FPL("\uFF21\uFF22\uFF23.txt"), "\xEF\xBC\xA1\xEF\xBC\xA2\xEF\xBC\xA3.txt"},
+#endif
   };
 
 #if !defined(SYSTEM_NATIVE_UTF8) && defined(OS_LINUX)

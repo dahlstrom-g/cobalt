@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <utility>
 
+#include "base/debug/stack_trace.h"
+
 #include "base/bind.h"
 #include "base/callback_helpers.h"
 #include "base/compiler_specific.h"
@@ -22,10 +24,6 @@
 #include "base/threading/thread_id_name_manager.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/trace_event/trace_event.h"
-
-#if defined(OS_MACOSX)
-#include "base/message_loop/message_pump_mac.h"
-#endif
 
 namespace base {
 
@@ -392,6 +390,13 @@ void MessageLoop::Quit() {
   pump_->Quit();
 }
 
+#if defined(STARBOARD)
+void MessageLoop::RunUntilIdleForTesting() {
+  base::RunLoop run_loop;
+  run_loop.RunUntilIdle();
+}
+#endif
+
 void MessageLoop::EnsureWorkScheduled() {
   DCHECK_CALLED_ON_VALID_THREAD(bound_thread_checker_);
   if (sequenced_task_source_->HasTasks())
@@ -622,6 +627,13 @@ MessageLoopCurrentForUI MessageLoopForUI::current() {
 bool MessageLoopForUI::IsCurrent() {
   return MessageLoopCurrentForUI::IsSet();
 }
+
+#if defined(STARBOARD)
+void MessageLoopForUI::Start() {
+  // No Histogram support for UI message loop as it is managed by Starboard.
+  static_cast<base::MessagePumpUIStarboard*>(pump_.get())->Start(this);
+}
+#endif
 
 #if defined(OS_IOS)
 void MessageLoopForUI::Attach() {

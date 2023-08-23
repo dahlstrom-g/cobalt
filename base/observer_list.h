@@ -5,8 +5,6 @@
 #ifndef BASE_OBSERVER_LIST_H_
 #define BASE_OBSERVER_LIST_H_
 
-#include <stddef.h>
-
 #include <algorithm>
 #include <iterator>
 #include <limits>
@@ -19,6 +17,7 @@
 #include "base/observer_list_internal.h"
 #include "base/sequence_checker.h"
 #include "base/stl_util.h"
+#include "starboard/types.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -278,9 +277,9 @@ class ObserverList {
   // not in this list.
   void RemoveObserver(const ObserverType* obs) {
     DCHECK(obs);
-    const auto it =
-        std::find_if(observers_.begin(), observers_.end(),
-                     [obs](const auto& o) { return o.IsEqual(obs); });
+    const auto it = std::find_if(
+        observers_.begin(), observers_.end(),
+        [obs](const ObserverStorageType& o) { return o.IsEqual(obs); });
     if (it == observers_.end())
       return;
 
@@ -300,8 +299,9 @@ class ObserverList {
     if (obs == nullptr)
       return false;
     return std::find_if(observers_.begin(), observers_.end(),
-                        [obs](const auto& o) { return o.IsEqual(obs); }) !=
-           observers_.end();
+                        [obs](const ObserverStorageType& o) {
+                          return o.IsEqual(obs);
+                        }) != observers_.end();
   }
 
   // Removes all the observers from this list.
@@ -326,7 +326,9 @@ class ObserverList {
     // Compact() is only ever called when the last iterator is destroyed.
     DETACH_FROM_SEQUENCE(iteration_sequence_checker_);
 
-    EraseIf(observers_, [](const auto& o) { return o.IsMarkedForRemoval(); });
+    EraseIf(observers_, [](const ObserverStorageType& o) {
+      return o.IsMarkedForRemoval();
+    });
   }
 
   std::vector<ObserverStorageType> observers_;
@@ -344,5 +346,17 @@ template <class ObserverType, bool check_empty = false>
 using ReentrantObserverList = ObserverList<ObserverType, check_empty, true>;
 
 }  // namespace base
+
+#if defined(STARBOARD)
+#define FOR_EACH_OBSERVER(ObserverType, observer_list, func)          \
+  do {                                                                \
+    if ((observer_list).might_have_observers()) {                     \
+      for (base::ObserverList<ObserverType>::Iter it(&observer_list); \
+           it != base::ObserverList<ObserverType>::Iter(); it++) {    \
+        it->func;                                                     \
+      }                                                               \
+    }                                                                 \
+  } while (0)
+#endif
 
 #endif  // BASE_OBSERVER_LIST_H_

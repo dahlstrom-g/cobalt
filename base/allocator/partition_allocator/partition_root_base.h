@@ -11,6 +11,7 @@
 #include "base/allocator/partition_allocator/partition_direct_map_extent.h"
 #include "base/allocator/partition_allocator/partition_page.h"
 #include "build/build_config.h"
+#include "starboard/memory.h"
 
 namespace base {
 namespace internal {

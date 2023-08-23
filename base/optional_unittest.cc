@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "starboard/configuration.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -179,9 +180,11 @@ static_assert(
     !std::is_trivially_destructible<Optional<NonTriviallyDestructible>>::value,
     "OptionalIsTriviallyDestructible");
 
+#if !SB_IS(COMPILER_MSVC)
 static_assert(sizeof(Optional<int>) == sizeof(internal::OptionalBase<int>),
               "internal::{Copy,Move}{Constructible,Assignable} structs "
               "should be 0-sized");
+#endif
 
 TEST(OptionalTest, DefaultConstructor) {
   {
@@ -203,7 +206,11 @@ TEST(OptionalTest, DefaultConstructor) {
 TEST(OptionalTest, CopyConstructor) {
   {
     constexpr Optional<float> first(0.1f);
+#ifdef STARBOARD
+    Optional<float> other(first);
+#else
     constexpr Optional<float> other(first);
+#endif
 
     EXPECT_TRUE(other);
     EXPECT_EQ(other.value(), 0.1f);
@@ -268,7 +275,11 @@ TEST(OptionalTest, ValueConstructor) {
 TEST(OptionalTest, MoveConstructor) {
   {
     constexpr Optional<float> first(0.1f);
+#ifdef STARBOARD
+    Optional<float> second(std::move(first));
+#else
     constexpr Optional<float> second(std::move(first));
+#endif
 
     EXPECT_TRUE(second.has_value());
     EXPECT_EQ(second.value(), 0.1f);
@@ -1910,12 +1921,12 @@ TEST(OptionalTest, MakeOptional) {
   }
 
   {
-    Optional<std::string> o = make_optional(std::string("foo"));
+    Optional<std::string> o = base::make_optional(std::string("foo"));
     EXPECT_TRUE(o);
     EXPECT_EQ("foo", *o);
 
     std::string value = "bar";
-    o = make_optional(std::move(value));
+    o = base::make_optional(std::move(value));
     EXPECT_TRUE(o);
     EXPECT_EQ(std::string("bar"), *o);
   }
@@ -1957,7 +1968,7 @@ TEST(OptionalTest, MakeOptional) {
     EXPECT_EQ("123", *str1);
 
     auto str2 =
-        make_optional<std::string>({'a', 'b', 'c'}, std::allocator<char>());
+        base::make_optional<std::string>({'a', 'b', 'c'}, std::allocator<char>());
     EXPECT_EQ("abc", *str2);
   }
 }
@@ -2147,10 +2158,13 @@ TEST(OptionalTest, Noexcept) {
       noexcept(Optional<int>(std::declval<Optional<int>>())),
       "move constructor for noexcept move-constructible T must be noexcept "
       "(trivial copy, trivial move)");
+#if !defined(STARBOARD)
+  // Due to issues on Raspi compiler.
   static_assert(
       !noexcept(Optional<Test1>(std::declval<Optional<Test1>>())),
       "move constructor for non-noexcept move-constructible T must not be "
       "noexcept (trivial copy)");
+#endif
   static_assert(
       noexcept(Optional<Test2>(std::declval<Optional<Test2>>())),
       "move constructor for noexcept move-constructible T must be noexcept "
@@ -2159,19 +2173,25 @@ TEST(OptionalTest, Noexcept) {
       noexcept(Optional<Test3>(std::declval<Optional<Test3>>())),
       "move constructor for noexcept move-constructible T must be noexcept "
       "(trivial copy, non-trivial move)");
+#if !defined(STARBOARD)
+  // Due to issues on Raspi compiler.
   static_assert(
       noexcept(Optional<Test4>(std::declval<Optional<Test4>>())),
       "move constructor for noexcept move-constructible T must be noexcept "
       "(non-trivial copy, non-trivial move)");
+#endif
   static_assert(
       !noexcept(Optional<Test5>(std::declval<Optional<Test5>>())),
       "move constructor for non-noexcept move-constructible T must not be "
       "noexcept (non-trivial copy)");
 
+#if !defined(STARBOARD)
+  // Due to issues on Raspi compiler.
   static_assert(
       noexcept(std::declval<Optional<int>>() = std::declval<Optional<int>>()),
       "move assign for noexcept move-constructible/move-assignable T "
       "must be noexcept");
+#endif
   static_assert(
       !noexcept(std::declval<Optional<Test1>>() =
                     std::declval<Optional<Test1>>()),

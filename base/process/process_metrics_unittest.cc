@@ -4,12 +4,13 @@
 
 #include "base/process/process_metrics.h"
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include "starboard/types.h"
+
+#include "starboard/memory.h"
 
 #include "base/bind.h"
 #include "base/command_line.h"

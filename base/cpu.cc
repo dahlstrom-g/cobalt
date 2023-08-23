@@ -5,12 +5,16 @@
 #include "base/cpu.h"
 
 #include <limits.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 
 #include <algorithm>
 #include <utility>
+
+#include "starboard/types.h"
+
+#include "starboard/common/string.h"
+
+#include "starboard/memory.h"
 
 #include "base/macros.h"
 #include "build/build_config.h"
@@ -111,10 +115,14 @@ std::string* CpuInfoBrand() {
     std::istringstream iss(contents);
     std::string line;
     while (std::getline(iss, line)) {
-      if (line.compare(0, strlen(kModelNamePrefix), kModelNamePrefix) == 0)
-        return new std::string(line.substr(strlen(kModelNamePrefix)));
-      if (line.compare(0, strlen(kProcessorPrefix), kProcessorPrefix) == 0)
-        return new std::string(line.substr(strlen(kProcessorPrefix)));
+      if (line.compare(0, strlen(kModelNamePrefix),
+                       kModelNamePrefix) == 0)
+        return new std::string(
+            line.substr(strlen(kModelNamePrefix)));
+      if (line.compare(0, strlen(kProcessorPrefix),
+                       kProcessorPrefix) == 0)
+        return new std::string(
+            line.substr(strlen(kProcessorPrefix)));
     }
 
     return new std::string();

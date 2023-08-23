@@ -5,14 +5,13 @@
 #ifndef BASE_TASK_TASK_TRAITS_EXTENSION_H_
 #define BASE_TASK_TASK_TRAITS_EXTENSION_H_
 
-#include <stdint.h>
-
 #include <array>
 #include <tuple>
 #include <utility>
 
 #include "base/base_export.h"
 #include "base/task/task_traits_details.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -188,7 +187,7 @@ struct TaskTraitsExtension {
   template <class... ArgTypes,
             class CheckCanMakeExtension =
                 decltype(MakeTaskTraitsExtension(std::declval<ArgTypes>()...))>
-  constexpr TaskTraitsExtension(ArgTypes... args) {}
+  constexpr TaskTraitsExtension(ArgTypes... /*args*/) {}
 };
 
 // Tests that that a trait extension accepts all |ArgsTypes...|.
@@ -204,14 +203,14 @@ struct AreValidTraitsForExtension
 // otherwise.
 template <class... ArgTypes>
 constexpr TaskTraitsExtensionStorage GetTaskTraitsExtension(
-    std::true_type base_traits,
-    ArgTypes... args) {
+    std::true_type /*base_traits*/,
+    ArgTypes... /*args*/) {
   return TaskTraitsExtensionStorage();
 }
 
 template <class... ArgTypes>
 constexpr TaskTraitsExtensionStorage GetTaskTraitsExtension(
-    std::false_type base_traits,
+    std::false_type /*base_traits*/,
     ArgTypes... args) {
   return MakeTaskTraitsExtension(args...);
 }

@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#if defined(STARBOARD)
+#include "starboard/configuration.h"
+#endif
+
+#if !defined(STARBOARD) || SB_IS(WCHAR_T_UTF32)
+
 #include "base/strings/string16.h"
 
 #if defined(WCHAR_T_IS_UTF16) && !defined(_AIX)
@@ -16,10 +22,11 @@
 #include <ostream>
 
 #include "base/strings/utf_string_conversions.h"
+#include "starboard/memory.h"
 
 namespace base {
 
-int c16memcmp(const char16* s1, const char16* s2, size_t n) {
+int c16SbMemoryCompare(const char16* s1, const char16* s2, size_t n) {
   // We cannot call memcmp because that changes the semantics.
   while (n-- > 0) {
     if (*s1 != *s2) {
@@ -40,7 +47,7 @@ size_t c16len(const char16* s) {
   return s - s_orig;
 }
 
-const char16* c16memchr(const char16* s, char16 c, size_t n) {
+const char16* c16SbMemoryFindByte(const char16* s, char16 c, size_t n) {
   while (n-- > 0) {
     if (*s == c) {
       return s;
@@ -50,15 +57,15 @@ const char16* c16memchr(const char16* s, char16 c, size_t n) {
   return nullptr;
 }
 
-char16* c16memmove(char16* s1, const char16* s2, size_t n) {
+char16* c16SbMemoryMove(char16* s1, const char16* s2, size_t n) {
   return static_cast<char16*>(memmove(s1, s2, n * sizeof(char16)));
 }
 
-char16* c16memcpy(char16* s1, const char16* s2, size_t n) {
+char16* c16SbMemoryCopy(char16* s1, const char16* s2, size_t n) {
   return static_cast<char16*>(memcpy(s1, s2, n * sizeof(char16)));
 }
 
-char16* c16memset(char16* s, char16 c, size_t n) {
+char16* c16SbMemorySet(char16* s, char16 c, size_t n) {
   char16 *s_orig = s;
   while (n-- > 0) {
     *s = c;
@@ -85,3 +92,5 @@ template class std::
     basic_string<base::char16, base::string16_internals::string16_char_traits>;
 
 #endif  // WCHAR_T_IS_UTF32
+
+#endif  // !STARBOARD || WCHAR_T_IS_UTF32

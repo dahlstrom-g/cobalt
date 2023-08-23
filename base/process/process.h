@@ -22,6 +22,7 @@
 #if defined(OS_MACOSX)
 #include "base/feature_list.h"
 #include "base/process/port_provider_mac.h"
+#include "starboard/types.h"
 #endif
 
 namespace base {
@@ -82,8 +83,10 @@ class BASE_EXPORT Process {
   // Returns true if processes can be backgrounded.
   static bool CanBackgroundProcesses();
 
+#ifndef STARBOARD
   // Terminates the current process immediately with |exit_code|.
   [[noreturn]] static void TerminateCurrentProcessImmediately(int exit_code);
+#endif
 
   // Returns true if this objects represents a valid process.
   bool IsValid() const;

@@ -22,6 +22,11 @@
 #include "base/threading/scoped_blocking_call.h"
 #include "build/build_config.h"
 
+#if defined(STARBOARD)
+#include "starboard/memory.h"
+#include "starboard/types.h"
+#endif
+
 namespace base {
 
 #if !defined(OS_NACL_NONSFI)
@@ -54,6 +59,24 @@ bool ContentsEqual(const FilePath& filename1, const FilePath& filename2) {
   // We open the file in binary format even if they are text files because
   // we are just comparing that bytes are exactly same in both files and not
   // doing anything smart with text formatting.
+#ifdef STARBOARD
+  // std::ifstream doesn't work on all our platforms.
+  base::File file1(filename1, base::File::FLAG_OPEN | base::File::FLAG_READ);
+  base::File file2(filename2, base::File::FLAG_OPEN | base::File::FLAG_READ);
+  auto file1_length = file1.GetLength();
+  if (file1_length != file2.GetLength()) {
+    return false;
+  }
+  std::unique_ptr<char[]> file1_content(new char[file1_length]());
+  std::unique_ptr<char[]> file2_content(new char[file1_length]());
+  if (file1.ReadAtCurrentPos(file1_content.get(), file1_length) != file1_length ||
+      file2.ReadAtCurrentPos(file2_content.get(), file1_length) != file1_length) {
+    return false;
+  }
+
+  return memcmp(file1_content.get(), file2_content.get(),
+                file1_length) == 0;
+#else
   std::ifstream file1(filename1.value().c_str(),
                       std::ios::in | std::ios::binary);
   std::ifstream file2(filename2.value().c_str(),
@@ -70,9 +93,9 @@ bool ContentsEqual(const FilePath& filename1, const FilePath& filename2) {
     file1.read(buffer1, BUFFER_SIZE);
     file2.read(buffer2, BUFFER_SIZE);
 
-    if ((file1.eof() != file2.eof()) ||
-        (file1.gcount() != file2.gcount()) ||
-        (memcmp(buffer1, buffer2, static_cast<size_t>(file1.gcount())))) {
+    if ((file1.eof() != file2.eof()) || (file1.gcount() != file2.gcount()) ||
+        (SbMemoryCompare(buffer1, buffer2,
+                         static_cast<size_t>(file1.gcount())))) {
       file1.close();
       file2.close();
       return false;
@@ -82,8 +105,10 @@ bool ContentsEqual(const FilePath& filename1, const FilePath& filename2) {
   file1.close();
   file2.close();
   return true;
+#endif
 }
 
+#if !defined(STARBOARD)
 bool TextContentsEqual(const FilePath& filename1, const FilePath& filename2) {
   std::ifstream file1(filename1.value().c_str(), std::ios::in);
   std::ifstream file2(filename2.value().c_str(), std::ios::in);
@@ -123,6 +148,7 @@ bool TextContentsEqual(const FilePath& filename1, const FilePath& filename2) {
 
   return true;
 }
+#endif  // !defined(STARBOARD)
 #endif  // !defined(OS_NACL_NONSFI)
 
 bool ReadFileToStringWithMaxSize(const FilePath& path,
@@ -132,6 +158,44 @@ bool ReadFileToStringWithMaxSize(const FilePath& path,
     contents->clear();
   if (path.ReferencesParent())
     return false;
+
+#if defined(STARBOARD)
+  base::File file(path, base::File::FLAG_OPEN | base::File::FLAG_READ);
+  if (!file.IsValid()) {
+    return false;
+  }
+
+  // Use a smaller buffer than in Chromium so we don't run out of stack space.
+  const size_t kBufferSize = 1 << 12;
+  char buf[kBufferSize];
+  size_t len;
+  size_t size = 0;
+  bool read_status = true;
+
+  while ((len = file.ReadAtCurrentPos(buf, sizeof(buf))) > 0) {
+    if (contents) {
+      size_t bytes_to_add = std::min(len, max_size - size);
+      if (size + bytes_to_add > contents->max_size()) {
+        read_status = false;
+        break;
+      }
+      contents->append(buf, std::min(len, max_size - size));
+    }
+
+    if ((max_size - size) < len) {
+      read_status = false;
+      break;
+    }
+
+    size += len;
+  }
+
+  if (contents) {
+    contents->resize(contents->size());
+  }
+  read_status = read_status && file.IsValid();
+  return read_status;
+#else
   FILE* file = OpenFile(path, "rb");
   if (!file) {
     return false;
@@ -186,6 +250,7 @@ bool ReadFileToStringWithMaxSize(const FilePath& path,
   }
 
   return read_status;
+#endif  // STARBOARD
 }
 
 bool ReadFileToString(const FilePath& path, std::string* contents) {
@@ -202,6 +267,7 @@ bool IsDirectoryEmpty(const FilePath& dir_path) {
   return false;
 }
 
+#if !defined(STARBOARD)
 FILE* CreateAndOpenTemporaryFile(FilePath* path) {
   FilePath directory;
   if (!GetTempDir(&directory))
@@ -209,6 +275,7 @@ FILE* CreateAndOpenTemporaryFile(FilePath* path) {
 
   return CreateAndOpenTemporaryFileInDir(directory, path);
 }
+#endif  // !defined(STARBOARD)
 
 bool CreateDirectory(const FilePath& full_path) {
   return CreateDirectoryAndGetError(full_path, nullptr);
@@ -222,6 +289,7 @@ bool GetFileSize(const FilePath& file_path, int64_t* file_size) {
   return true;
 }
 
+#if !defined(STARBOARD)
 bool TouchFile(const FilePath& path,
                const Time& last_accessed,
                const Time& last_modified) {
@@ -239,15 +307,19 @@ bool TouchFile(const FilePath& path,
 
   return file.SetTimes(last_accessed, last_modified);
 }
+#endif  // !defined(STARBOARD)
 #endif  // !defined(OS_NACL_NONSFI)
 
+#ifndef STARBOARD
 bool CloseFile(FILE* file) {
   if (file == nullptr)
     return true;
   return fclose(file) == 0;
 }
+#endif  // !defined(STARBOARD)
 
 #if !defined(OS_NACL_NONSFI)
+#if !defined(STARBOARD)
 bool TruncateFile(FILE* file) {
   if (file == nullptr)
     return false;
@@ -265,6 +337,7 @@ bool TruncateFile(FILE* file) {
 #endif
   return true;
 }
+#endif  // !defined(STARBOARD)
 
 int GetUniquePathNumber(const FilePath& path,
                         const FilePath::StringType& suffix) {

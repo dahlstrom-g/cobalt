@@ -4,13 +4,16 @@
 
 #include "base/containers/hash_tables.h"
 
-#include <stdint.h>
 #include <string>
 
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 
+// MSVC does not support using hash pair as key. std containers also fail
+// these tests.
+#ifndef STARBOARD
 class HashPairTest : public testing::Test {
 };
 
@@ -51,6 +54,7 @@ TEST_F(HashPairTest, IntegerPairs) {
   INSERT_PAIR_TEST(Int64Int64Pair, 10,
                    (INT64_C(1) << 60) + INT64_C(78931732321));
 }
+#endif
 
 // Verify that base::hash_set<const char*> compares by pointer value, not as C
 // strings.

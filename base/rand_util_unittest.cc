@@ -4,15 +4,14 @@
 
 #include "base/rand_util.h"
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <algorithm>
 #include <limits>
 #include <memory>
 
 #include "base/logging.h"
 #include "base/time/time.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace {

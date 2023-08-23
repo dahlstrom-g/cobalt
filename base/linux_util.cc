@@ -26,6 +26,8 @@
 #include "base/strings/string_util.h"
 #include "base/synchronization/lock.h"
 #include "build/build_config.h"
+#include "starboard/common/string.h"
+#include "starboard/types.h"
 
 namespace {
 

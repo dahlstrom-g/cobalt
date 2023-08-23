@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <ostream>
 
+#include "starboard/types.h"
+
 #include "base/files/file_path.h"
 #include "base/logging.h"
 #include "base/macros.h"
@@ -33,6 +35,9 @@ const CommandLine::CharType kSwitchValueSeparator[] = FILE_PATH_LITERAL("=");
 
 // Since we use a lazy match, make sure that longer versions (like "--") are
 // listed before shorter versions (like "-") of similar prefixes.
+#if defined(STARBOARD)
+const CommandLine::CharType* const kSwitchPrefixes[] = {"--", "-"};
+#else
 #if defined(OS_WIN)
 // By putting slash last, we can control whether it is treaded as a switch
 // value by changing the value of switch_prefix_count to be one less than
@@ -42,6 +47,8 @@ const CommandLine::CharType* const kSwitchPrefixes[] = {L"--", L"-", L"/"};
 // Unixes don't use slash as a switch.
 const CommandLine::CharType* const kSwitchPrefixes[] = {"--", "-"};
 #endif
+#endif
+
 size_t switch_prefix_count = arraysize(kSwitchPrefixes);
 
 size_t GetSwitchPrefixLength(const CommandLine::StringType& string) {
@@ -90,7 +97,7 @@ void AppendSwitchesAndArguments(CommandLine* command_line,
 #if defined(OS_WIN)
       command_line->AppendSwitchNative(UTF16ToASCII(switch_string),
                                        switch_value);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
       command_line->AppendSwitchNative(switch_string, switch_value);
 #else
 #error Unsupported platform
@@ -214,7 +221,7 @@ bool CommandLine::Init(int argc, const char* const* argv) {
   current_process_commandline_ = new CommandLine(NO_PROGRAM);
 #if defined(OS_WIN)
   current_process_commandline_->ParseFromString(::GetCommandLineW());
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
   current_process_commandline_->InitFromArgv(argc, argv);
 #else
 #error Unsupported platform
@@ -273,7 +280,7 @@ FilePath CommandLine::GetProgram() const {
 void CommandLine::SetProgram(const FilePath& program) {
 #if defined(OS_WIN)
   TrimWhitespace(program.value(), TRIM_ALL, &argv_[0]);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
   TrimWhitespaceASCII(program.value(), TRIM_ALL, &argv_[0]);
 #else
 #error Unsupported platform
@@ -282,7 +289,7 @@ void CommandLine::SetProgram(const FilePath& program) {
 
 bool CommandLine::HasSwitch(const base::StringPiece& switch_string) const {
   DCHECK_EQ(ToLowerASCII(switch_string), switch_string);
-  return ContainsKey(switches_, switch_string);
+  return ContainsKey(switches_, std::string(switch_string));
 }
 
 bool CommandLine::HasSwitch(const char switch_constant[]) const {
@@ -298,7 +305,7 @@ std::string CommandLine::GetSwitchValueASCII(
   }
 #if defined(OS_WIN)
   return UTF16ToASCII(value);
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
   return value;
 #endif
 }
@@ -311,7 +318,7 @@ FilePath CommandLine::GetSwitchValuePath(
 CommandLine::StringType CommandLine::GetSwitchValueNative(
     const base::StringPiece& switch_string) const {
   DCHECK_EQ(ToLowerASCII(switch_string), switch_string);
-  auto result = switches_.find(switch_string);
+  auto result = switches_.find(std::string(switch_string));
   return result == switches_.end() ? StringType() : result->second;
 }
 
@@ -326,12 +333,17 @@ void CommandLine::AppendSwitchPath(const std::string& switch_string,
 
 void CommandLine::AppendSwitchNative(const std::string& switch_string,
                                      const CommandLine::StringType& value) {
+#if defined(STARBOARD)
+  const std::string& switch_key = switch_string;
+  StringType combined_switch_string(switch_key);
+#else
 #if defined(OS_WIN)
   const std::string switch_key = ToLowerASCII(switch_string);
   StringType combined_switch_string(ASCIIToUTF16(switch_key));
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   const std::string& switch_key = switch_string;
   StringType combined_switch_string(switch_key);
+#endif
 #endif
   size_t prefix_length = GetSwitchPrefixLength(combined_switch_string);
   auto insertion =
@@ -349,12 +361,16 @@ void CommandLine::AppendSwitchNative(const std::string& switch_string,
 
 void CommandLine::AppendSwitchASCII(const std::string& switch_string,
                                     const std::string& value_string) {
+#if defined(STARBOARD)
+  AppendSwitchNative(switch_string, value_string);
+#else
 #if defined(OS_WIN)
   AppendSwitchNative(switch_string, ASCIIToUTF16(value_string));
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   AppendSwitchNative(switch_string, value_string);
 #else
 #error Unsupported platform
+#endif
 #endif
 }
 
@@ -379,6 +395,9 @@ CommandLine::StringVector CommandLine::GetArgs() const {
 }
 
 void CommandLine::AppendArg(const std::string& value) {
+#if defined(STARBOARD)
+  AppendArgNative(value);
+#else
 #if defined(OS_WIN)
   DCHECK(IsStringUTF8(value));
   AppendArgNative(UTF8ToWide(value));
@@ -386,6 +405,7 @@ void CommandLine::AppendArg(const std::string& value) {
   AppendArgNative(value);
 #else
 #error Unsupported platform
+#endif
 #endif
 }
 

@@ -9,6 +9,8 @@
 
 #include "base/logging.h"
 #include "base/win/windows_version.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace base {
 namespace debug {

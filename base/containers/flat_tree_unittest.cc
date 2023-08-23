@@ -927,6 +927,38 @@ TEST(FlatTree, ErasePosition) {
   {
     IntTree cont({1, 2, 3, 4, 5, 6, 7, 8});
 
+#if defined(STARBOARD)
+    // Raspi compiler does not support erasing const iterator.
+    auto it = cont.erase(std::next(cont.begin(), 3));
+    EXPECT_EQ(std::next(cont.begin(), 3), it);
+    EXPECT_THAT(cont, ElementsAre(1, 2, 3, 5, 6, 7, 8));
+
+    it = cont.erase(std::next(cont.begin(), 0));
+    EXPECT_EQ(cont.begin(), it);
+    EXPECT_THAT(cont, ElementsAre(2, 3, 5, 6, 7, 8));
+
+    it = cont.erase(std::next(cont.begin(), 5));
+    EXPECT_EQ(cont.end(), it);
+    EXPECT_THAT(cont, ElementsAre(2, 3, 5, 6, 7));
+
+    it = cont.erase(std::next(cont.begin(), 1));
+    EXPECT_EQ(std::next(cont.begin()), it);
+    EXPECT_THAT(cont, ElementsAre(2, 5, 6, 7));
+
+    it = cont.erase(std::next(cont.begin(), 2));
+    EXPECT_EQ(std::next(cont.begin(), 2), it);
+    EXPECT_THAT(cont, ElementsAre(2, 5, 7));
+
+    it = cont.erase(std::next(cont.begin(), 2));
+    EXPECT_EQ(std::next(cont.begin(), 2), it);
+    EXPECT_THAT(cont, ElementsAre(2, 5));
+
+    it = cont.erase(std::next(cont.begin(), 0));
+    EXPECT_EQ(std::next(cont.begin(), 0), it);
+    EXPECT_THAT(cont, ElementsAre(5));
+
+    it = cont.erase(cont.begin());
+#else
     auto it = cont.erase(std::next(cont.cbegin(), 3));
     EXPECT_EQ(std::next(cont.begin(), 3), it);
     EXPECT_THAT(cont, ElementsAre(1, 2, 3, 5, 6, 7, 8));
@@ -956,6 +988,7 @@ TEST(FlatTree, ErasePosition) {
     EXPECT_THAT(cont, ElementsAre(5));
 
     it = cont.erase(cont.cbegin());
+#endif
     EXPECT_EQ(cont.begin(), it);
     EXPECT_EQ(cont.end(), it);
   }
@@ -965,7 +998,7 @@ TEST(FlatTree, ErasePosition) {
   {
     using T = TemplateConstructor;
 
-    flat_tree<T, T, GetKeyFromValueIdentity<T>, std::less<>> cont;
+    flat_tree<T, T, GetKeyFromValueIdentity<T>, std::less<void>> cont;
     T v(0);
 
     auto it = cont.find(v);
@@ -979,6 +1012,25 @@ TEST(FlatTree, ErasePosition) {
 TEST(FlatTree, EraseRange) {
   IntTree cont({1, 2, 3, 4, 5, 6, 7, 8});
 
+#if defined(STARBOARD)
+  // Raspi compiler does not support erasing const iterator.
+  auto it = cont.erase(std::next(cont.begin(), 5), std::next(cont.begin(), 5));
+  EXPECT_EQ(std::next(cont.begin(), 5), it);
+  EXPECT_THAT(cont, ElementsAre(1, 2, 3, 4, 5, 6, 7, 8));
+
+  it = cont.erase(std::next(cont.begin(), 3), std::next(cont.begin(), 4));
+  EXPECT_EQ(std::next(cont.begin(), 3), it);
+  EXPECT_THAT(cont, ElementsAre(1, 2, 3, 5, 6, 7, 8));
+
+  it = cont.erase(std::next(cont.begin(), 2), std::next(cont.begin(), 5));
+  EXPECT_EQ(std::next(cont.begin(), 2), it);
+  EXPECT_THAT(cont, ElementsAre(1, 2, 7, 8));
+
+  it = cont.erase(std::next(cont.begin(), 0), std::next(cont.begin(), 2));
+  EXPECT_EQ(std::next(cont.begin(), 0), it);
+  EXPECT_THAT(cont, ElementsAre(7, 8));
+  it = cont.erase(cont.begin(), cont.end());
+#else
   auto it =
       cont.erase(std::next(cont.cbegin(), 5), std::next(cont.cbegin(), 5));
   EXPECT_EQ(std::next(cont.begin(), 5), it);
@@ -997,6 +1049,7 @@ TEST(FlatTree, EraseRange) {
   EXPECT_THAT(cont, ElementsAre(7, 8));
 
   it = cont.erase(cont.cbegin(), cont.cend());
+#endif
   EXPECT_EQ(cont.begin(), it);
   EXPECT_EQ(cont.end(), it);
 }
@@ -1110,6 +1163,22 @@ TEST(FlatTree, Find) {
     EXPECT_EQ(std::next(cont.begin(), 7), cont.find(12));
     EXPECT_EQ(std::next(cont.begin(), 8), cont.find(4));
   }
+}
+
+// bool contains(const key_type& key) const
+
+TEST(FlatTree, Contains) {
+  const IntTree cont({5, 6, 7, 8, 9, 10, 11, 12});
+
+  EXPECT_TRUE(cont.contains(5));
+  EXPECT_TRUE(cont.contains(6));
+  EXPECT_TRUE(cont.contains(7));
+  EXPECT_TRUE(cont.contains(8));
+  EXPECT_TRUE(cont.contains(9));
+  EXPECT_TRUE(cont.contains(10));
+  EXPECT_TRUE(cont.contains(11));
+  EXPECT_TRUE(cont.contains(12));
+  EXPECT_FALSE(cont.contains(4));
 }
 
 // pair<iterator, iterator> equal_range(const key_type& key)

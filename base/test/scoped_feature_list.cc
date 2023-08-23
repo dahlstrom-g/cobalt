@@ -89,11 +89,13 @@ ScopedFeatureList::~ScopedFeatureList() {
   if (!init_called_)
     return;
 
+#if !defined(STARBOARD)
   if (field_trial_override_) {
     base::FieldTrialParamAssociator::GetInstance()->ClearParamsForTesting(
         field_trial_override_->trial_name(),
         field_trial_override_->group_name());
   }
+#endif
 
   FeatureList::ClearInstanceForTesting();
   if (original_feature_list_)
@@ -180,6 +182,7 @@ void ScopedFeatureList::InitWithFeaturesAndFieldTrials(
                      &merged_features);
   }
 
+#if !defined(STARBOARD)
   // Add the field trial overrides. This assumes that |enabled_features| are at
   // the begining of |merged_features.enabled_feature_list|, in the same order.
   auto trial_it = trials_for_enabled_features.begin();
@@ -194,7 +197,7 @@ void ScopedFeatureList::InitWithFeaturesAndFieldTrials(
     ++trial_it;
     ++feature_it;
   }
-
+#endif
   std::string enabled = JoinString(merged_features.enabled_feature_list, ",");
   std::string disabled = JoinString(merged_features.disabled_feature_list, ",");
   InitFromCommandLine(enabled, disabled);
@@ -203,6 +206,7 @@ void ScopedFeatureList::InitWithFeaturesAndFieldTrials(
 void ScopedFeatureList::InitAndEnableFeatureWithParameters(
     const Feature& feature,
     const std::map<std::string, std::string>& feature_parameters) {
+#if !defined(STARBOARD)
   if (!FieldTrialList::IsGlobalSetForTesting()) {
     field_trial_list_ = std::make_unique<base::FieldTrialList>(nullptr);
   }
@@ -225,6 +229,7 @@ void ScopedFeatureList::InitAndEnableFeatureWithParameters(
       kTrialName, kTrialGroup, feature_parameters);
   InitAndEnableFeatureWithFieldTrialOverride(feature,
                                              field_trial_override_.get());
+#endif
 }
 
 }  // namespace test

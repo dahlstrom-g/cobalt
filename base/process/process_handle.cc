@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
-
-#include "base/logging.h"
 #include "base/process/process_handle.h"
+#include "base/logging.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -28,6 +27,9 @@ uint32_t MangleProcessId(ProcessId process_id) {
 }  // namespace
 
 uint32_t GetUniqueIdForProcess() {
+#if defined(STARBOARD)
+  return 0;
+#else
   if (!g_have_unique_id) {
     return MangleProcessId(GetCurrentProcId());
   }
@@ -37,6 +39,7 @@ uint32_t GetUniqueIdForProcess() {
   // positives.
   DCHECK_EQ(GetCurrentProcId(), g_procid);
   return g_unique_id;
+#endif  // !defined(STARBOARD)
 }
 
 #if defined(OS_LINUX) || defined(OS_AIX)

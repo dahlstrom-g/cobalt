@@ -69,6 +69,9 @@ class LOCKABLE BASE_EXPORT Lock {
   // Whether Lock mitigates priority inversion when used from different thread
   // priorities.
   static bool HandlesMultipleThreadPriorities() {
+#if defined(STARBOARD)
+    return false;
+#else
 #if defined(OS_WIN)
     // Windows mitigates priority inversion by randomly boosting the priority of
     // ready threads.
@@ -80,6 +83,7 @@ class LOCKABLE BASE_EXPORT Lock {
     return internal::LockImpl::PriorityInheritanceAvailable();
 #else
 #error Unsupported platform
+#endif
 #endif
   }
 

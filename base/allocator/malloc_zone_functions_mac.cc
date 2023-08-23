@@ -6,6 +6,7 @@
 
 #include "base/atomicops.h"
 #include "base/synchronization/lock.h"
+#include "starboard/memory.h"
 
 namespace base {
 namespace allocator {

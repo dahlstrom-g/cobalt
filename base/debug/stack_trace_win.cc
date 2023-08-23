@@ -6,7 +6,6 @@
 
 #include <windows.h>
 #include <dbghelp.h>
-#include <stddef.h>
 
 #include <algorithm>
 #include <iostream>
@@ -17,6 +16,8 @@
 #include "base/macros.h"
 #include "base/memory/singleton.h"
 #include "base/synchronization/lock.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace base {
 namespace debug {

@@ -148,7 +148,7 @@ struct GetKeyFromValuePairFirst {
 //   bool operator>=(const flat_map&, const flat_map);
 //   bool operator<=(const flat_map&, const flat_map);
 //
-template <class Key, class Mapped, class Compare = std::less<>>
+template <class Key, class Mapped, class Compare = std::less<void>>
 class flat_map : public ::base::internal::flat_tree<
                      Key,
                      std::pair<Key, Mapped>,

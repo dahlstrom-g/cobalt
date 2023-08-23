@@ -21,6 +21,7 @@
 #include "base/threading/platform_thread.h"
 #include "base/threading/simple_thread.h"
 #include "base/time/time.h"
+#include "starboard/memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -569,7 +570,7 @@ TEST_F(ActivityTrackerTest, ProcessDeathTest) {
   // Restore memory contents and types so things don't crash when doing real
   // process clean-up.
   memcpy(const_cast<void*>(thread->GetBaseAddress()), tracker_copy.get(),
-         tracker_size);
+               tracker_size);
   global->allocator()->ChangeType(
       proc_data_ref, GlobalActivityTracker::kTypeIdProcessDataRecord,
       GlobalActivityTracker::kTypeIdUserDataRecordFree, false);

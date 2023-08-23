@@ -5,8 +5,6 @@
 #ifndef BASE_MEMORY_SCOPED_REFPTR_H_
 #define BASE_MEMORY_SCOPED_REFPTR_H_
 
-#include <stddef.h>
-
 #include <iosfwd>
 #include <type_traits>
 #include <utility>
@@ -14,6 +12,7 @@
 #include "base/compiler_specific.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "starboard/types.h"
 
 template <class T>
 class scoped_refptr;
@@ -209,7 +208,11 @@ class scoped_refptr {
   }
 
   T* get() const { return ptr_; }
-
+#if defined(STARBOARD)
+  // TODO[Cobalt]: remove this implicit convertor and replace all occurances of
+  // necessary implicit conversion with scoped_refptr.get().
+  operator T*() const { return ptr_; }
+#endif
   T& operator*() const {
     DCHECK(ptr_);
     return *ptr_;
@@ -220,7 +223,9 @@ class scoped_refptr {
     return ptr_;
   }
 
+#if !defined(STARBOARD)
   scoped_refptr& operator=(T* p) { return *this = scoped_refptr(p); }
+#endif
 
   // Unified assignment operator.
   scoped_refptr& operator=(scoped_refptr r) noexcept {
@@ -240,6 +245,13 @@ class scoped_refptr {
   bool operator==(const scoped_refptr<U>& rhs) const {
     return ptr_ == rhs.get();
   }
+
+#if defined(STARBOARD)
+  template <typename U>
+  bool operator!=(U* rhs) const {
+    return ptr_ != rhs;
+  }
+#endif
 
   template <typename U>
   bool operator!=(const scoped_refptr<U>& rhs) const {
@@ -284,6 +296,7 @@ void scoped_refptr<T>::Release(T* ptr) {
   ptr->Release();
 }
 
+#if !defined(STARBOARD)
 template <typename T, typename U>
 bool operator==(const scoped_refptr<T>& lhs, const U* rhs) {
   return lhs.get() == rhs;
@@ -295,12 +308,12 @@ bool operator==(const T* lhs, const scoped_refptr<U>& rhs) {
 }
 
 template <typename T>
-bool operator==(const scoped_refptr<T>& lhs, std::nullptr_t null) {
+bool operator==(const scoped_refptr<T>& lhs, std::nullptr_t /*null*/) {
   return !static_cast<bool>(lhs);
 }
 
 template <typename T>
-bool operator==(std::nullptr_t null, const scoped_refptr<T>& rhs) {
+bool operator==(std::nullptr_t /*null*/, const scoped_refptr<T>& rhs) {
   return !static_cast<bool>(rhs);
 }
 
@@ -323,6 +336,7 @@ template <typename T>
 bool operator!=(std::nullptr_t null, const scoped_refptr<T>& rhs) {
   return !operator==(null, rhs);
 }
+#endif
 
 template <typename T>
 std::ostream& operator<<(std::ostream& out, const scoped_refptr<T>& p) {

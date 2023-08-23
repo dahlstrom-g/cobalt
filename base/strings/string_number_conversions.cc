@@ -17,6 +17,8 @@
 #include "base/scoped_clear_last_error.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/third_party/dmg_fp/dmg_fp.h"
+#include "starboard/common/string.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -401,6 +403,16 @@ bool StringToInt64(StringPiece16 input, int64_t* output) {
   return String16ToIntImpl(input, output);
 }
 
+#if defined(STARBOARD)
+bool StringToInt32(StringPiece input, int32_t* output) {
+  return StringToIntImpl(input, output);
+}
+
+bool StringToUint32(StringPiece input, uint32_t* output) {
+  return StringToIntImpl(input, output);
+}
+#endif
+
 bool StringToUint64(StringPiece input, uint64_t* output) {
   return StringToIntImpl(input, output);
 }
@@ -433,8 +445,7 @@ bool StringToDouble(const std::string& input, double* output) {
   //    expected end given the string's stated length to correctly catch cases
   //    where the string contains embedded NUL characters.
   //  - If the first character is a space, there was leading whitespace
-  return errno == 0 &&
-         !input.empty() &&
+  return errno == 0 && !input.empty() &&
          input.c_str() + input.length() == endptr &&
          !isspace(input[0]);
 }

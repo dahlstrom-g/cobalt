@@ -74,6 +74,8 @@
 #include "base/fuchsia/file_utils.h"
 #include "base/fuchsia/fuchsia_logging.h"
 #include "base/path_service.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #endif
 
 namespace base {

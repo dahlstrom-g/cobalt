@@ -12,6 +12,9 @@
 #endif  // defined(OS_CHROMEOS)
 
 #include "base/threading/thread_restrictions.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -128,7 +131,8 @@ bool PrepareMapFile(ScopedFD fd,
 
       // Put a marker at the start of our data so we can confirm where it
       // begins.
-      crash_ptr = strncpy(crash_ptr, kFileDataMarker, strlen(kFileDataMarker));
+      crash_ptr = strncpy(crash_ptr, kFileDataMarker,
+                               SbStringGetLength(kFileDataMarker));
       for (int i = original_fd_limit; i >= 0; --i) {
         memset(buf, 0, arraysize(buf));
         memset(fd_path, 0, arraysize(fd_path));

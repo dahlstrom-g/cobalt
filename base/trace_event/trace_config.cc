@@ -4,8 +4,6 @@
 
 #include "base/trace_event/trace_config.h"
 
-#include <stddef.h>
-
 #include <utility>
 
 #include "base/json/json_reader.h"
@@ -15,6 +13,7 @@
 #include "base/trace_event/memory_dump_manager.h"
 #include "base/trace_event/memory_dump_request_args.h"
 #include "base/trace_event/trace_event.h"
+#include "starboard/types.h"
 
 namespace base {
 namespace trace_event {
@@ -387,6 +386,7 @@ void TraceConfig::InitializeFromConfigDict(const DictionaryValue& dict) {
   if (dict.GetList(kEventFiltersParam, &category_event_filters))
     SetEventFiltersFromConfigList(*category_event_filters);
 
+#if !defined(STARBOARD)
   if (category_filter_.IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
     // If dump triggers not set, the client is using the legacy with just
     // category enabled. So, use the default periodic dump config.
@@ -396,6 +396,7 @@ void TraceConfig::InitializeFromConfigDict(const DictionaryValue& dict) {
     else
       SetDefaultMemoryDumpConfig();
   }
+#endif
 }
 
 void TraceConfig::InitializeFromConfigString(StringPiece config_string) {
@@ -435,13 +436,16 @@ void TraceConfig::InitializeFromStrings(StringPiece category_filter_string,
     }
   }
 
+#if !defined(STARBOARD)
   if (category_filter_.IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
     SetDefaultMemoryDumpConfig();
   }
+#endif
 }
 
 void TraceConfig::SetMemoryDumpConfigFromConfigDict(
     const DictionaryValue& memory_dump_config) {
+#if !defined(STARBOARD)
   // Set allowed dump modes.
   memory_dump_config_.allowed_dump_modes.clear();
   const ListValue* allowed_modes_list;
@@ -506,11 +510,14 @@ void TraceConfig::SetMemoryDumpConfigFromConfigDict(
           MemoryDumpConfig::HeapProfiler::kDefaultBreakdownThresholdBytes;
     }
   }
+#endif
 }
 
 void TraceConfig::SetDefaultMemoryDumpConfig() {
+#if !defined(STARBOARD)
   memory_dump_config_.Clear();
   memory_dump_config_.allowed_dump_modes = GetDefaultAllowedMemoryDumpModes();
+#endif
 }
 
 void TraceConfig::SetProcessFilterConfig(const ProcessFilterConfig& config) {
@@ -562,6 +569,7 @@ std::unique_ptr<DictionaryValue> TraceConfig::ToDict() const {
     dict->Set(kEventFiltersParam, std::move(filter_list));
   }
 
+#if !defined(STARBOARD)
   if (category_filter_.IsCategoryEnabled(MemoryDumpManager::kTraceCategory)) {
     auto allowed_modes = std::make_unique<ListValue>();
     for (auto dump_mode : memory_dump_config_.allowed_dump_modes)
@@ -598,6 +606,8 @@ std::unique_ptr<DictionaryValue> TraceConfig::ToDict() const {
     }
     dict->Set(kMemoryDumpConfigParam, std::move(memory_dump_config));
   }
+#endif  // !defined(STARBOARD)
+
   return dict;
 }
 

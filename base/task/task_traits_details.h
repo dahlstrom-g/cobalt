@@ -10,11 +10,13 @@
 #include <type_traits>
 #include <utility>
 
+
 namespace base {
 namespace trait_helpers {
 
 // Checks if any of the elements in |ilist| is true.
 // Similar to std::any_of for the case of constexpr initializer_list.
+#if __cplusplus >= 201402L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201402L)
 inline constexpr bool any_of(std::initializer_list<bool> ilist) {
   for (auto c : ilist) {
     if (c)
@@ -43,6 +45,7 @@ inline constexpr size_t count(std::initializer_list<T> ilist, T value) {
   }
   return c;
 }
+#endif
 
 // CallFirstTag is an argument tag that helps to avoid ambiguous overloaded
 // functions. When the following call is made:
@@ -78,14 +81,10 @@ constexpr TraitFilterType GetTraitFromArg(CallFirstTag, ArgType arg) {
 }
 
 template <class TraitFilterType, class ArgType>
-constexpr InvalidTrait GetTraitFromArg(CallSecondTag, ArgType arg) {
+constexpr InvalidTrait GetTraitFromArg(CallSecondTag, ArgType /*arg*/) {
   return InvalidTrait();
 }
 
-// Returns an object of type |TraitFilterType| constructed from a compatible
-// argument in |args...|, or default constructed if none of the arguments are
-// compatible. This is the implementation of GetTraitFromArgList() with a
-// disambiguation tag.
 template <class TraitFilterType,
           class... ArgTypes,
           class TestCompatibleArgument = std::enable_if_t<any_of(
@@ -98,7 +97,7 @@ constexpr TraitFilterType GetTraitFromArgListImpl(CallFirstTag,
 
 template <class TraitFilterType, class... ArgTypes>
 constexpr TraitFilterType GetTraitFromArgListImpl(CallSecondTag,
-                                                  ArgTypes... args) {
+                                                  ArgTypes... /*args*/) {
   static_assert(std::is_constructible<TraitFilterType>::value,
                 "TaskTraits contains a Trait that must be explicity "
                 "initialized in its constructor.");
@@ -112,20 +111,64 @@ constexpr TraitFilterType GetTraitFromArgListImpl(CallSecondTag,
 template <class TraitFilterType, class... ArgTypes>
 constexpr typename TraitFilterType::ValueType GetTraitFromArgList(
     ArgTypes... args) {
+#if __cplusplus >= 201402L
   static_assert(
       count({std::is_constructible<TraitFilterType, ArgTypes>::value...},
             true) <= 1,
       "Multiple arguments of the same type were provided to the "
       "constructor of TaskTraits.");
+#endif
   return GetTraitFromArgListImpl<TraitFilterType>(CallFirstTag(), args...);
 }
 
 // Returns true if this trait is explicitly defined in an argument list, i.e.
 // there is an argument compatible with this trait in |args...|.
+#if __cplusplus < 201402L
+template <class TraitFilterType>
+constexpr bool TraitIsDefined() {
+  return false;
+}
+
+template <class TraitFilterType, class ArgType1>
+constexpr bool TraitIsDefined(ArgType1 arg1) {
+  return std::is_constructible<TraitFilterType, ArgType1>::value;
+}
+
+template <class TraitFilterType, class ArgType1, class ArgType2>
+constexpr bool TraitIsDefined(ArgType1 arg1, ArgType2 /*arg2*/) {
+  return std::is_constructible<TraitFilterType, ArgType1>::value ||
+         std::is_constructible<TraitFilterType, ArgType2>::value;
+}
+
+template <class TraitFilterType, class ArgType1, class ArgType2, class ArgType3>
+constexpr bool TraitIsDefined(ArgType1 /*arg1*/,
+                              ArgType2 /*arg2*/,
+                              ArgType3 /*arg3*/) {
+  return std::is_constructible<TraitFilterType, ArgType1>::value ||
+         std::is_constructible<TraitFilterType, ArgType2>::value ||
+         std::is_constructible<TraitFilterType, ArgType3>::value;
+}
+
+template <class TraitFilterType,
+          class ArgType1,
+          class ArgType2,
+          class ArgType3,
+          class ArgType4>
+constexpr bool TraitIsDefined(ArgType1 /*arg1*/,
+                              ArgType2 /*arg2*/,
+                              ArgType3 /*arg3*/,
+                              ArgType4 /*arg4*/) {
+  return std::is_constructible<TraitFilterType, ArgType1>::value ||
+         std::is_constructible<TraitFilterType, ArgType2>::value ||
+         std::is_constructible<TraitFilterType, ArgType3>::value ||
+         std::is_constructible<TraitFilterType, ArgType4>::value;
+}
+#else
 template <class TraitFilterType, class... ArgTypes>
 constexpr bool TraitIsDefined(ArgTypes... args) {
   return any_of({std::is_constructible<TraitFilterType, ArgTypes>::value...});
 }
+#endif
 
 // Helper class to implemnent a |TraitFilterType|.
 template <typename T>
@@ -156,6 +199,15 @@ struct RequiredEnumTraitFilter : public BasicTraitFilter<ArgType> {
   constexpr RequiredEnumTraitFilter(ArgType arg) { this->value = arg; }
 };
 
+#ifdef STARBOARD
+// Allows instantiation of multiple types in one statement. Used to prevent
+// instantiation of the constructor of TaskTraits with inappropriate argument
+// types.
+template <class...>
+struct InitTypes {};
+#endif
+
+#if __cplusplus >= 201402L
 // Tests whether a given trait type is valid or invalid by testing whether it is
 // convertible to the provided ValidTraits type. To use, define a ValidTraits
 // type like this:
@@ -169,6 +221,7 @@ struct AreValidTraits
     : std::integral_constant<
           bool,
           all_of({std::is_convertible<ArgTypes, ValidTraits>::value...})> {};
+#endif
 
 }  // namespace trait_helpers
 }  // namespace base

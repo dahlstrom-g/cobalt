@@ -40,6 +40,8 @@
 
 #if BUILDFLAG(CAN_UNWIND_WITH_CFI_TABLE)
 #include "base/trace_event/cfi_backtrace_android.h"
+#include "starboard/common/string.h"
+#include "starboard/types.h"
 #endif
 
 #endif  // defined(OS_ANDROID)
@@ -447,7 +449,7 @@ void MemoryDumpManager::InvokeOnMemoryDump(MemoryDumpProviderInfo* mdpinfo,
   // in safe way.
   char provider_name_for_debugging[16];
   strncpy(provider_name_for_debugging, mdpinfo->name,
-          sizeof(provider_name_for_debugging) - 1);
+               sizeof(provider_name_for_debugging) - 1);
   provider_name_for_debugging[sizeof(provider_name_for_debugging) - 1] = '\0';
   base::debug::Alias(provider_name_for_debugging);
 

@@ -4,8 +4,6 @@
 
 #include "base/i18n/streaming_utf8_validator.h"
 
-#include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -34,6 +32,9 @@
 #include "base/synchronization/lock.h"
 #include "base/task/post_task.h"
 #include "base/task/task_scheduler/task_scheduler.h"
+#include "starboard/common/string.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "third_party/icu/source/common/unicode/utf8.h"
 
 #endif  // BASE_I18N_UTF8_VALIDATOR_THOROUGH_TEST
@@ -212,7 +213,8 @@ class PartialIterator {
       : index_(index), prefix_length_(prefix_length) {}
 
   void Advance() {
-    if (index_ < arraysize(valid) && prefix_length_ < strlen(valid[index_]))
+    if (index_ < arraysize(valid) &&
+        prefix_length_ < strlen(valid[index_]))
       ++prefix_length_;
     while (index_ < arraysize(valid) &&
            prefix_length_ == strlen(valid[index_])) {
@@ -306,9 +308,8 @@ TEST(StreamingUtf8ValidatorTest, NulIsValid) {
 // Just a basic sanity test before we start getting fancy.
 TEST(StreamingUtf8ValidatorTest, HelloWorld) {
   static const char kHelloWorld[] = "Hello, World!";
-  EXPECT_EQ(
-      VALID_ENDPOINT,
-      StreamingUtf8Validator().AddBytes(kHelloWorld, strlen(kHelloWorld)));
+  EXPECT_EQ(VALID_ENDPOINT, StreamingUtf8Validator().AddBytes(
+                                kHelloWorld, strlen(kHelloWorld)));
 }
 
 // Check that the Reset() method works.

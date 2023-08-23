@@ -21,10 +21,11 @@
 //   printf("xyz: %" PRIuS, size);
 // The "u" in the macro corresponds to %u, and S is for "size".
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include "build/build_config.h"
+
+#if defined(STARBOARD)
+#include "starboard/types.h"
+#endif
 
 #if (defined(OS_POSIX) || defined(OS_FUCHSIA)) && \
     (defined(_INTTYPES_H) || defined(_INTTYPES_H_)) && !defined(PRId64)
@@ -32,7 +33,8 @@
 #error "without __STDC_FORMAT_MACROS defined."
 #endif
 
-#if (defined(OS_POSIX) || defined(OS_FUCHSIA)) && !defined(__STDC_FORMAT_MACROS)
+#if (defined(OS_POSIX) || defined(STARBOARD) || defined(OS_FUCHSIA)) && \
+    !defined(__STDC_FORMAT_MACROS)
 #define __STDC_FORMAT_MACROS
 #endif
 
@@ -52,7 +54,7 @@
 #define PRIuS "Iu"
 #endif
 
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA) || defined(STARBOARD)
 
 // GCC will concatenate wide and narrow strings correctly, so nothing needs to
 // be done here.

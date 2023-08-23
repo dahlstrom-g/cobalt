@@ -5,8 +5,6 @@
 #ifndef BASE_TASK_TASK_TRAITS_H_
 #define BASE_TASK_TASK_TRAITS_H_
 
-#include <stdint.h>
-
 #include <iosfwd>
 #include <tuple>
 #include <type_traits>
@@ -17,6 +15,7 @@
 #include "base/task/task_traits_details.h"
 #include "base/task/task_traits_extension.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -160,15 +159,24 @@ class BASE_EXPORT TaskTraits {
   // constexpr base::TaskTraits user_visible_may_block_traits = {
   //     base::TaskPriority::USER_VISIBLE, base::MayBlock()};
   // constexpr base::TaskTraits other_user_visible_may_block_traits = {
-  //     base::MayBlock(), base::TaskPriority::USER_VISIBLE};
+  //     base::MayBlock(), base ::TaskPriority::USER_VISIBLE};
   template <class... ArgTypes,
+#if __cplusplus < 201402L
+            class CheckArgumentsAreValid = trait_helpers::InitTypes<
+                decltype(ValidTrait(std::declval<ArgTypes>()))...>>
+#else
             class CheckArgumentsAreValid = std::enable_if_t<
                 trait_helpers::AreValidTraits<ValidTrait, ArgTypes...>::value ||
                 trait_helpers::AreValidTraitsForExtension<ArgTypes...>::value>>
+#endif
   constexpr TaskTraits(ArgTypes... args)
+#if __cplusplus < 201402L
+      :
+#else
       : extension_(trait_helpers::GetTaskTraitsExtension(
             trait_helpers::AreValidTraits<ValidTrait, ArgTypes...>{},
             args...)),
+#endif
         priority_(
             trait_helpers::GetTraitFromArgList<TaskPriorityFilter>(args...)),
         shutdown_behavior_(

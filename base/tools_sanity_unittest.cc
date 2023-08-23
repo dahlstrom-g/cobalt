@@ -6,15 +6,18 @@
 // crashes if the test is ran without special memory testing tools. We use these
 // errors to verify the sanity of the tools.
 
-#include <stddef.h>
-
 #include "base/atomicops.h"
+#if !defined(STARBOARD)
 #include "base/cfi_buildflags.h"
+#endif
 #include "base/debug/asan_invalid_access.h"
 #include "base/debug/profiler.h"
 #include "base/third_party/dynamic_annotations/dynamic_annotations.h"
 #include "base/threading/thread.h"
 #include "build/build_config.h"
+#include "debug/leak_annotations.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -80,7 +83,7 @@ void WriteValueOutOfArrayBoundsRight(char *ptr, size_t size) {
 
 void MakeSomeErrors(char *ptr, size_t size) {
   ReadUninitializedValue(ptr);
-
+#if !defined(STARBOARD)
   HARMFUL_ACCESS(ReadValueOutOfArrayBoundsLeft(ptr),
                  "2 bytes to the left");
   HARMFUL_ACCESS(ReadValueOutOfArrayBoundsRight(ptr, size),
@@ -89,12 +92,14 @@ void MakeSomeErrors(char *ptr, size_t size) {
                  "1 bytes to the left");
   HARMFUL_ACCESS(WriteValueOutOfArrayBoundsRight(ptr, size),
                  "0 bytes to the right");
+#endif
 }
 
 }  // namespace
 
 // A memory leak detector should report an error in this test.
 TEST(ToolsSanityTest, MemoryLeak) {
+  ANNOTATE_SCOPED_MEMORY_LEAK;
   // Without the |volatile|, clang optimizes away the next two lines.
   int* volatile leak = new int[256];  // Leak some memory intentionally.
   leak[4] = 1;  // Make sure the allocated memory is used.
@@ -125,6 +130,7 @@ TEST(ToolsSanityTest, MemoryLeak) {
 #define MAYBE_SingleElementDeletedWithBraces SingleElementDeletedWithBraces
 #endif  // defined(ADDRESS_SANITIZER)
 
+#if !defined(STARBOARD)
 TEST(ToolsSanityTest, MAYBE_AccessesToNewMemory) {
   char *foo = new char[10];
   MakeSomeErrors(foo, 10);
@@ -134,12 +140,13 @@ TEST(ToolsSanityTest, MAYBE_AccessesToNewMemory) {
 }
 
 TEST(ToolsSanityTest, MAYBE_AccessesToMallocMemory) {
-  char *foo = reinterpret_cast<char*>(malloc(10));
+  char* foo = reinterpret_cast<char*>(SbMemoryAllocate(10));
   MakeSomeErrors(foo, 10);
-  free(foo);
+  SbMemoryDeallocate(foo);
   // Use after free.
   HARMFUL_ACCESS(foo[5] = 0, "heap-use-after-free");
 }
+#endif  // !defined(STARBOARD)
 
 #if defined(ADDRESS_SANITIZER)
 
@@ -207,6 +214,7 @@ TEST(ToolsSanityTest, DISABLED_AddressSanitizerGlobalOOBCrashTest) {
 }
 
 #ifndef HARMFUL_ACCESS_IS_NOOP
+#if !defined(STARBOARD)
 TEST(ToolsSanityTest, AsanHeapOverflow) {
   HARMFUL_ACCESS(debug::AsanHeapOverflow() ,"to the right");
 }
@@ -232,6 +240,7 @@ TEST(ToolsSanityTest, DISABLED_AsanCorruptHeap) {
   EXPECT_DEATH(debug::AsanCorruptHeap(), "");
 }
 #endif  // OS_WIN
+#endif  // !defined(STARBOARD)
 #endif  // !HARMFUL_ACCESS_IS_NOOP
 
 #endif  // ADDRESS_SANITIZER
@@ -332,6 +341,7 @@ TEST(ToolsSanityTest, AtomicsAreIgnored) {
   EXPECT_EQ(kMagicValue, shared);
 }
 
+#if !defined(STARBOARD)
 #if BUILDFLAG(CFI_ENFORCEMENT_TRAP)
 #if defined(OS_WIN)
 #define CFI_ERROR_MSG "EXCEPTION_ILLEGAL_INSTRUCTION"
@@ -411,6 +421,7 @@ TEST(ToolsSanityTest, BadUnrelatedCast) {
 #endif  // BUILDFLAG(CFI_CAST_CHECK)
 
 #endif  // CFI_ERROR_MSG
+#endif  // !defined(STARBOARD)
 
 #undef CFI_ERROR_MSG
 #undef MAYBE_AccessesToNewMemory

@@ -5,6 +5,7 @@
 #include "base/big_endian.h"
 
 #include "base/strings/string_piece.h"
+#include "starboard/memory.h"
 
 namespace base {
 

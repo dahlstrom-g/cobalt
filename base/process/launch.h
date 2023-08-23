@@ -7,7 +7,7 @@
 #ifndef BASE_PROCESS_LAUNCH_H_
 #define BASE_PROCESS_LAUNCH_H_
 
-#include <stddef.h>
+#if !defined(STARBOARD)
 
 #include <string>
 #include <utility>
@@ -30,6 +30,7 @@
 
 #if defined(OS_POSIX) || defined(OS_FUCHSIA)
 #include "base/posix/file_descriptor_shuffle.h"
+#include "starboard/types.h"
 #endif
 
 namespace base {
@@ -393,4 +394,5 @@ BASE_EXPORT pid_t ForkWithFlags(unsigned long flags, pid_t* ptid, pid_t* ctid);
 
 }  // namespace base
 
+#endif  // !defined(STARBOARD)
 #endif  // BASE_PROCESS_LAUNCH_H_

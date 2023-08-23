@@ -13,6 +13,11 @@
 #include <errno.h>
 #endif
 
+#if defined(STARBOARD)
+#include "starboard/common/log.h"
+#include "starboard/types.h"
+#endif
+
 namespace base {
 
 File::Info::Info()
@@ -79,13 +84,17 @@ File& File::operator=(File&& other) {
 #if !defined(OS_NACL)
 void File::Initialize(const FilePath& path, uint32_t flags) {
   if (path.ReferencesParent()) {
+#if defined(STARBOARD)
+
+#else
 #if defined(OS_WIN)
     ::SetLastError(ERROR_ACCESS_DENIED);
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
     errno = EACCES;
 #else
 #error Unsupported platform
-#endif
+#endif  // defined(OS_WIN)
+#endif  // defined(STARBOARD)
     error_details_ = FILE_ERROR_ACCESS_DENIED;
     return;
   }

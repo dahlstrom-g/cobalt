@@ -4,6 +4,7 @@
 
 #include "base/json/json_reader.h"
 #include "base/values.h"
+#include "starboard/memory.h"
 
 // Entry point for LibFuzzer.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {

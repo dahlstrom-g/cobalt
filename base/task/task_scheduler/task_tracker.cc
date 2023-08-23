@@ -413,6 +413,7 @@ void TaskTracker::Shutdown() {
   // when shutdown completes.
   {
     AutoSchedulerLock auto_lock(flush_lock_);
+
     flush_cv_->Signal();
   }
   CallFlushCallbackForTesting();

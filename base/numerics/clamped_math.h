@@ -5,12 +5,11 @@
 #ifndef BASE_NUMERICS_CLAMPED_MATH_H_
 #define BASE_NUMERICS_CLAMPED_MATH_H_
 
-#include <stddef.h>
-
 #include <limits>
 #include <type_traits>
 
 #include "base/numerics/clamped_math_impl.h"
+#include "starboard/types.h"
 
 namespace base {
 namespace internal {
@@ -118,23 +117,23 @@ class ClampedNumeric {
         SafeUnsignedAbs(value_));
   }
 
-  constexpr ClampedNumeric& operator++() {
+  constexpr ClampedNumeric& operator++() const {
     *this += 1;
     return *this;
   }
 
-  constexpr ClampedNumeric operator++(int) {
+  constexpr ClampedNumeric operator++(int) const {
     ClampedNumeric value = *this;
     *this += 1;
     return value;
   }
 
-  constexpr ClampedNumeric& operator--() {
+  constexpr ClampedNumeric& operator--() const {
     *this -= 1;
     return *this;
   }
 
-  constexpr ClampedNumeric operator--(int) {
+  constexpr ClampedNumeric operator--(int) const {
     ClampedNumeric value = *this;
     *this -= 1;
     return value;

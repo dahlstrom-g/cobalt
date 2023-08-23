@@ -5,7 +5,6 @@
 #include "base/debug/stack_trace.h"
 
 #include <link.h>
-#include <stddef.h>
 #include <string.h>
 #include <threads.h>
 #include <unwind.h>
@@ -20,6 +19,8 @@
 #include <iostream>
 
 #include "base/logging.h"
+#include "starboard/common/string.h"
+#include "starboard/types.h"
 
 namespace base {
 namespace debug {

@@ -64,7 +64,9 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
   // TaskScheduler:
   void Start(const TaskScheduler::InitParams& init_params,
              SchedulerWorkerObserver* scheduler_worker_observer) override;
+#if !defined(STARBOARD)
   std::vector<const HistogramBase*> GetHistograms() const override;
+#endif
   int GetMaxConcurrentNonBlockedTasksWithTraitsDeprecated(
       const TaskTraits& traits) const override;
   void Shutdown() override;

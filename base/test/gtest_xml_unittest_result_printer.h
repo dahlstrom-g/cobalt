@@ -9,7 +9,10 @@
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+#if !defined(STARBOARD)
 
 namespace base {
 
@@ -51,5 +54,7 @@ class XmlUnitTestResultPrinter : public testing::EmptyTestEventListener {
 };
 
 }  // namespace base
+
+#endif  // !defined(STARBOARD)
 
 #endif  // BASE_TEST_GTEST_XML_UNITTEST_RESULT_PRINTER_H_

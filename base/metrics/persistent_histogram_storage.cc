@@ -94,7 +94,12 @@ PersistentHistogramStorage::~PersistentHistogramStorage() {
 
   StringPiece contents(static_cast<const char*>(allocator->data()),
                        allocator->used());
+#if defined(STARBOARD)
+  int bytes_written = base::WriteFile(file_path, contents.data(), contents.size());
+  if (bytes_written == contents.size()) {
+#else
   if (!ImportantFileWriter::WriteFileAtomically(file_path, contents)) {
+#endif
     LOG(ERROR) << "Persistent histograms fail to write to file: "
                << file_path.value();
   }

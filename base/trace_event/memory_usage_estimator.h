@@ -5,8 +5,6 @@
 #ifndef BASE_TRACE_EVENT_MEMORY_USAGE_ESTIMATOR_H_
 #define BASE_TRACE_EVENT_MEMORY_USAGE_ESTIMATOR_H_
 
-#include <stdint.h>
-
 #include <array>
 #include <deque>
 #include <list>
@@ -31,6 +29,7 @@
 #include "base/stl_util.h"
 #include "base/strings/string16.h"
 #include "base/template_util.h"
+#include "starboard/types.h"
 
 // Composable memory usage estimators.
 //
@@ -211,10 +210,12 @@ template <class T, class X = void>
 struct EMUCaller {
   // std::is_same<> below makes static_assert depend on T, in order to
   // prevent it from asserting regardless instantiation.
+#if !defined(_GLIBCXX_DEBUG) && !defined(_LIBCPP_DEBUG)
   static_assert(std::is_same<T, std::false_type>::value,
                 "Neither global function 'size_t EstimateMemoryUsage(T)' "
                 "nor member function 'size_t T::EstimateMemoryUsage() const' "
                 "is defined for the type.");
+#endif
 
   static size_t Call(const T&) { return 0; }
 };
@@ -249,6 +250,30 @@ struct IsComplexIteratorForContainer<
   };
 };
 
+#if defined(STARBOARD)
+template <class I>
+struct IsComplexIteratorForContainer<
+    std::multiset,
+    I,
+    std::enable_if_t<!std::is_pointer<I>::value &&
+                     base::internal::is_iterator<I>::value>> {
+  using value_type = typename std::iterator_traits<I>::value_type;
+  using container_type = std::multiset<value_type, std::greater<value_type>>;
+
+  // We use enum instead of static constexpr bool, beause we don't have inline
+  // variables until c++17.
+  //
+  // The downside is - value is not of type bool.
+  enum : bool {
+    value =
+        std::is_same<typename container_type::iterator, I>::value ||
+        std::is_same<typename container_type::const_iterator, I>::value ||
+        std::is_same<typename container_type::reverse_iterator, I>::value ||
+        std::is_same<typename container_type::const_reverse_iterator, I>::value,
+  };
+};
+#endif
+
 template <class I, template <class...> class... Containers>
 constexpr bool OneOfContainersComplexIterators() {
   // We are forced to create a temporary variable to workaround a compilation
@@ -276,6 +301,15 @@ constexpr bool IsStandardContainerComplexIterator() {
       /*std::forward_list,*/ std::list, std::set, std::multiset>();
 }
 
+#if defined(STARBOARD)
+template <class T>
+struct EMUCaller<
+    T,
+    typename std::enable_if<!HasEMU<T>::value &&
+                            std::is_trivially_destructible<T>::value>::type> {
+  static size_t Call(const T& value) { return 0; }
+};
+#else   // defined(STARBOARD)
 // Work around MSVS bug. For some reason constexpr function doesn't work.
 // However variable template does.
 template <typename T>
@@ -289,6 +323,7 @@ struct EMUCaller<
     std::enable_if_t<!HasEMU<T>::value && IsKnownNonAllocatingType_v<T>>> {
   static size_t Call(const T& value) { return 0; }
 };
+#endif  // defined(STARBOARD)
 
 }  // namespace internal
 

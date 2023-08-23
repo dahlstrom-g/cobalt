@@ -4,10 +4,11 @@
 
 #include "base/memory/shared_memory.h"
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <memory>
+
+#include "starboard/types.h"
+
+#include "starboard/memory.h"
 
 #include "base/atomicops.h"
 #include "base/base_switches.h"
@@ -396,7 +397,8 @@ TEST_P(SharedMemoryTest, GetReadOnlyHandle) {
   // Make sure the writable instance is still writable.
   ASSERT_TRUE(writable_shmem.Map(contents.size()));
   StringPiece new_contents = "Goodbye";
-  memcpy(writable_shmem.memory(), new_contents.data(), new_contents.size());
+  memcpy(writable_shmem.memory(), new_contents.data(),
+               new_contents.size());
   EXPECT_EQ(new_contents,
             StringPiece(static_cast<const char*>(writable_shmem.memory()),
                         new_contents.size()));
@@ -537,7 +539,8 @@ TEST_P(SharedMemoryTest, ShareWithMultipleInstances) {
   ASSERT_EQ(kContents, readonly_contents);
 
   // |shared| should also be able to update the content.
-  memcpy(shared.memory(), ToLowerASCII(kContents).c_str(), kContents.size());
+  memcpy(shared.memory(), ToLowerASCII(kContents).c_str(),
+               kContents.size());
 
   ASSERT_EQ(StringPiece(ToLowerASCII(kContents)), shmem_contents);
   ASSERT_EQ(StringPiece(ToLowerASCII(kContents)), shared_contents);

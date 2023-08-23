@@ -21,9 +21,6 @@
 #ifndef BASE_VALUES_H_
 #define BASE_VALUES_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <iosfwd>
 #include <map>
 #include <memory>
@@ -38,6 +35,7 @@
 #include "base/strings/string16.h"
 #include "base/strings/string_piece.h"
 #include "base/value_iterators.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -133,9 +131,15 @@ class BASE_EXPORT Value {
   explicit Value(std::string&& in_string) noexcept;
   explicit Value(const char16* in_string16);
   explicit Value(StringPiece16 in_string16);
+#if defined(STARBOARD) && SB_IS(COMPILER_MSVC)
+  explicit Value(const std::string& in_string) : Value(in_string.c_str()) {}
+#endif
 
   explicit Value(const std::vector<char>& in_blob);
   explicit Value(base::span<const uint8_t> in_blob);
+#if defined(STARBOARD) && SB_IS(COMPILER_MSVC)
+  Value::Value(const BlobStorage& in_blob);
+#endif
   explicit Value(BlobStorage&& in_blob) noexcept;
 
   explicit Value(const DictStorage& in_dict);
@@ -173,6 +177,11 @@ class BASE_EXPORT Value {
 
   ListStorage& GetList();
   const ListStorage& GetList() const;
+
+  // Transfers ownership of the underlying list to the caller. Subsequent
+  // calls to `GetList()` will return an empty list.
+  // Note: This requires that `type()` is Type::LIST.
+  ListStorage TakeList();
 
   // |FindKey| looks up |key| in the underlying dictionary. If found, it returns
   // a pointer to the element. Otherwise it returns nullptr.
@@ -240,6 +249,12 @@ class BASE_EXPORT Value {
   // Note: If there is only one component in the path, use FindKey() instead.
   Value* FindPath(std::initializer_list<StringPiece> path);
   Value* FindPath(span<const StringPiece> path);
+#if defined(STARBOARD)
+  // This is a bandage on the inability to implicitly convert to span.
+  Value* FindPath(const std::vector<StringPiece>& path) {
+    return FindPath(span<const StringPiece>(path.data(), path.size()));
+  }
+#endif
   const Value* FindPath(std::initializer_list<StringPiece> path) const;
   const Value* FindPath(span<const StringPiece> path) const;
 

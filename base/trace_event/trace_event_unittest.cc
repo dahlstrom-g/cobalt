@@ -5,8 +5,6 @@
 #include "base/trace_event/trace_event.h"
 
 #include <math.h>
-#include <stddef.h>
-#include <stdint.h>
 
 #include <cstdlib>
 #include <memory>
@@ -37,6 +35,8 @@
 #include "base/trace_event/trace_event_filter.h"
 #include "base/trace_event/trace_event_filter_test_utils.h"
 #include "base/values.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -160,7 +160,7 @@ class TraceEventTestFixture : public testing::Test {
     if (TraceLog::GetInstance())
       EXPECT_FALSE(TraceLog::GetInstance()->IsEnabled());
     PlatformThread::SetName(old_thread_name_ ? old_thread_name_ : "");
-    free(old_thread_name_);
+    SbMemoryDeallocate(old_thread_name_);
     old_thread_name_ = nullptr;
     // We want our singleton torn down after each test.
     TraceLog::ResetForTesting();
@@ -1488,7 +1488,7 @@ TEST_F(TraceEventTestFixture, Categories) {
   // Make sure metadata isn't returned.
   EXPECT_FALSE(ContainsValue(cat_groups, "__metadata"));
 
-  const std::vector<std::string> empty_categories;
+  const std::vector<std::string> empty_categories{};
   std::vector<std::string> included_categories;
   std::vector<std::string> excluded_categories;
 
@@ -1857,8 +1857,10 @@ TEST_F(TraceEventTestFixture, ThreadNames) {
 
       std::string expected_name = StringPrintf("Thread %d", j);
       EXPECT_TRUE(item->GetString("ph", &tmp) && tmp == "M");
+#if !defined(STARBOARD)
       EXPECT_TRUE(item->GetInteger("pid", &tmp_int) &&
                   tmp_int == static_cast<int>(base::GetCurrentProcId()));
+#endif
       // If the thread name changes or the tid gets reused, the name will be
       // a comma-separated list of thread names, so look for a substring.
       EXPECT_TRUE(item->GetString("args.name", &tmp) &&
@@ -2066,7 +2068,7 @@ TEST_F(TraceEventTestFixture, TraceEnableDisable) {
 
   trace_log->SetEnabled(tc_inc_all, TraceLog::RECORDING_MODE);
   EXPECT_TRUE(trace_log->IsEnabled());
-  const std::vector<std::string> empty;
+  const std::vector<std::string> empty{};
   trace_log->SetEnabled(TraceConfig(), TraceLog::RECORDING_MODE);
   EXPECT_TRUE(trace_log->IsEnabled());
   trace_log->SetDisabled();

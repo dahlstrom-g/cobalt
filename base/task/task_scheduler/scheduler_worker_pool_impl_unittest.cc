@@ -4,8 +4,6 @@
 
 #include "base/task/task_scheduler/scheduler_worker_pool_impl.h"
 
-#include <stddef.h>
-
 #include <memory>
 #include <unordered_set>
 #include <vector>
@@ -48,10 +46,12 @@
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 #include "build/build_config.h"
+#include "starboard/configuration_constants.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 #if defined(OS_WIN)
 #include "base/win/com_init_util.h"
+#include "starboard/types.h"
 #endif  // defined(OS_WIN)
 
 namespace base {
@@ -78,7 +78,8 @@ void WaitWithoutBlockingObserver(WaitableEvent* event) {
 class TaskSchedulerWorkerPoolImplTestBase {
  protected:
   TaskSchedulerWorkerPoolImplTestBase()
-      : service_thread_("TaskSchedulerServiceThread"){};
+      : statistics_recorder_(StatisticsRecorder::CreateTemporaryForTesting()),
+        service_thread_("TaskSchedulerServiceThread"){};
 
   void CommonSetUp(TimeDelta suggested_reclaim_time = TimeDelta::Max()) {
     CreateAndStartWorkerPool(suggested_reclaim_time, kMaxTasks);
@@ -116,6 +117,7 @@ class TaskSchedulerWorkerPoolImplTestBase {
     StartWorkerPool(suggested_reclaim_time, max_tasks);
   }
 
+  std::unique_ptr<StatisticsRecorder> statistics_recorder_;
   Thread service_thread_;
   TaskTracker task_tracker_ = {"Test"};
 
@@ -170,6 +172,9 @@ class ThreadPostingTasksWaitIdle : public SimpleThread {
                              test::ExecutionMode execution_mode)
       : SimpleThread("ThreadPostingTasksWaitIdle"),
         worker_pool_(worker_pool),
+#ifdef STARBOARD
+        task_runner_(nullptr),
+#endif
         factory_(CreateTaskRunnerWithExecutionMode(worker_pool, execution_mode),
                  execution_mode) {
     DCHECK(worker_pool_);
@@ -536,6 +541,7 @@ TEST_F(TaskSchedulerWorkerPoolCheckTlsReuse, CheckCleanupWorkers) {
   waiter_.Signal();
 }
 
+#if !defined(STARBOARD)
 namespace {
 
 class TaskSchedulerWorkerPoolHistogramTest
@@ -779,6 +785,7 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeCleanup) {
   EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(6));
   EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(10));
 }
+#endif  // !defined(STARBOARD)
 
 namespace {
 
@@ -1319,6 +1326,8 @@ TEST_F(TaskSchedulerWorkerPoolBlockingTest,
 TEST(TaskSchedulerWorkerPoolOverCapacityTest, VerifyCleanup) {
   constexpr size_t kLocalMaxTasks = 3;
 
+  std::unique_ptr<StatisticsRecorder> recorder_for_testing =
+      StatisticsRecorder::CreateTemporaryForTesting();
   TaskTracker task_tracker("Test");
   DelayedTaskManager delayed_task_manager;
   scoped_refptr<TaskRunner> service_thread_task_runner =
@@ -1406,7 +1415,11 @@ TEST(TaskSchedulerWorkerPoolOverCapacityTest, VerifyCleanup) {
 // Verify that the maximum number of workers is 256 and that hitting the max
 // leaves the pool in a valid state with regards to max tasks.
 TEST_F(TaskSchedulerWorkerPoolBlockingTest, MaximumWorkersTest) {
+#ifdef STARBOARD
+  const size_t kMaxNumberOfWorkers = kSbMaxThreads;
+#else
   constexpr size_t kMaxNumberOfWorkers = 256;
+#endif
   constexpr size_t kNumExtraTasks = 10;
 
   WaitableEvent early_blocking_threads_running;
@@ -1652,6 +1665,9 @@ INSTANTIATE_TEST_CASE_P(
 // Verify that worker detachement doesn't race with worker cleanup, regression
 // test for https://crbug.com/810464.
 TEST_F(TaskSchedulerWorkerPoolImplStartInBodyTest, RacyCleanup) {
+#ifdef STARBOARD
+  const size_t kLocalMaxTasks = kSbMaxThreads;
+#else
 #if defined(OS_FUCHSIA)
   // Fuchsia + QEMU doesn't deal well with *many* threads being
   // created/destroyed at once: https://crbug.com/816575.
@@ -1659,6 +1675,7 @@ TEST_F(TaskSchedulerWorkerPoolImplStartInBodyTest, RacyCleanup) {
 #else   // defined(OS_FUCHSIA)
   constexpr size_t kLocalMaxTasks = 256;
 #endif  // defined(OS_FUCHSIA)
+#endif  // STARBOARD
   constexpr TimeDelta kReclaimTimeForRacyCleanupTest =
       TimeDelta::FromMilliseconds(10);
 

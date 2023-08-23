@@ -251,9 +251,11 @@ TraceLog::ThreadLocalEventBuffer::ThreadLocalEventBuffer(TraceLog* trace_log)
   MessageLoop* message_loop = MessageLoop::current();
   message_loop->AddDestructionObserver(this);
 
+#if !defined(STARBOARD)
   // This is to report the local memory usage when memory-infra is enabled.
   MemoryDumpManager::GetInstance()->RegisterDumpProvider(
       this, "ThreadLocalEventBuffer", ThreadTaskRunnerHandle::Get());
+#endif
 
   AutoLock lock(trace_log->lock_);
   trace_log->thread_message_loops_.insert(message_loop);
@@ -262,7 +264,10 @@ TraceLog::ThreadLocalEventBuffer::ThreadLocalEventBuffer(TraceLog* trace_log)
 TraceLog::ThreadLocalEventBuffer::~ThreadLocalEventBuffer() {
   CheckThisIsCurrentBuffer();
   MessageLoop::current()->RemoveDestructionObserver(this);
+
+#if !defined(STARBOARD)
   MemoryDumpManager::GetInstance()->UnregisterDumpProvider(this);
+#endif
 
   {
     AutoLock lock(trace_log_->lock_);
@@ -303,6 +308,9 @@ void TraceLog::ThreadLocalEventBuffer::WillDestroyCurrentMessageLoop() {
 
 bool TraceLog::ThreadLocalEventBuffer::OnMemoryDump(const MemoryDumpArgs& args,
                                                     ProcessMemoryDump* pmd) {
+#if defined(STARBOARD)
+  return true;
+#else
   if (!chunk_)
     return true;
   std::string dump_base_name = StringPrintf(
@@ -311,6 +319,7 @@ bool TraceLog::ThreadLocalEventBuffer::OnMemoryDump(const MemoryDumpArgs& args,
   chunk_->EstimateTraceMemoryOverhead(&overhead);
   overhead.DumpInto(dump_base_name.c_str(), pmd);
   return true;
+#endif
 }
 
 void TraceLog::ThreadLocalEventBuffer::FlushWhileLocked() {
@@ -383,10 +392,12 @@ TraceLog::TraceLog()
       filter_factory_for_testing_(nullptr) {
   CategoryRegistry::Initialize();
 
+#if !defined(STARBOARD)
 #if defined(OS_NACL)  // NaCl shouldn't expose the process id.
   SetProcessID(0);
 #else
   SetProcessID(static_cast<int>(GetCurrentProcId()));
+#endif
 #endif
 
 // Linux renderer processes and Android O processes are not allowed to read
@@ -400,8 +411,10 @@ TraceLog::TraceLog()
 
   logged_events_.reset(CreateTraceBuffer());
 
+#if !defined(STARBOARD)
   MemoryDumpManager::GetInstance()->RegisterDumpProvider(this, "TraceLog",
                                                          nullptr);
+#endif
   g_trace_log_for_testing = this;
 }
 
@@ -430,6 +443,9 @@ void TraceLog::InitializeThreadLocalEventBufferIfSupported() {
 
 bool TraceLog::OnMemoryDump(const MemoryDumpArgs& args,
                             ProcessMemoryDump* pmd) {
+#if defined(STARBOARD)
+  return true;
+#else
   // TODO(ssid): Use MemoryDumpArgs to create light dumps when requested
   // (crbug.com/499731).
   TraceEventMemoryOverhead overhead;
@@ -445,6 +461,7 @@ bool TraceLog::OnMemoryDump(const MemoryDumpArgs& args,
   overhead.AddSelf();
   overhead.DumpInto("tracing/main_trace_log", pmd);
   return true;
+#endif
 }
 
 const unsigned char* TraceLog::GetCategoryGroupEnabled(
@@ -568,6 +585,7 @@ void TraceLog::GetKnownCategoryGroups(
 
 void TraceLog::SetEnabled(const TraceConfig& trace_config,
                           uint8_t modes_to_enable) {
+#if !defined(TRACING_DISABLED)
   DCHECK(trace_config.process_filter_config().IsEnabled(process_id_));
 
   AutoLock lock(lock_);
@@ -654,6 +672,7 @@ void TraceLog::SetEnabled(const TraceConfig& trace_config,
     }
   }
   dispatching_to_observers_ = false;
+#endif  // !defined(TRACING_DISABLED)
 }
 
 void TraceLog::SetArgumentFilterPredicate(
@@ -1782,11 +1801,13 @@ void TraceLog::SetTraceBufferForTesting(
   logged_events_ = std::move(trace_buffer);
 }
 
+#if !defined(STARBOARD)
 void ConvertableToTraceFormat::EstimateTraceMemoryOverhead(
     TraceEventMemoryOverhead* overhead) {
   overhead->Add(TraceEventMemoryOverhead::kConvertableToTraceFormat,
                 sizeof(*this));
 }
+#endif
 
 }  // namespace trace_event
 }  // namespace base

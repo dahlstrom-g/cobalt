@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stddef.h>
-
 #include <algorithm>
 #include <limits>
 #include <vector>
@@ -15,6 +13,7 @@
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/scoped_blocking_call.h"
 #include "base/threading/thread_restrictions.h"
+#include "starboard/types.h"
 
 // -----------------------------------------------------------------------------
 // A WaitableEvent on POSIX is implemented as a wait-list. Currently we don't
@@ -162,10 +161,13 @@ bool WaitableEvent::TimedWait(const TimeDelta& wait_delta) {
 }
 
 bool WaitableEvent::TimedWaitUntil(const TimeTicks& end_time) {
+#if !defined(STARBOARD)
   internal::ScopedBlockingCallWithBaseSyncPrimitives scoped_blocking_call(
       BlockingType::MAY_BLOCK);
+
   // Record the event that this thread is blocking upon (for hang diagnosis).
   base::debug::ScopedEventWaitActivity event_activity(this);
+#endif
 
   const bool finite_time = !end_time.is_max();
 
@@ -228,20 +230,33 @@ bool WaitableEvent::TimedWaitUntil(const TimeTicks& end_time) {
 // -----------------------------------------------------------------------------
 // Synchronous waiting on multiple objects.
 
+#if defined(STARBOARD)
+struct EventComparator
+{
+  bool operator()(const std::pair<WaitableEvent*, size_t> &a,
+             const std::pair<WaitableEvent*, size_t> &b) {
+    return a.first < b.first;
+  }
+};
+#else
 static bool  // StrictWeakOrdering
 cmp_fst_addr(const std::pair<WaitableEvent*, unsigned> &a,
              const std::pair<WaitableEvent*, unsigned> &b) {
   return a.first < b.first;
 }
+#endif
 
 // static
 size_t WaitableEvent::WaitMany(WaitableEvent** raw_waitables,
                                size_t count) {
   DCHECK(count) << "Cannot wait on no events";
+#if !defined(STARBOARD)
   internal::ScopedBlockingCallWithBaseSyncPrimitives scoped_blocking_call(
       BlockingType::MAY_BLOCK);
+
   // Record an event (the first) that this thread is blocking upon.
   base::debug::ScopedEventWaitActivity event_activity(raw_waitables[0]);
+#endif  // !defined(STARBOARD)
 
   // We need to acquire the locks in a globally consistent order. Thus we sort
   // the array of waitables by address. We actually sort a pairs so that we can
@@ -253,7 +268,11 @@ size_t WaitableEvent::WaitMany(WaitableEvent** raw_waitables,
 
   DCHECK_EQ(count, waitables.size());
 
+#if defined(STARBOARD)
+  sort(waitables.begin(), waitables.end(), EventComparator());
+#else
   sort(waitables.begin(), waitables.end(), cmp_fst_addr);
+#endif
 
   // The set of waitables must be distinct. Since we have just sorted by
   // address, we can check this cheaply by comparing pairs of consecutive

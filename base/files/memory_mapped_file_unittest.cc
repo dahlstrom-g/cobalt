@@ -4,13 +4,12 @@
 
 #include "base/files/memory_mapped_file.h"
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <utility>
 
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
 

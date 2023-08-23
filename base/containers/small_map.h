@@ -5,8 +5,6 @@
 #ifndef BASE_CONTAINERS_SMALL_MAP_H_
 #define BASE_CONTAINERS_SMALL_MAP_H_
 
-#include <stddef.h>
-
 #include <limits>
 #include <map>
 #include <new>
@@ -15,6 +13,7 @@
 
 #include "base/containers/hash_tables.h"
 #include "base/logging.h"
+#include "starboard/types.h"
 
 namespace {
 constexpr size_t kUsingFullMapSentinel = std::numeric_limits<size_t>::max();
@@ -226,7 +225,7 @@ class small_map {
       return *this;
     }
 
-    inline iterator operator++(int /*unused*/) {
+    inline iterator operator++(int unused) {
       iterator result(*this);
       ++(*this);
       return result;
@@ -241,7 +240,7 @@ class small_map {
       return *this;
     }
 
-    inline iterator operator--(int /*unused*/) {
+    inline iterator operator--(int unused) {
       iterator result(*this);
       --(*this);
       return result;
@@ -306,7 +305,7 @@ class small_map {
       return *this;
     }
 
-    inline const_iterator operator++(int /*unused*/) {
+    inline const_iterator operator++(int unused) {
       const_iterator result(*this);
       ++(*this);
       return result;
@@ -321,7 +320,7 @@ class small_map {
       return *this;
     }
 
-    inline const_iterator operator--(int /*unused*/) {
+    inline const_iterator operator--(int unused) {
       const_iterator result(*this);
       --(*this);
       return result;

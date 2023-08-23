@@ -168,7 +168,13 @@ TEST(TimeFormattingTest, TimeFormatTimeOfDayJP) {
   Time time;
   EXPECT_TRUE(Time::FromUTCExploded(kTestDateTimeExploded, &time));
   string16 clock24h(ASCIIToUTF16("15:42"));
+#ifdef STARBOARD
+  // On MSVC, adding "u8" prefix leads to an unnecessary
+  // UTF16->UTF8 conversion on the already utf8 string.
+  string16 clock12h_pm(UTF8ToUTF16("午後3:42"));
+#else
   string16 clock12h_pm(UTF8ToUTF16(u8"午後3:42"));
+#endif
   string16 clock12h(ASCIIToUTF16("3:42"));
 
   // The default is 24h clock.
@@ -289,10 +295,18 @@ TEST(TimeFormattingTest, TimeFormatWithPattern) {
             TimeFormatWithPattern(time, "MMMMdjmmss"));
 
   i18n::SetICUDefaultLocale("ja_JP");
+#ifdef STARBOARD
+  // On MSVC, adding "u8" prefix leads to an unnecessary
+  // UTF16->UTF8 conversion on the already utf8 string.
+  EXPECT_EQ(UTF8ToUTF16("2011年4月30日"), TimeFormatWithPattern(time, "yMMMd"));
+  EXPECT_EQ(UTF8ToUTF16("4月30日 15:42:07"),
+            TimeFormatWithPattern(time, "MMMMdjmmss"));
+#else
   EXPECT_EQ(UTF8ToUTF16(u8"2011年4月30日"),
             TimeFormatWithPattern(time, "yMMMd"));
   EXPECT_EQ(UTF8ToUTF16(u8"4月30日 15:42:07"),
             TimeFormatWithPattern(time, "MMMMdjmmss"));
+#endif
 }
 
 TEST(TimeFormattingTest, TimeDurationFormat) {
@@ -314,9 +328,9 @@ TEST(TimeFormattingTest, TimeDurationFormat) {
   i18n::SetICUDefaultLocale("da");
   EXPECT_EQ(ASCIIToUTF16("15 timer og 42 minutter"),
             TimeDurationFormatString(delta, DURATION_WIDTH_WIDE));
-  EXPECT_EQ(ASCIIToUTF16("15 t og 42 min."),
+  EXPECT_EQ(ASCIIToUTF16("15 t. og 42 min."),
             TimeDurationFormatString(delta, DURATION_WIDTH_SHORT));
-  EXPECT_EQ(ASCIIToUTF16("15 t og 42 min"),
+  EXPECT_EQ(ASCIIToUTF16("15 t og 42 m"),
             TimeDurationFormatString(delta, DURATION_WIDTH_NARROW));
   EXPECT_EQ(ASCIIToUTF16("15.42"),
             TimeDurationFormatString(delta, DURATION_WIDTH_NUMERIC));
@@ -329,9 +343,7 @@ TEST(TimeFormattingTest, TimeDurationFormat) {
   string16 fa_short = UTF8ToUTF16(
       u8"\u06f1\u06f5 \u0633\u0627\u0639\u062a\u060c\u200f \u06f4\u06f2 \u062f"
       u8"\u0642\u06cc\u0642\u0647");
-  string16 fa_narrow = UTF8ToUTF16(
-      u8"\u06f1\u06f5 \u0633\u0627\u0639\u062a \u06f4\u06f2 \u062f\u0642\u06cc"
-      u8"\u0642\u0647");
+  string16 fa_narrow = UTF8ToUTF16(u8"\u06F1\u06F5h \u06F4\u06F2m");
   string16 fa_numeric = UTF8ToUTF16(u8"\u06f1\u06f5:\u06f4\u06f2");
   EXPECT_EQ(fa_wide, TimeDurationFormatString(delta, DURATION_WIDTH_WIDE));
   EXPECT_EQ(fa_short, TimeDurationFormatString(delta, DURATION_WIDTH_SHORT));
@@ -404,9 +416,17 @@ TEST(TimeFormattingTest, TimeIntervalFormat) {
   Time end_time;
   EXPECT_TRUE(Time::FromUTCExploded(kTestIntervalEndTimeExploded, &end_time));
 
+#ifdef STARBOARD
+  // On MSVC, adding "u8" prefix leads to an unnecessary
+  // UTF16->UTF8 conversion on the already utf8 string.
+  EXPECT_EQ(
+      UTF8ToUTF16("Saturday, April 30 – Saturday, May 28"),
+      DateIntervalFormat(begin_time, end_time, DATE_FORMAT_MONTH_WEEKDAY_DAY));
+#else
   EXPECT_EQ(
       UTF8ToUTF16(u8"Saturday, April 30 – Saturday, May 28"),
       DateIntervalFormat(begin_time, end_time, DATE_FORMAT_MONTH_WEEKDAY_DAY));
+#endif
 
   const Time::Exploded kTestIntervalBeginTimeExploded = {
       2011, 5,  1, 16,  // Mon, May 16, 2012
@@ -414,19 +434,37 @@ TEST(TimeFormattingTest, TimeIntervalFormat) {
   };
   EXPECT_TRUE(
       Time::FromUTCExploded(kTestIntervalBeginTimeExploded, &begin_time));
+#ifdef STARBOARD
+  // On MSVC, adding "u8" prefix leads to an unnecessary
+  // UTF16->UTF8 conversion on the already utf8 string.
+  EXPECT_EQ(
+      UTF8ToUTF16("Monday, May 16 – Saturday, May 28"),
+      DateIntervalFormat(begin_time, end_time, DATE_FORMAT_MONTH_WEEKDAY_DAY));
+
+  i18n::SetICUDefaultLocale("en_GB");
+  EXPECT_EQ(
+      UTF8ToUTF16("Monday 16 May – Saturday 28 May"),
+      DateIntervalFormat(begin_time, end_time, DATE_FORMAT_MONTH_WEEKDAY_DAY));
+
+  i18n::SetICUDefaultLocale("ja");
+  EXPECT_EQ(
+      UTF8ToUTF16("5月16日(月曜日)～28日(土曜日)"),
+      DateIntervalFormat(begin_time, end_time, DATE_FORMAT_MONTH_WEEKDAY_DAY));
+#else
   EXPECT_EQ(
       UTF8ToUTF16(u8"Monday, May 16 – Saturday, May 28"),
       DateIntervalFormat(begin_time, end_time, DATE_FORMAT_MONTH_WEEKDAY_DAY));
 
   i18n::SetICUDefaultLocale("en_GB");
   EXPECT_EQ(
-      UTF8ToUTF16(u8"Monday 16 – Saturday 28 May"),
+      UTF8ToUTF16(u8"Monday 16 May – Saturday 28 May"),
       DateIntervalFormat(begin_time, end_time, DATE_FORMAT_MONTH_WEEKDAY_DAY));
 
   i18n::SetICUDefaultLocale("ja");
   EXPECT_EQ(
       UTF8ToUTF16(u8"5月16日(月曜日)～28日(土曜日)"),
       DateIntervalFormat(begin_time, end_time, DATE_FORMAT_MONTH_WEEKDAY_DAY));
+#endif
 }
 
 }  // namespace

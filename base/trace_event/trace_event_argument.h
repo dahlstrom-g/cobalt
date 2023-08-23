@@ -5,8 +5,6 @@
 #ifndef BASE_TRACE_EVENT_TRACE_EVENT_ARGUMENT_H_
 #define BASE_TRACE_EVENT_TRACE_EVENT_ARGUMENT_H_
 
-#include <stddef.h>
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -15,6 +13,7 @@
 #include "base/pickle.h"
 #include "base/strings/string_piece.h"
 #include "base/trace_event/trace_event_impl.h"
+#include "starboard/types.h"
 
 namespace base {
 
@@ -61,7 +60,9 @@ class BASE_EXPORT TracedValue : public ConvertableToTraceFormat {
   // ConvertableToTraceFormat implementation.
   void AppendAsTraceFormat(std::string* out) const override;
 
+#if !defined(STARBOARD)
   void EstimateTraceMemoryOverhead(TraceEventMemoryOverhead* overhead) override;
+#endif
 
   // DEPRECATED: do not use, here only for legacy reasons. These methods causes
   // a copy-and-translation of the base::Value into the equivalent TracedValue.

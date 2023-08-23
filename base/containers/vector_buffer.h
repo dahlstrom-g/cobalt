@@ -14,6 +14,8 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/numerics/checked_math.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 
 namespace base {
 namespace internal {
@@ -40,14 +42,15 @@ class VectorBuffer {
  public:
   constexpr VectorBuffer() = default;
 
-#if defined(__clang__) && !defined(__native_client__)
+// Cobalt Clang 3.6 compiler does not support no_sanitize.
+#if defined(__clang__) && !defined(__native_client__) && (!defined(STARBOARD) || (__clang_major__ > 3))
   // This constructor converts an uninitialized void* to a T* which triggers
   // clang Control Flow Integrity. Since this is as-designed, disable.
   __attribute__((no_sanitize("cfi-unrelated-cast", "vptr")))
 #endif
   VectorBuffer(size_t count)
       : buffer_(reinterpret_cast<T*>(
-            malloc(CheckMul(sizeof(T), count).ValueOrDie()))),
+            SbMemoryAllocate(CheckMul(sizeof(T), count).ValueOrDie()))),
         capacity_(count) {
   }
   VectorBuffer(VectorBuffer&& other) noexcept
@@ -56,10 +59,10 @@ class VectorBuffer {
     other.capacity_ = 0;
   }
 
-  ~VectorBuffer() { free(buffer_); }
+  ~VectorBuffer() { SbMemoryDeallocate(buffer_); }
 
   VectorBuffer& operator=(VectorBuffer&& other) {
-    free(buffer_);
+    SbMemoryDeallocate(buffer_);
     buffer_ = other.buffer_;
     capacity_ = other.capacity_;
 
@@ -94,7 +97,7 @@ class VectorBuffer {
   template <typename T2 = T,
             typename std::enable_if<std::is_trivially_destructible<T2>::value,
                                     int>::type = 0>
-  void DestructRange(T* begin, T* end) {}
+  void DestructRange(T*, T*) {}
 
   // Non-trivially destructible objects must have their destructors called
   // individually.

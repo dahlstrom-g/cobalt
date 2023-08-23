@@ -5,8 +5,6 @@
 #ifndef BASE_TEST_LAUNCHER_UNIT_TEST_LAUNCHER_H_
 #define BASE_TEST_LAUNCHER_UNIT_TEST_LAUNCHER_H_
 
-#include <stddef.h>
-
 #include <string>
 #include <vector>
 
@@ -15,6 +13,9 @@
 #include "base/macros.h"
 #include "base/test/launcher/test_launcher.h"
 #include "build/build_config.h"
+#include "starboard/types.h"
+
+#if !defined(STARBOARD)
 
 namespace base {
 
@@ -130,5 +131,7 @@ class UnitTestLauncherDelegate : public TestLauncherDelegate {
 };
 
 }   // namespace base
+
+#endif  // !defined(STARBOARD)
 
 #endif  // BASE_TEST_LAUNCHER_UNIT_TEST_LAUNCHER_H_

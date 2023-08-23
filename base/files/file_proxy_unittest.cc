@@ -4,9 +4,6 @@
 
 #include "base/files/file_proxy.h"
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <utility>
 
 #include "base/bind.h"
@@ -20,6 +17,8 @@
 #include "base/threading/thread.h"
 #include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
+#include "starboard/memory.h"
+#include "starboard/types.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -175,8 +174,10 @@ TEST_F(FileProxyTest, Close) {
   EXPECT_EQ(File::FILE_OK, error_);
   EXPECT_FALSE(proxy.IsValid());
 
+#if !defined(STARBOARD)
   // Now it should pass on all platforms.
   EXPECT_TRUE(base::Move(TestPath(), TestDirPath().AppendASCII("new")));
+#endif
 }
 
 TEST_F(FileProxyTest, CreateTemporary) {
@@ -222,6 +223,7 @@ TEST_F(FileProxyTest, SetAndTake) {
   EXPECT_TRUE(file.IsValid());
 }
 
+#if !defined(STARBOARD)
 TEST_F(FileProxyTest, DuplicateFile) {
   FileProxy proxy(file_task_runner());
   CreateProxy(File::FLAG_CREATE | File::FLAG_WRITE, &proxy);
@@ -238,6 +240,7 @@ TEST_F(FileProxyTest, DuplicateFile) {
   EXPECT_FALSE(invalid_proxy.IsValid());
   EXPECT_FALSE(invalid_duplicate.IsValid());
 }
+#endif
 
 TEST_F(FileProxyTest, GetInfo) {
   // Setup.
@@ -310,7 +313,7 @@ TEST_F(FileProxyTest, WriteAndFlush) {
   }
 }
 
-#if defined(OS_ANDROID) || defined(OS_FUCHSIA)
+#if defined(OS_ANDROID) || defined(OS_FUCHSIA) || defined(STARBOARD)
 // Flaky on Android, see http://crbug.com/489602
 // TODO(crbug.com/851734): Implementation depends on stat, which is not
 // implemented on Fuchsia
